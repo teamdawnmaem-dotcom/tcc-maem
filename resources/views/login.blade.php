@@ -418,8 +418,8 @@
             <div class="content-box animate-scale">
                 <div class="login-section animate-slide-left">
                     <div class="login-title animate-on-scroll">
-                        <h2>LOGIN</h2>
-                        <p>Welcome User</p>
+                        <h2>LOGIN Staging</h2>
+                        <p>Welcome User (Staging)</p>
                     </div>
 
                     @if ($errors->has('login_error'))
