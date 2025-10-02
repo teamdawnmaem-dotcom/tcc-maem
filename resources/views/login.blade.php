@@ -419,7 +419,7 @@
                 <div class="login-section animate-slide-left">
                     <div class="login-title animate-on-scroll">
                         <h2>LOGIN Staging</h2>
-                        <p>Welcome User</p>
+                        <p>Welcome User (Staging)</p>
                     </div>
 
                     @if ($errors->has('login_error'))
