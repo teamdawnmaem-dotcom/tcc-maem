@@ -418,7 +418,7 @@
             <div class="content-box animate-scale">
                 <div class="login-section animate-slide-left">
                     <div class="login-title animate-on-scroll">
-                        <h2>LOGIN</h2>
+                        <h2>LOGIN (Staging)</h2>
                         <p>Welcome User</p>
                     </div>
 
