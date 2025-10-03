@@ -57,7 +57,7 @@
         <tbody>
         @forelse ($records as $record)
                 <tr>
-                    <td class="date-col">{{ \Carbon\Carbon::parse($record->record_time_in)->format('F j, Y') }}</td>
+                    <td class="date-col">{{ \Carbon\Carbon::parse($record->record_date)->format('F j, Y') }}</td>
                     <td class="name-col">{{ $record->faculty->faculty_fname }} {{ $record->faculty->faculty_lname }}</td>
                     <td class="dept-col">{{ $record->faculty->faculty_department }}</td>
                     <td class="course-col">{{ $record->teachingLoad->teaching_load_course_code }}</td>
@@ -65,7 +65,7 @@
                     <td class="day-col">{{ $record->teachingLoad->teaching_load_day_of_week }}</td>
                     <td class="time-schedule">{{ \Carbon\Carbon::parse($record->teachingLoad->teaching_load_time_in)->format('h:i A') }} to {{ \Carbon\Carbon::parse($record->teachingLoad->teaching_load_time_out)->format('h:i A') }}</td>
                     <td class="time-in-col">
-                        @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP')
+                        @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP' || !$record->record_time_in)
                             N/A
                         @else
                             {{ \Carbon\Carbon::parse($record->record_time_in)->format('h:i A') }}
@@ -82,11 +82,11 @@
                     </td>
                     <td class="duration-col">
                         @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP')
-                            N/A
+                            0
                         @elseif($record->time_duration_seconds > 0)
                             {{ intval($record->time_duration_seconds / 60) }}m {{ $record->time_duration_seconds % 60 }}s
                         @else
-                            N/A
+                            0
                         @endif
                     </td>
                     <td class="room-col">{{ $record->camera->room->room_name }}</td>

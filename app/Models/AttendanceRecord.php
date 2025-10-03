@@ -17,6 +17,7 @@ class AttendanceRecord extends Model
         'faculty_id',
         'teaching_load_id',
         'camera_id',
+        'record_date',
         'record_time_in',
         'record_time_out',
         'time_duration_seconds',

@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('tbl_attendance_record', function (Blueprint $table) {
             $table->id('record_id');
+            $table->timestamp('record_date')->useCurrent();
              $table->foreignId('faculty_id')
                   ->constrained('tbl_faculty', 'faculty_id')
                   ->cascadeOnDelete()
@@ -21,7 +22,7 @@ return new class extends Migration
                   ->constrained('tbl_teaching_load', 'teaching_load_id')
                   ->cascadeOnDelete()
                   ->cascadeOnUpdate();
-                  $table->timestamp('record_time_in')->useCurrent();
+                  $table->timestamp('record_time_in')->nullable();
                   $table->timestamp('record_time_out')->nullable();
                   $table->integer('time_duration_seconds')->default(0);
                   $table->string('record_status', 50);
