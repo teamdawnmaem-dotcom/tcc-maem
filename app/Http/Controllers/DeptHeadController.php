@@ -42,17 +42,17 @@ public function attendanceRecords(Request $request)
 
     // Date filters
     if ($request->startDate) {
-        $query->whereDate('record_time_in', '>=', $request->startDate);
+        $query->whereDate('record_date', '>=', $request->startDate);
     }
     if ($request->endDate) {
-        $query->whereDate('record_time_in', '<=', $request->endDate);
+        $query->whereDate('record_date', '<=', $request->endDate);
     }
     
     // If no date filters are provided and no other filters, default to current date (real-time attendance)
     if (!$request->startDate && !$request->endDate && !$request->department && !$request->instructor && 
         !$request->course_code && !$request->subject && !$request->day && !$request->room && 
         !$request->building && !$request->status && !$request->remarks && !$request->search) {
-        $query->whereDate('record_time_in', now()->toDateString());
+        $query->whereDate('record_date', now()->toDateString());
     }
     
     // Department filter
@@ -135,12 +135,12 @@ public function attendanceRecords(Request $request)
             // Search in attendance record fields
             ->orWhere('record_status', 'like', "%{$searchTerm}%")
             ->orWhere('record_remarks', 'like', "%{$searchTerm}%")
-            ->orWhere('record_time_in', 'like', "%{$searchTerm}%")
+            ->orWhere('record_date', 'like', "%{$searchTerm}%")
             ->orWhere('record_id', 'like', "%{$searchTerm}%");
         });
     }
 
-    $records = $query->orderBy('record_time_in', 'desc')->get();
+    $records = $query->orderBy('record_date', 'desc')->get();
 
     // Return JSON for AJAX requests
     if ($request->ajax() || $request->wantsJson()) {
@@ -160,17 +160,17 @@ public function attendanceRecordsPrint(Request $request)
 
     // Date filters
     if ($request->startDate) {
-        $query->whereDate('record_time_in', '>=', $request->startDate);
+        $query->whereDate('record_date', '>=', $request->startDate);
     }
     if ($request->endDate) {
-        $query->whereDate('record_time_in', '<=', $request->endDate);
+        $query->whereDate('record_date', '<=', $request->endDate);
     }
     
     // If no date filters are provided and no other filters, default to current date (real-time attendance)
     if (!$request->startDate && !$request->endDate && !$request->department && !$request->instructor && 
         !$request->courseCode && !$request->subject && !$request->day && !$request->room && 
         !$request->building && !$request->status && !$request->remarks && !$request->search) {
-        $query->whereDate('record_time_in', now()->toDateString());
+        $query->whereDate('record_date', now()->toDateString());
     }
     
     // Department filter
@@ -253,12 +253,12 @@ public function attendanceRecordsPrint(Request $request)
             // Search in attendance record fields
             ->orWhere('record_status', 'like', "%{$searchTerm}%")
             ->orWhere('record_remarks', 'like', "%{$searchTerm}%")
-            ->orWhere('record_time_in', 'like', "%{$searchTerm}%")
+            ->orWhere('record_date', 'like', "%{$searchTerm}%")
             ->orWhere('record_id', 'like', "%{$searchTerm}%");
         });
     }
 
-    $records = $query->orderBy('record_time_in', 'desc')->get();
+    $records = $query->orderBy('record_date', 'desc')->get();
 
     $pdf = \PDF::loadView('deptHead.attendance-records-pdf', [
         'records' => $records,

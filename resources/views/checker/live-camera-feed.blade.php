@@ -279,6 +279,7 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
             overflow: hidden;
             display: none;
+            max-height: 400px;
         }
 
         .recognition-title {
@@ -293,6 +294,21 @@
         .attendance-table {
             width: 100%;
             border-collapse: collapse;
+        }
+
+        .attendance-table-container {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .scheduled-faculty {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .unscheduled-faculty {
+            color: #ff8c00;
+            font-weight: bold;
         }
 
         .attendance-table th {
@@ -420,24 +436,26 @@
 <!-- Current Recognition Status -->
 <div class="recognition-status" id="recognition-status-section">
     <div class="recognition-title">Current Recognition Status</div>
-    <table class="attendance-table">
-        <thead>
-            <tr>
-                <th>Time</th>
-                <th>Camera</th>
-                <th>Faculty</th>
-                <th>Status</th>
-                <th>Distance</th>
-            </tr>
-        </thead>
-        <tbody id="recognition-logs-body">
-            <tr>
-                <td colspan="5" style="text-align: center; padding: 40px; color: #999; font-style: italic;">
-                    Waiting for data...
-                </td>
-            </tr>
-        </tbody>
-    </table>
+    <div class="attendance-table-container">
+        <table class="attendance-table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Camera</th>
+                    <th>Faculty</th>
+                    <th>Status</th>
+                    <th>Distance</th>
+                </tr>
+            </thead>
+            <tbody id="recognition-logs-body">
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 40px; color: #999; font-style: italic;">
+                        Waiting for data...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </div>
 @endsection
 
@@ -669,20 +687,27 @@
             Object.entries(results).forEach(([cameraId, result]) => {
                 console.log('Processing camera result:', cameraId, result); // Debug log
                 
-                // Check if result has meaningful data (not just idle state)
-                if (result && (result.faculty_id || result.status !== 'idle')) {
+                // Always process results, even idle ones
+                if (result) {
                     const camera = cameras.find(cam => cam.camera_id == cameraId);
                     const cameraName = camera ? camera.camera_name : `Camera ${cameraId}`;
                     
                     let facultyName = 'Unknown';
                     let status = 'Unknown';
                     let distance = 'N/A';
+                    let isScheduled = false;
                     
                     if (result.faculty_id && result.faculty_id !== null) {
                         // Find faculty name from faculty data
                         const faculty = faculties.find(f => f.faculty_id == result.faculty_id);
                         if (faculty) {
                             facultyName = `${faculty.faculty_fname} ${faculty.faculty_lname}`;
+                            
+                            // Check if this faculty is scheduled for this camera's room
+                            const currentLoad = getCurrentLoadForRoom(camera.room_no);
+                            if (currentLoad && currentLoad.faculty_id == result.faculty_id) {
+                                isScheduled = true;
+                            }
                         } else {
                             facultyName = `Faculty ID: ${result.faculty_id}`;
                         }
@@ -699,10 +724,20 @@
                         distance = 'N/A';
                     }
                     
+                    // Add scheduling identifier
+                    let facultyDisplay = facultyName;
+                    if (result.faculty_id && result.faculty_id !== null) {
+                        if (isScheduled) {
+                            facultyDisplay = `<span class="scheduled-faculty">${facultyName} (Scheduled)</span>`;
+                        } else {
+                            facultyDisplay = `<span class="unscheduled-faculty">${facultyName} (Not Scheduled)</span>`;
+                        }
+                    }
+                    
                     const row = `<tr>
                         <td>${timeStr}</td>
                         <td>${cameraName}</td>
-                        <td>${facultyName}</td>
+                        <td>${facultyDisplay}</td>
                         <td>${status}</td>
                         <td>${distance}</td>
                     </tr>`;

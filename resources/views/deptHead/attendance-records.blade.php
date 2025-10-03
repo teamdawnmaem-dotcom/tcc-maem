@@ -505,7 +505,7 @@
             <tbody>
                 @forelse ($records as $record)
                     <tr>
-                        <td>{{ \Carbon\Carbon::parse($record->record_time_in)->format('F j, Y') }}</td>
+                        <td>{{ \Carbon\Carbon::parse($record->record_date)->format('F j, Y') }}</td>
                         <td>{{ $record->faculty->faculty_fname }} {{ $record->faculty->faculty_lname }}</td>
                         <td>{{ $record->faculty->faculty_department }}</td>
                         <td>{{ $record->teachingLoad->teaching_load_course_code }}</td>
@@ -513,28 +513,26 @@
                         <td>{{ $record->teachingLoad->teaching_load_day_of_week }}</td>
                         <td>{{ \Carbon\Carbon::parse($record->teachingLoad->teaching_load_time_in)->format('h:i A') }} to {{ \Carbon\Carbon::parse($record->teachingLoad->teaching_load_time_out)->format('h:i A') }}</td>
                         <td>
-                            @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP')
+                            @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP' || !$record->record_time_in)
                                 <span style="color: #999;">N/A</span>
                             @else
                                 {{ \Carbon\Carbon::parse($record->record_time_in)->format('h:i A') }}
                             @endif
                         </td>
                         <td>
-                            @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP')
+                            @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP' || !$record->record_time_out)
                                 <span style="color: #999;">N/A</span>
-                            @elseif($record->record_time_out)
-                                {{ \Carbon\Carbon::parse($record->record_time_out)->format('h:i A') }}
                             @else
-                                <span style="color: #999;">N/A</span>
+                                {{ \Carbon\Carbon::parse($record->record_time_out)->format('h:i A') }}
                             @endif
                         </td>
                         <td>
                             @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP')
-                                <span style="color: #999;">N/A</span>
-                            @elseif($record->time_duration_seconds > 0)
-                                {{ intval($record->time_duration_seconds / 60) }}m {{ $record->time_duration_seconds % 60 }}s
+                                <span style="color: #999;">0</span>
+                            @elseif($record->time_duration_seconds == 0)
+                                <span style="color: #999;">0</span>
                             @else
-                                <span style="color: #999;">N/A</span>
+                                {{ intval($record->time_duration_seconds / 60) }}m {{ $record->time_duration_seconds % 60 }}s
                             @endif
                         </td>
                         <td>{{ $record->camera->room->room_name }}</td>

@@ -141,7 +141,7 @@ class AttendanceRemarksService
      */
     public function updateAttendanceRemarksForDate($date)
     {
-        $attendanceRecords = AttendanceRecord::whereDate('record_time_in', $date)
+        $attendanceRecords = AttendanceRecord::whereDate('record_date', $date)
             ->with(['teachingLoad'])
             ->get();
 
@@ -184,7 +184,7 @@ class AttendanceRemarksService
             // Check if there's already an attendance record for this teaching load on this date
             $existingRecord = AttendanceRecord::where('faculty_id', $facultyId)
                 ->where('teaching_load_id', $teachingLoad->teaching_load_id)
-                ->whereDate('record_time_in', $date)
+                ->whereDate('record_date', $date)
                 ->first();
 
             if (!$existingRecord) {
@@ -211,7 +211,8 @@ class AttendanceRemarksService
                         'faculty_id' => $facultyId,
                         'teaching_load_id' => $teachingLoad->teaching_load_id,
                         'camera_id' => $cameraId,
-                        'record_time_in' => Carbon::parse($date . ' ' . $teachingLoad->teaching_load_time_in),
+                        'record_date' => Carbon::parse($date),
+                        'record_time_in' => null,
                         'record_time_out' => null,
                         'time_duration_seconds' => 0,
                         'record_status' => 'Absent',
@@ -237,8 +238,8 @@ class AttendanceRemarksService
             ->where('record_status', 'Absent')
             ->where('record_remarks', 'On Leave')
             ->where(function ($q) use ($newStart, $newEnd) {
-                $q->where('record_time_in', '<', $newStart)
-                  ->orWhere('record_time_in', '>', $newEnd);
+                $q->where('record_date', '<', $newStart)
+                  ->orWhere('record_date', '>', $newEnd);
             })
             ->delete();
 
@@ -302,7 +303,7 @@ class AttendanceRemarksService
                 // Remove no-longer-valid pass-slip absent records for this date/load
                 AttendanceRecord::where('faculty_id', $facultyId)
                     ->where('teaching_load_id', $load->teaching_load_id)
-                    ->whereDate('record_time_in', $date)
+                    ->whereDate('record_date', $date)
                     ->where('record_status', 'Absent')
                     ->where('record_remarks', 'With Pass Slip')
                     ->delete();

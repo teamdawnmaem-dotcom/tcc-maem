@@ -15,7 +15,7 @@ class AttendanceController extends Controller
 	public function index()
 	{
 		$records = AttendanceRecord::with(['faculty', 'teachingLoad.room', 'camera'])
-			->orderBy('record_time_in', 'desc')
+			->orderBy('record_date', 'desc')
 			->get()
 			->map(function ($record) {
 				return [
@@ -44,18 +44,31 @@ class AttendanceController extends Controller
 			'faculty_id'       => 'required|exists:tbl_faculty,faculty_id',
 			'teaching_load_id' => 'required|exists:tbl_teaching_load,teaching_load_id',
 			'camera_id'        => 'required|exists:tbl_camera,camera_id',
-			'record_status'    => 'required|string|in:present,late,absent',
-			'record_time_in'   => 'nullable|date',
-			'record_time_out'  => 'nullable|date',
+			'record_status'    => 'required|string|in:Present,Late,Absent,present,late,absent',
+			'record_time_in'   => 'nullable|string',
+			'record_time_out'  => 'nullable|string',
 			'time_duration_seconds' => 'nullable|integer|min:0',
 			'record_remarks'   => 'nullable|string',
 		]);
 
-		$timeIn = $request->input('record_time_in', now());
+		// Handle N/A values for time fields
+		$timeIn = $request->input('record_time_in');
+		$timeOut = $request->input('record_time_out');
+		$timeDuration = $request->input('time_duration_seconds', 0);
+		
+		// Convert N/A to null for database storage
+		$timeIn = ($timeIn === 'N/A') ? null : $timeIn;
+		$timeOut = ($timeOut === 'N/A') ? null : $timeOut;
+		
+		// Only use current time as fallback if time_in is not provided at all (not N/A)
+		// If the original input was N/A, keep it as null (don't use fallback)
+		if (!$timeIn && $request->input('record_time_in') !== 'N/A') {
+			$timeIn = now();
+		}
 
 		$exists = AttendanceRecord::where('faculty_id', $request->faculty_id)
 			->where('teaching_load_id', $request->teaching_load_id)
-			->whereDate('record_time_in', now()->toDateString())
+			->whereDate('record_date', now()->toDateString())
 			->exists();
 
 		if ($exists) {
@@ -69,9 +82,10 @@ class AttendanceController extends Controller
 			'faculty_id'       => $request->faculty_id,
 			'teaching_load_id' => $request->teaching_load_id,
 			'camera_id'        => $request->camera_id,
+			'record_date'      => now(),
 			'record_time_in'   => $timeIn,
-			'record_time_out'  => $request->input('record_time_out'),
-			'time_duration_seconds' => $request->input('time_duration_seconds', 0),
+			'record_time_out'  => $timeOut,
+			'time_duration_seconds' => $timeDuration,
 			'record_status'    => $request->record_status,
 			'record_remarks'   => $request->input('record_remarks', ''),
 		]);
@@ -96,7 +110,7 @@ class AttendanceController extends Controller
 
 		$exists = AttendanceRecord::where('faculty_id', $request->faculty_id)
 			->where('teaching_load_id', $request->teaching_load_id)
-			->whereDate('record_time_in', now()->toDateString())
+			->whereDate('record_date', now()->toDateString())
 			->exists();
 
 		return response()->json([
