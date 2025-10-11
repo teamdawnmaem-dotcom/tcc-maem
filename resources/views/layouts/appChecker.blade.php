@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Tagoloan Community College - Checker')</title>
     <style>
         * {
@@ -1377,6 +1378,26 @@
             color: #333 !important;
         }
     </style>
+    <!-- Global SweetAlert2 helpers and confirm handlers -->
+    <script>
+        (function(){
+            window.SwalUtils = {
+                error: function(title, text){ if(window.Swal){ Swal.fire({ icon:'error', title: title||'Error', text: text||'', confirmButtonColor:'#8B0000' }); } },
+                info: function(title, text){ if(window.Swal){ Swal.fire({ icon:'info', title: title||'Info', text: text||'', confirmButtonColor:'#8B0000' }); } },
+                success: function(title, text){ if(window.Swal){ Swal.fire({ icon:'success', title: title||'Success', text: text||'', confirmButtonColor:'#8B0000' }); } },
+                confirmDelete: async function(opts){ if(!window.Swal) return { isConfirmed:true }; return await Swal.fire({ icon:'warning', title:(opts&&opts.title)||'Are you sure?', text:(opts&&opts.text)||'This action cannot be undone.', showCancelButton:true, confirmButtonText:(opts&&opts.confirmText)||'Delete', cancelButtonText:(opts&&opts.cancelText)||'Cancel', confirmButtonColor:'#ff3636', cancelButtonColor:'#800000' }); },
+                incompleteFields: function(){ if(window.Swal){ Swal.fire({ icon:'error', title:'Incomplete fields', text:'Please fill out Subject Code, Description, and Department.', confirmButtonColor:'#8B0000' }); } }
+            };
+            document.addEventListener('submit', async function(e){
+                const form = e.target;
+                if(form && form.dataset && form.dataset.swalConfirm === 'delete'){
+                    e.preventDefault();
+                    const res = await window.SwalUtils.confirmDelete({});
+                    if(res && res.isConfirmed){ form.submit(); }
+                }
+            }, true);
+        })();
+    </script>
     
     @yield('scripts')
 </body>

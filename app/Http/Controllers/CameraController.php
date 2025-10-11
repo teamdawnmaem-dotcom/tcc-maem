@@ -52,6 +52,15 @@ public function store(Request $request)
         'room_no' => 'required|exists:tbl_room,room_no',
     ]);
 
+    // Check if room is already assigned to another camera
+    $existingCamera = Camera::where('room_no', $request->room_no)->first();
+    if ($existingCamera) {
+        return redirect()->back()
+            ->withErrors(['room_no' => "Room conflict with existing camera: {$existingCamera->camera_name} (ID: {$existingCamera->camera_id})"])
+            ->with('open_modal', 'addCameraModal')
+            ->withInput();
+    }
+
     // Generate RTSP URL
     $rtspUrl = 'rtsp://' . $request->camera_username . ':' . $request->camera_password . '@' . $request->camera_ip_address . ':554/stream1';
 
@@ -86,6 +95,17 @@ public function update(Request $request, $id)
         'camera_password' => 'required|string|max:50',
         'room_no' => 'required|exists:tbl_room,room_no',
     ]);
+
+    // Check if room is already assigned to another camera (excluding current camera)
+    $existingCamera = Camera::where('room_no', $request->room_no)
+        ->where('camera_id', '!=', $id)
+        ->first();
+    if ($existingCamera) {
+        return redirect()->back()
+            ->withErrors(['room_no' => "Room conflict with existing camera: {$existingCamera->camera_name} (ID: {$existingCamera->camera_id})"])
+            ->with('open_modal', 'updateCameraModal')
+            ->withInput();
+    }
 
     // Regenerate RTSP URL
     $rtspUrl = 'rtsp://' . $request->camera_username . ':' . $request->camera_password . '@' . $request->camera_ip_address . ':554/stream1';

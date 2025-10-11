@@ -246,7 +246,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="text-center">No activity logs found.</td>
+                    <td colspan="6" style="text-align:center; padding:12px; color:#999; font-style:italic;">No activity logs found.</td>
                 </tr>
             @endforelse
         </tbody>

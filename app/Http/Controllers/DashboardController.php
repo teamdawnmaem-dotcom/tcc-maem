@@ -29,14 +29,11 @@ class DashboardController extends Controller
     $registeredFaculty = Faculty::count();
 
      $logs = ActivityLog::with('user')
-        ->orderBy('logs_timestamp', 'desc')
+        ->orderBy('logs_timestamp', direction: 'desc')
         ->get();
 
     return view('admin.admin-dashboard', compact('registeredUser','registeredFaculty', 'totalCameras', 'logs'));
-
-
     }
-  
 
     public function checker()
     {
@@ -49,7 +46,6 @@ class DashboardController extends Controller
     $registeredFaculty = Faculty::count();
         return view('checker.checker-dashboard', compact('registeredUser', 'registeredFaculty', 'totalCameras'));
     }
-
 
 
     public function deptHead()

@@ -32,15 +32,11 @@ class LeaveController extends Controller
             'lp_purpose' => 'required|string|max:255',
             'leave_start_date' => 'required|date',
             'leave_end_date' => 'required|date|after_or_equal:leave_start_date',
-            'lp_image' => 'nullable|image|max:2048',
+            'lp_image' => 'required|image|max:2048',
         ]);
 
         // Force type to Leave
         $validated['lp_type'] = 'Leave';
-
-        // Validation: prevent creating leave if a pass-slip already exists for this faculty and date with time overlap
-        // (Optional strict rule, can be relaxed if business allows both)
-        // Currently we only prevent pass creation during leave; leave creation is allowed.
 
         // Handle file upload
         if ($request->hasFile('lp_image')) {
@@ -93,16 +89,29 @@ class LeaveController extends Controller
 
         // Handle new image upload
         if ($request->hasFile('lp_image')) {
+            // Delete old image if it exists
             if ($leave->lp_image) {
                 Storage::disk('public')->delete($leave->lp_image);
             }
             $validated['lp_image'] = $request->file('lp_image')->store('leave_slips', 'public');
+        } else {
+            // Keep the old image if no new image is uploaded
+            unset($validated['lp_image']);
         }
 
+        // Store old dates for reconciliation
+        $oldStartDate = $leave->leave_start_date;
+        $oldEndDate = $leave->leave_end_date;
+        
         $leave->update($validated);
 
         // Update attendance remarks for the leave period
         $remarksService = new AttendanceRemarksService();
+        
+        // First, remove old leave records that are no longer valid
+        $remarksService->removeLeaveAbsencesInWindow($request->faculty_id, $oldStartDate, $oldEndDate);
+        
+        // Then, reconcile the new leave period
         $remarksService->reconcileLeaveChange($request->faculty_id, $validated['leave_start_date'], $validated['leave_end_date']);
 
          $faculty = Faculty::find($request->faculty_id);
@@ -154,7 +163,8 @@ class LeaveController extends Controller
             'faculty_id' => 'required|integer',
             'date' => 'required|date',
             'time_in' => 'required|string',
-            'time_out' => 'required|string'
+            'time_out' => 'required|string',
+            'teaching_load_class_section' => 'required|string',
         ]);
 
         $facultyId = $request->faculty_id;
@@ -188,5 +198,72 @@ class LeaveController extends Controller
         $end2 = \Carbon\Carbon::parse($end2);
 
         return $start1->lt($end2) && $start2->lt($end1);
+    }
+
+    /**
+     * Check for overlapping leave requests
+     */
+    public function checkLeaveOverlap(Request $request)
+    {
+        $request->validate([
+            'faculty_id' => 'required|integer',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date',
+            'exclude_id' => 'nullable|integer',
+        ]);
+
+        $facultyId = $request->faculty_id;
+        $startDate = $request->start_date;
+        $endDate = $request->end_date;
+        $excludeId = $request->exclude_id;
+
+        $query = Leave::where('faculty_id', $facultyId);
+        
+        if ($excludeId) {
+            $query->where('lp_id', '!=', $excludeId);
+        }
+        
+        $existingLeaves = $query->get();
+
+        foreach ($existingLeaves as $leave) {
+            // Check for exact duplicate (same start and end dates)
+            if ($startDate === $leave->leave_start_date && $endDate === $leave->leave_end_date) {
+                $formattedStart = \Carbon\Carbon::parse($leave->leave_start_date)->format('F j, Y');
+                $formattedEnd = \Carbon\Carbon::parse($leave->leave_end_date)->format('F j, Y');
+                return response()->json([
+                    'has_overlap' => true,
+                    'message' => "This instructor already has a leave request with the exact same dates ({$formattedStart} to {$formattedEnd})."
+                ]);
+            }
+            
+            // Check for date overlap
+            if ($this->datesOverlap($startDate, $endDate, $leave->leave_start_date, $leave->leave_end_date)) {
+                $formattedStart = \Carbon\Carbon::parse($leave->leave_start_date)->format('F j, Y');
+                $formattedEnd = \Carbon\Carbon::parse($leave->leave_end_date)->format('F j, Y');
+                return response()->json([
+                    'has_overlap' => true,
+                    'message' => "This instructor already has a leave request from {$formattedStart} to {$formattedEnd}."
+                ]);
+            }
+        }
+
+        return response()->json([
+            'has_overlap' => false,
+            'message' => null
+        ]);
+    }
+
+    /**
+     * Check if two date ranges overlap
+     */
+    private function datesOverlap($start1, $end1, $start2, $end2)
+    {
+        $start1Date = \Carbon\Carbon::parse($start1);
+        $end1Date = \Carbon\Carbon::parse($end1);
+        $start2Date = \Carbon\Carbon::parse($start2);
+        $end2Date = \Carbon\Carbon::parse($end2);
+        
+        // Two date ranges overlap if one starts before the other ends
+        return $start1Date->lte($end2Date) && $start2Date->lte($end1Date);
     }
 }

@@ -56,8 +56,17 @@ class FacultyController extends Controller
             // Validate that the embedding is valid JSON
             $embedding = json_decode($request->faculty_face_embedding, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
+                \Log::error("Invalid JSON format for faculty_face_embedding for faculty_id {$request->faculty_id}");
                 return response()->json(['error' => 'Invalid JSON format for faculty_face_embedding'], 400);
             }
+
+            // Validate that embedding is not empty
+            if (empty($embedding)) {
+                \Log::error("Empty embedding array for faculty_id {$request->faculty_id}");
+                return response()->json(['error' => 'Embedding array cannot be empty'], 400);
+            }
+
+            \Log::info("Updating embeddings for faculty_id {$request->faculty_id} with " . count($embedding) . " embeddings");
 
             $faculty->update([
                 'faculty_face_embedding' => $request->faculty_face_embedding
@@ -71,7 +80,12 @@ class FacultyController extends Controller
 
         } catch (\Exception $e) {
             \Log::error("Failed to update faculty embeddings: " . $e->getMessage());
-            return response()->json(['error' => 'Failed to update faculty embeddings'], 500);
+            \Log::error("Stack trace: " . $e->getTraceAsString());
+            return response()->json([
+                'error' => 'Failed to update faculty embeddings',
+                'details' => $e->getMessage(),
+                'faculty_id' => $request->faculty_id
+            ], 500);
         }
     }
 
@@ -96,114 +110,62 @@ class FacultyController extends Controller
                 ], 200);
             }
             
-            // Create a Python script to extract embeddings
-            $python_script = $this->createEmbeddingExtractionScript($faculty_id, $faculty_images);
-            $script_path = storage_path('app/temp_embedding_extraction.py');
-            file_put_contents($script_path, $python_script);
+            // Call the recognition service to update embeddings
+            $response = Http::timeout(30)->post('http://127.0.0.1:5000/update-embeddings', [
+                'faculty_id' => $faculty_id
+            ]);
             
-            // Run the Python script
-            $command = "python \"{$script_path}\" 2>&1";
-            $output = shell_exec($command);
-            
-            // Clean up the temporary script
-            unlink($script_path);
-            
-            \Log::info("Embedding extraction output for faculty_id {$faculty_id}: " . $output);
-            
-            return response()->json([
-                'message' => 'Embedding extraction completed',
-                'faculty_id' => $faculty_id,
-                'output' => $output
-            ], 200);
+            if ($response->successful()) {
+                $result = $response->json();
+                \Log::info("Embedding update triggered via recognition service for faculty_id {$faculty_id}: " . $result['message']);
+                
+                return response()->json([
+                    'message' => 'Embedding extraction triggered via recognition service',
+                    'faculty_id' => $faculty_id,
+                    'service_response' => $result
+                ], 200);
+            } else {
+                \Log::error("Recognition service returned error for faculty_id {$faculty_id}: " . $response->body());
+                return response()->json([
+                    'error' => 'Recognition service error',
+                    'faculty_id' => $faculty_id,
+                    'service_error' => $response->body()
+                ], 500);
+            }
 
         } catch (\Exception $e) {
             \Log::error("Failed to trigger embedding extraction: " . $e->getMessage());
             return response()->json(['error' => 'Failed to trigger embedding extraction: ' . $e->getMessage()], 500);
         }
     }
-    
-    // Create a Python script for embedding extraction
-    private function createEmbeddingExtractionScript($faculty_id, $image_paths)
+
+    // API endpoint to regenerate all faculty embeddings
+    public function apiRegenerateAllEmbeddings()
     {
-        $storage_path = storage_path('app/public');
-        $api_url = url('/api/faculty-embeddings');
-        
-        $script = "#!/usr/bin/env python3
-import os
-import json
-import requests
-import face_recognition
-import numpy as np
-
-# Configuration
-FACULTY_ID = {$faculty_id}
-STORAGE_PATH = r'{$storage_path}'
-API_URL = '{$api_url}'
-IMAGE_PATHS = " . json_encode($image_paths) . "
-
-def extract_embeddings():
-    print(f'Processing faculty_id {FACULTY_ID} with {len(IMAGE_PATHS)} images')
-    
-    embeddings_list = []
-    
-    for i, img_path in enumerate(IMAGE_PATHS):
-        print(f'Processing image {i+1}: {img_path}')
-        
-        # Handle both relative and absolute paths
-        if os.path.isabs(img_path):
-            full_path = img_path
-        else:
-            full_path = os.path.join(STORAGE_PATH, img_path)
-        
-        print(f'Full path: {full_path}')
-        
-        if not os.path.exists(full_path):
-            print(f'File not found: {full_path}')
-            continue
-        
-        try:
-            # Load and process image
-            img = face_recognition.load_image_file(full_path)
-            print(f'Image loaded successfully: {img.shape}')
+        try {
+            // Call the recognition service to regenerate all embeddings
+            $response = Http::timeout(60)->post('http://127.0.0.1:5000/regenerate-all-embeddings');
             
-            # Try different face detection models
-            encodings = face_recognition.face_encodings(img, model='cnn')
-            if not encodings:
-                # Fallback to HOG model if CNN fails
-                encodings = face_recognition.face_encodings(img, model='hog')
-            
-            if encodings:
-                embeddings_list.extend(encodings)
-                print(f'Found {len(encodings)} face(s) in {img_path}')
-            else:
-                print(f'No faces detected in {img_path}')
+            if ($response->successful()) {
+                $result = $response->json();
+                \Log::info("All embeddings regeneration triggered via recognition service: " . $result['message']);
                 
-        except Exception as e:
-            print(f'Error processing image {img_path}: {e}')
-    
-    if embeddings_list:
-        print(f'Extracting embeddings for faculty_id {FACULTY_ID}')
-        emb_list_json = [emb.tolist() for emb in embeddings_list]
-        payload = {'faculty_id': FACULTY_ID, 'faculty_face_embedding': json.dumps(emb_list_json)}
-        
-        try:
-            # Update embeddings via API
-            r = requests.put(API_URL, json=payload, timeout=30)
-            if r.status_code in (200, 201):
-                print(f'Successfully updated embeddings for faculty_id {FACULTY_ID} with {len(embeddings_list)} face(s)')
-                print(f'Response: {r.json()}')
-            else:
-                print(f'Failed to update embeddings: {r.status_code} - {r.text}')
-        except Exception as e:
-            print(f'Error posting embeddings: {e}')
-    else:
-        print(f'No valid faces found for faculty_id {FACULTY_ID}')
+                return response()->json([
+                    'message' => 'All faculty embeddings regeneration triggered via recognition service',
+                    'service_response' => $result
+                ], 200);
+            } else {
+                \Log::error("Recognition service returned error for all embeddings regeneration: " . $response->body());
+                return response()->json([
+                    'error' => 'Recognition service error',
+                    'service_error' => $response->body()
+                ], 500);
+            }
 
-if __name__ == '__main__':
-    extract_embeddings()
-";
-        
-        return $script;
+        } catch (\Exception $e) {
+            \Log::error("Failed to trigger all embeddings regeneration: " . $e->getMessage());
+            return response()->json(['error' => 'Failed to trigger all embeddings regeneration: ' . $e->getMessage()], 500);
+        }
     }
 
     // Store new faculty
@@ -213,7 +175,7 @@ if __name__ == '__main__':
             'faculty_fname' => 'required|string|max:255',
             'faculty_lname' => 'required|string|max:255',
             'faculty_department' => 'required|string|max:255',
-            'faculty_images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
+            'faculty_images.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
         $images = [];

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Tagoloan Community College')</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -860,10 +861,16 @@
                 </span> Dashboard
             </div>
             
-            <div class="nav-item @yield('faculty-account-active')" onclick="window.location.href='{{ route('deptHead.faculty.account.management') }}'">
+            <div class="nav-item has-dropdown @yield('files-active') @if(trim($__env->yieldContent('files-active')) == 'active') open @endif" onclick="toggleDropdown(this, 'files')">
                 <span class="nav-icon" style="display:inline-flex;align-items:center;justify-content:center;">
-                    <svg width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="7" width="16" height="10" rx="2" stroke="#fff" stroke-width="2"/><path d="M7 7V5a4 4 0 1 1 8 0v2" stroke="#fff" stroke-width="2"/></svg>
+                    <svg width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="16" height="14" rx="2" stroke="#fff" stroke-width="2"/><path d="M3 9h16" stroke="#fff" stroke-width="2"/></svg>
                 </span> Faculty Information
+            </div>
+            <div class="sub-nav" id="files-subnav" @if(trim($__env->yieldContent('files-active')) == 'active') style="display:flex;" @endif>
+                <div class="sub-nav-item @yield('faculty-account-active')" onclick="window.location.href='{{ route('deptHead.faculty.account.management') }}'">Faculty Management</div>
+                <div class="sub-nav-item @yield('teaching-load-active')" onclick="window.location.href='{{ route('deptHead.teaching.load.management') }}'">Teaching Load</div>
+                <div class="sub-nav-item @yield('subject-active')" onclick="window.location.href='{{ route('deptHead.subject.management') }}'">Subject Management</div>
+                <!-- Leave and Pass removed due to missing deptHead blade files -->
             </div>
             
             <div class="nav-item has-dropdown @yield('monitoring-active') @if(trim($__env->yieldContent('monitoring-active')) == 'active' || trim($__env->yieldContent('live-camera-active')) == 'active' || trim($__env->yieldContent('recognition-logs-active')) == 'active') open @endif" onclick="toggleDropdown(this, 'monitoring')">
@@ -878,15 +885,7 @@
                 <div class="sub-nav-item @yield('recognition-logs-active')" onclick="window.location.href='{{ route('deptHead.recognition.logs') }}'">Recognition Logs</div>
             </div>
             
-            <div class="nav-item has-dropdown @yield('files-active') @if(trim($__env->yieldContent('files-active')) == 'active') open @endif" onclick="toggleDropdown(this, 'files')">
-                <span class="nav-icon" style="display:inline-flex;align-items:center;justify-content:center;">
-                    <svg width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="16" height="14" rx="2" stroke="#fff" stroke-width="2"/><path d="M3 9h16" stroke="#fff" stroke-width="2"/></svg>
-                </span> Files
-            </div>
-            <div class="sub-nav" id="files-subnav" @if(trim($__env->yieldContent('files-active')) == 'active') style="display:flex;" @endif>
-                <div class="sub-nav-item @yield('teaching-load-active')" onclick="window.location.href='{{ route('deptHead.teaching.load.management') }}'">Teaching Load</div>
-                <!-- Leave and Pass removed due to missing deptHead blade files -->
-            </div>
+            
             
             
             <div class="nav-item @yield('reports-active')" onclick="window.location.href='{{ route('deptHead.attendance.records') }}'">
@@ -1327,6 +1326,41 @@ function showFieldError(field, message) {
             color: #333 !important;
         }
     </style>
+    <!-- Global SweetAlert2 helpers and confirm handlers -->
+    <script>
+        (function(){
+            // Helpers
+            window.SwalUtils = {
+                error: function(title, text){ if(window.Swal){ Swal.fire({ icon:'error', title: title||'Error', text: text||'', confirmButtonColor:'#8B0000' }); } },
+                info: function(title, text){ if(window.Swal){ Swal.fire({ icon:'info', title: title||'Info', text: text||'', confirmButtonColor:'#8B0000' }); } },
+                success: function(title, text){ if(window.Swal){ Swal.fire({ icon:'success', title: title||'Success', text: text||'', confirmButtonColor:'#8B0000' }); } },
+                confirmDelete: async function(opts){
+                    if(!window.Swal) return { isConfirmed:true };
+                    return await Swal.fire({
+                        icon: 'warning',
+                        title: (opts&&opts.title)||'Are you sure?',
+                        text: (opts&&opts.text)||'This action cannot be undone.',
+                        showCancelButton: true,
+                        confirmButtonText: (opts&&opts.confirmText)||'Delete',
+                        cancelButtonText: (opts&&opts.cancelText)||'Cancel',
+                        confirmButtonColor: '#ff3636',
+                        cancelButtonColor: '#800000'
+                    });
+                },
+                incompleteFields: function(){ if(window.Swal){ Swal.fire({ icon:'error', title:'Incomplete fields', text:'Please fill out Subject Code, Description, and Department.', confirmButtonColor:'#8B0000' }); } }
+            };
+
+            // Generic delete confirmation for forms tagged with data-swal-confirm="delete"
+            document.addEventListener('submit', async function(e){
+                const form = e.target;
+                if(form && form.dataset && form.dataset.swalConfirm === 'delete'){
+                    e.preventDefault();
+                    const res = await window.SwalUtils.confirmDelete({});
+                    if(res && res.isConfirmed){ form.submit(); }
+                }
+            }, true);
+        })();
+    </script>
     
     @yield('scripts')
 </body>

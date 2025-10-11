@@ -35,6 +35,7 @@ Route::post('/teaching-load-details', [TeachingLoadController::class, 'apiTeachi
 Route::get('/faculty-embeddings', [FacultyController::class, 'apiFacultyEmbeddings']);
 Route::put('/faculty-embeddings', [FacultyController::class, 'apiUpdateFacultyEmbeddings']);
 Route::post('/trigger-embedding-update', [FacultyController::class, 'apiTriggerEmbeddingUpdate']);
+Route::post('/regenerate-all-embeddings', [FacultyController::class, 'apiRegenerateAllEmbeddings']);
 
 Route::get('/attendance', [AttendanceController::class, 'index']);
 Route::post('/attendance', [AttendanceController::class, 'store']);

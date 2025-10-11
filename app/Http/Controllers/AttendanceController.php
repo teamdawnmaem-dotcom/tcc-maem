@@ -10,7 +10,7 @@ use App\Services\AttendanceRemarksService;
 class AttendanceController extends Controller
 {
 	/**
-	 * ✅ Return all attendance records for frontend (Blade fetchAttendance)
+	 *  Return all attendance records for frontend (Blade fetchAttendance)
 	 */
 	public function index()
 	{
@@ -49,6 +49,7 @@ class AttendanceController extends Controller
 			'record_time_out'  => 'nullable|string',
 			'time_duration_seconds' => 'nullable|integer|min:0',
 			'record_remarks'   => 'nullable|string',
+			'teaching_load_class_section' => 'required|string',
 		]);
 
 		// Handle N/A values for time fields

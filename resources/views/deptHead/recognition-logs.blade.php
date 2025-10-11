@@ -2,7 +2,7 @@
 
 @section('title', 'Recognition Logs - Tagoloan Community College')
 @section('recognition-logs-active', 'active')
-
+@section('monitoring-active', 'active')
 @section('styles')
 <style>
     .faculty-header {
@@ -342,16 +342,6 @@
                 <!-- Will be populated by JavaScript -->
             </select>
         </div>
-        <div class="filter-group">
-            <label class="filter-label">Distance Range</label>
-            <select class="filter-select" id="distanceFilter">
-                <option value="">All Distances</option>
-                <option value="0-0.3">Excellent (0-0.3)</option>
-                <option value="0.3-0.5">Good (0.3-0.5)</option>
-                <option value="0.5-0.7">Fair (0.5-0.7)</option>
-                <option value="0.7-1.0">Poor (0.7-1.0)</option>
-            </select>
-        </div>
     </div>
     
     <div class="filter-actions">
@@ -379,7 +369,6 @@
                 <th>Building</th>
                 <th>Instructor</th>
                 <th>Status</th>
-                <th>Distance</th>
             </tr>
         </thead>
         <tbody id="logsTableBody">
@@ -391,11 +380,10 @@
                     <td>{{ $log->building_no ?? 'N/A' }}</td>
                     <td>{{ $log->faculty_name ?? 'Unknown' }}</td>
                     <td><span class="status-{{ $log->status }}">{{ $log->status }}</span></td>
-                    <td>{{ $log->distance ? number_format($log->distance, 4) : 'N/A' }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="no-records">No records found</td>
+                    <td colspan="6" class="no-records">No records found</td>
             </tr>
             @endforelse
         </tbody>
@@ -464,7 +452,7 @@ function displayLogs(logs) {
     const tableBody = document.getElementById('logsTableBody');
     
     if (logs.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="7" class="no-records">No records found</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="6" class="no-records">No records found</td></tr>';
         return;
     }
     
@@ -480,7 +468,6 @@ function displayLogs(logs) {
             <td>${log.building_no || 'N/A'}</td>
             <td>${log.faculty_name || 'Unknown'}</td>
             <td><span class="status-${log.status}">${log.status}</span></td>
-            <td>${log.distance ? Number(log.distance).toFixed(4) : 'N/A'}</td>
         </tr>
         `;
     }).join('');
@@ -637,8 +624,7 @@ function applyFilters() {
         faculty_id: document.getElementById('instructorFilter').value,
         room_name: document.getElementById('roomFilter').value,
         building_no: document.getElementById('buildingFilter').value,
-        camera_id: document.getElementById('cameraFilter').value,
-        distance_range: document.getElementById('distanceFilter').value
+        camera_id: document.getElementById('cameraFilter').value
     };
     
     // Remove empty filters
@@ -669,7 +655,6 @@ function clearFilters() {
     document.getElementById('roomFilter').value = '';
     document.getElementById('buildingFilter').value = '';
     document.getElementById('cameraFilter').value = '';
-    document.getElementById('distanceFilter').value = '';
     document.getElementById('searchInput').value = '';
     
     // Clear current filters
@@ -719,7 +704,6 @@ function populateFiltersFromURL() {
     document.getElementById('roomFilter').value = urlParams.get('room_name') || '';
     document.getElementById('buildingFilter').value = urlParams.get('building_no') || '';
     document.getElementById('cameraFilter').value = urlParams.get('camera_id') || '';
-    document.getElementById('distanceFilter').value = urlParams.get('distance_range') || '';
     document.getElementById('searchInput').value = urlParams.get('search') || '';
     
     // Also populate currentFilters from URL parameters
@@ -731,7 +715,6 @@ function populateFiltersFromURL() {
         room_name: urlParams.get('room_name') || '',
         building_no: urlParams.get('building_no') || '',
         camera_id: urlParams.get('camera_id') || '',
-        distance_range: urlParams.get('distance_range') || '',
         search: urlParams.get('search') || ''
     };
     

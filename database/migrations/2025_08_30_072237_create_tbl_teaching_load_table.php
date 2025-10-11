@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('teaching_load_course_code', 50);
             $table->string('teaching_load_subject', 50);
             $table->string('teaching_load_day_of_week', 50);
+            $table->string('teaching_load_class_section', 50);
             $table->time('teaching_load_time_in');
             $table->time('teaching_load_time_out');
             $table->foreignId('room_no')

@@ -568,10 +568,11 @@
             <table class="teaching-load-table">
                 <thead>
                     <tr>
-                        <th>Instructor</th>
                         <th>ID</th>
+                        <th>Instructor</th>
                         <th>Course Code</th>
                         <th>Subject</th>
+                        <th>Class Section</th>
                         <th>Day</th>
                         <th>Time In</th>
                         <th>Time Out</th>
@@ -581,13 +582,33 @@
                 </thead>
                 <tbody>
                     @forelse($teachingLoads as $load)
-                        <tr data-id="{{ $load->teaching_load_id }}">
+                        @php
+                            // Parse class section to get individual components
+                            $classSection = $load->teaching_load_class_section ?? '';
+                            $department = '';
+                            $year = '';
+                            $section = '';
+                            
+                            if ($classSection) {
+                                $match = preg_match('/^([A-Z]+)\s+(\d+)([A-Z]+)$/', $classSection, $matches);
+                                if ($match) {
+                                    $department = $matches[1];
+                                    $year = $matches[2];
+                                    $section = $matches[3];
+                                }
+                            }
+                        @endphp
+                        <tr data-id="{{ $load->teaching_load_id }}" 
+                            data-department="{{ $department }}" 
+                            data-year="{{ $year }}" 
+                            data-section="{{ $section }}">
+                            <td>{{ $load->teaching_load_id }}</td>
                             <td class="faculty" data-id="{{ $load->faculty_id }}">
                                 {{ $load->faculty->faculty_fname }} {{ $load->faculty->faculty_lname }}
                             </td>
-                            <td>{{ $load->teaching_load_id }}</td>
                             <td class="course">{{ $load->teaching_load_course_code }}</td>
                             <td class="subject">{{ $load->teaching_load_subject }}</td>
+                            <td class="class-section">{{ $load->teaching_load_class_section }}</td>
                             <td class="day">{{ $load->teaching_load_day_of_week }}</td>
                             <td class="time-in">{{ \Carbon\Carbon::createFromFormat('H:i:s', $load->teaching_load_time_in)->format('g:i a') }}</td>
                             <td class="time-out">{{ \Carbon\Carbon::createFromFormat('H:i:s', $load->teaching_load_time_out)->format('g:i a') }}</td>
@@ -603,7 +624,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" style="text-align:center; font-style:italic; color:#666;">
+                            <td colspan="10" style="text-align:center; font-style:italic; color:#666;">
                                 No Registered Teaching Load found.
                             </td>
                         </tr>
@@ -637,7 +658,7 @@
                             align-items: center;
                             gap: 6px;
                             margin-bottom: 0;
-                            padding-bottom: 6px;
+                            padding-bottom: 1px;
                             position: relative;
                         }
 
@@ -705,13 +726,73 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="modal-form-group full-width">
+                        <label>Department of Class:</label>
+                        <select name="department" id="addDeptSelect">
+                            <option value="">Select Department</option>
+                            <option value="Department of Admin">Department of Admin</option>
+                            <option value="College of Information Technology">College of Information Technology</option>
+                            <option value="College of Library and Information Science">College of Library and Information Science</option>
+                            <option value="College of Criminology">College of Criminology</option>
+                            <option value="College of Arts and Sciences">College of Arts and Sciences</option>
+                            <option value="College of Hospitality Management">College of Hospitality Management</option>
+                            <option value="College of Sociology">College of Sociology</option>
+                            <option value="College of Engineering">College of Engineering</option>
+                            <option value="College of Education">College of Education</option>
+                            <option value="College of Business Administration">College of Business Administration</option>
+                        </select>
+                    </div>
+                    
+                    <div class="modal-form-group full-width">
+                        <label>Course & Subject :</label>
+                        <select name="subject_combo" id="addSubjectCombo" disabled>
+                            <option value="">Select Course & Subject</option>
+                            @foreach(($subjectsOptions ?? collect()) as $opt)
+                                <option value="{{ $opt->code }}|{{ $opt->name }}" data-code="{{ $opt->code }}" data-name="{{ $opt->name }}" data-dept="{{ $opt->department }}">{{ $opt->code }} - {{ $opt->name }}</option>
+                            @endforeach
+                        </select>
+                        <input type="hidden" name="teaching_load_course_code" id="addCourseCodeHidden">
+                        <input type="hidden" name="teaching_load_subject" id="addSubjectHidden">
+                    </div>
+                    <!-- New dropdowns: Department (short), Year level, Section -->
                     <div class="modal-form-group">
-                        <label>Course Code :</label>
-                        <input type="text" name="teaching_load_course_code">
+                        <label>Class Department:</label>
+                        <select name="tl_department_short" id="tl_department_short_add">
+                            <option value="">Select Department</option>
+                            <option value="BSIT">BSIT</option>
+                            <option value="BSEd">BSEd</option>
+                            <option value="BSBA">BSBA</option>
+                            <option value="BSHM">BSHM</option>
+                            <option value="BSCrim">BSCrim</option>
+                            <option value="ADMIN">ADMIN</option>
+                            <option value="CLIS">CLIS</option>
+                            <option value="CAS">CAS</option>
+                            <option value="SOC">SOC</option>
+                            <option value="COE">COE</option>
+                        </select>
                     </div>
                     <div class="modal-form-group">
-                        <label>Subject :</label>
-                        <input type="text" name="teaching_load_subject">
+                        <label>Year :</label>
+                        <select name="tl_year_level" id="tl_year_level_add">
+                            <option value="">Select Year</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+                    <div class="modal-form-group">
+                        <label>Section :</label>
+                        <select name="tl_section" id="tl_section_add">
+                            <option value="">Select Section</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                            <option value="E">E</option>
+                            <option value="F">F</option>
+                            <option value="G">G</option>
+                        </select>
                     </div>
                     <div class="modal-form-group">
                         <label>Day of Week :</label>
@@ -846,13 +927,72 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="modal-form-group full-width">
+                        <label>Department :</label>
+                        <select name="department" id="updateDeptSelect">
+                            <option value="">Select Department</option>
+                            <option value="Department of Admin">Department of Admin</option>
+                            <option value="College of Information Technology">College of Information Technology</option>
+                            <option value="College of Library and Information Science">College of Library and Information Science</option>
+                            <option value="College of Criminology">College of Criminology</option>
+                            <option value="College of Arts and Sciences">College of Arts and Sciences</option>
+                            <option value="College of Hospitality Management">College of Hospitality Management</option>
+                            <option value="College of Sociology">College of Sociology</option>
+                            <option value="College of Engineering">College of Engineering</option>
+                            <option value="College of Education">College of Education</option>
+                            <option value="College of Business Administration">College of Business Administration</option>
+                        </select>
+                    </div>
+                    <div class="modal-form-group full-width">
+                        <label>Course & Subject :</label>
+                        <select name="subject_combo" id="updateSubjectCombo">
+                            <option value="">Select Course & Subject</option>
+                            @foreach(($subjectsOptions ?? collect()) as $opt)
+                                <option value="{{ $opt->code }}|{{ $opt->name }}" data-code="{{ $opt->code }}" data-name="{{ $opt->name }}">{{ $opt->code }} - {{ $opt->name }}</option>
+                            @endforeach
+                        </select>
+                        <input type="hidden" name="teaching_load_course_code" id="updateCourseCodeHidden">
+                        <input type="hidden" name="teaching_load_subject" id="updateSubjectHidden">
+                    </div>
+                    <!-- New dropdowns: Department (short), Year level, Section -->
                     <div class="modal-form-group">
-                        <label>Course Code :</label>
-                        <input type="text" name="teaching_load_course_code">
+                        <label>Department :</label>
+                        <select name="tl_department_short" id="tl_department_short_update">
+                            <option value="">Select Department</option>
+                            <option value="BSIT">BSIT</option>
+                            <option value="BSEd">BSEd</option>
+                            <option value="BSBA">BSBA</option>
+                            <option value="BSHM">BSHM</option>
+                            <option value="BSCrim">BSCrim</option>
+                            <option value="ADMIN">ADMIN</option>
+                            <option value="CLIS">CLIS</option>
+                            <option value="CAS">CAS</option>
+                            <option value="SOC">SOC</option>
+                            <option value="COE">COE</option>
+                        </select>
                     </div>
                     <div class="modal-form-group">
-                        <label>Subject :</label>
-                        <input type="text" name="teaching_load_subject">
+                        <label>Year :</label>
+                        <select name="tl_year_level" id="tl_year_level_update">
+                            <option value="">Select Year</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+                    <div class="modal-form-group">
+                        <label>Section :</label>
+                        <select name="tl_section" id="tl_section_update">
+                        <option value="">Select Section</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                            <option value="E">E</option>
+                            <option value="F">F</option>
+                            <option value="G">G</option>
+                        </select>
                     </div>
                     <div class="modal-form-group">
                         <label>Day of Week :</label>
@@ -923,6 +1063,13 @@
     <script>
         function openModal(id) {
             document.getElementById(id).style.display = 'flex';
+            
+            // Initialize button states when opening modals
+            if (id === 'addTeachingLoadModal') {
+                updateAddButtonState(false); // Start with disabled state
+            } else if (id === 'updateTeachingLoadModal') {
+                updateUpdateButtonState(false); // Start with disabled state
+            }
         }
 
         function resetModalForm(modalId) {
@@ -971,8 +1118,29 @@
             const row = document.querySelector(`tr[data-id='${id}']`);
             const form = document.getElementById('updateForm');
             form.action = `/deptHead/teaching-load/${id}`;
-            form.querySelector('[name="teaching_load_course_code"]').value = row.querySelector('.course').innerText;
-            form.querySelector('[name="teaching_load_subject"]').value = row.querySelector('.subject').innerText;
+            
+            // Set course & subject from row
+            const courseCode = row.querySelector('.course').innerText;
+            const subjectName = row.querySelector('.subject').innerText;
+            form.querySelector('[name="teaching_load_course_code"]').value = courseCode;
+            form.querySelector('[name="teaching_load_subject"]').value = subjectName;
+            const combo = document.getElementById('updateSubjectCombo');
+            if (combo) {
+                const val = `${courseCode}|${subjectName}`;
+                const opt = Array.from(combo.options).find(o => o.value === val);
+                combo.value = opt ? val : '';
+            }
+            
+            // Get individual department, year, and section from data attributes
+            const department = row.dataset.department || '';
+            const year = row.dataset.year || '';
+            const section = row.dataset.section || '';
+            
+            // Set the form fields with the individual values
+            form.querySelector('[name="tl_department_short"]').value = department;
+            form.querySelector('[name="tl_year_level"]').value = year;
+            form.querySelector('[name="tl_section"]').value = section;
+            
             form.querySelector('[name="teaching_load_day_of_week"]').value = row.querySelector('.day').innerText;
             // Convert readable time back to 24-hour format for form inputs
             const timeInText = row.querySelector('.time-in').innerText;
@@ -987,6 +1155,11 @@
             form.querySelector('[name="room_no"]').value = row.querySelector('.room').innerText;
             form.querySelector('[name="faculty_id"]').value = row.querySelector('.faculty').dataset.id;
             openModal('updateTeachingLoadModal');
+            
+            // Validate the pre-filled form and update button state
+            setTimeout(() => {
+                validateUpdate();
+            }, 100);
         }
 
         // Delete Modal
@@ -1057,7 +1230,7 @@
                     noResultsRow = document.createElement('tr');
                     noResultsRow.classList.add('no-results');
                     noResultsRow.innerHTML =
-                        `<td colspan="9" style="text-align:center; padding:20px; color:#999; font-style:italic;">No results found</td>`;
+                        `<td colspan="10" style="text-align:center; padding:20px; color:#999; font-style:italic;">No results found</td>`;
                     tbody.appendChild(noResultsRow);
                 }
             } else {
@@ -1077,9 +1250,116 @@
         });
 
         // =========================
+        // Time Overlap Validation
+        // =========================
+        function checkTimeOverlap(dayOfWeek, timeIn, timeOut, roomNo, excludeId = null) {
+            // This will be called by the backend validation, but we can add basic client-side checks
+            if (!dayOfWeek || !timeIn || !timeOut || !roomNo) {
+                return { hasOverlap: false };
+            }
+            
+            // Basic client-side validation: time in must be before time out
+            if (timeIn >= timeOut) {
+                return { 
+                    hasOverlap: true, 
+                    message: 'Time out must be later than time in.' 
+                };
+            }
+            
+            return { hasOverlap: false };
+        }
+
+        // Real-time overlap checking with existing teaching loads
+        function checkRealTimeOverlap(dayOfWeek, timeIn, timeOut, roomNo, excludeId = null) {
+            if (!dayOfWeek || !timeIn || !timeOut || !roomNo) {
+                return { hasOverlap: false, message: '' };
+            }
+            
+            // Get all existing teaching loads from the table
+            const tableRows = document.querySelectorAll('.teaching-load-table tbody tr');
+            let conflictMessage = '';
+            
+            for (let row of tableRows) {
+                // Skip if this is the row we're updating (excludeId)
+                if (excludeId && row.dataset.id === excludeId.toString()) {
+                    continue;
+                }
+                
+                const rowDay = row.querySelector('.day')?.textContent?.trim();
+                const rowRoom = row.querySelector('.room')?.textContent?.trim();
+                const rowTimeIn = row.querySelector('.time-in')?.textContent?.trim();
+                const rowTimeOut = row.querySelector('.time-out')?.textContent?.trim();
+                const rowCourse = row.querySelector('.course')?.textContent?.trim();
+                
+                // Check if same day and room
+                if (rowDay === dayOfWeek && rowRoom === roomNo) {
+                    // Convert times to comparable format
+                    const newStart = convertTimeToMinutes(timeIn);
+                    const newEnd = convertTimeToMinutes(timeOut);
+                    const existingStart = convertTimeToMinutes(rowTimeIn);
+                    const existingEnd = convertTimeToMinutes(rowTimeOut);
+                    
+                    // Check for overlap: newStart < existingEnd AND existingStart < newEnd
+                    if (newStart < existingEnd && existingStart < newEnd) {
+                        conflictMessage = `Time conflict with existing schedule: ${rowCourse} (${rowTimeIn} - ${rowTimeOut})`;
+                        return { hasOverlap: true, message: conflictMessage };
+                    }
+                }
+            }
+            
+            return { hasOverlap: false, message: '' };
+        }
+
+        // Convert time string to minutes for comparison
+        function convertTimeToMinutes(timeStr) {
+            if (!timeStr) return 0;
+            
+            // Handle different time formats
+            let time = timeStr.toLowerCase().trim();
+            
+            // If it's in 12-hour format (e.g., "1:30pm")
+            if (time.includes('am') || time.includes('pm')) {
+                const match = time.match(/(\d{1,2}):(\d{2})\s*(am|pm)/);
+                if (match) {
+                    let hours = parseInt(match[1]);
+                    const minutes = parseInt(match[2]);
+                    const period = match[3];
+                    
+                    if (period === 'pm' && hours !== 12) hours += 12;
+                    if (period === 'am' && hours === 12) hours = 0;
+                    
+                    return hours * 60 + minutes;
+                }
+            }
+            
+            // If it's in 24-hour format (e.g., "13:30")
+            const match = time.match(/(\d{1,2}):(\d{2})/);
+            if (match) {
+                const hours = parseInt(match[1]);
+                const minutes = parseInt(match[2]);
+                return hours * 60 + minutes;
+            }
+            
+            return 0;
+        }
+
+        // =========================
         // Client-side Validation (Teaching Load forms)
         // =========================
         (function() {
+            // Ensure SweetAlert2 is available
+            (function ensureSwal() {
+                if (window.Swal) return;
+                var s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+                document.head.appendChild(s);
+            })();
+
+            function showError(title, text) {
+                if (!window.Swal) return;
+                Swal.fire({ icon: 'error', title: title || 'Error', text: text || '', confirmButtonColor: '#8B0000' });
+            }
+
             function trim(v) {
                 return (v || '').trim();
             }
@@ -1114,14 +1394,53 @@
                 m.textContent = show ? (msg || '') : '';
             }
 
+            function updateAddButtonState(isValid) {
+                const addButton = document.querySelector('#addTeachingLoadModal .modal-btn.add');
+                if (addButton) {
+                    if (isValid) {
+                        addButton.disabled = false;
+                        addButton.style.opacity = '1';
+                        addButton.style.cursor = 'pointer';
+                        addButton.textContent = 'Add';
+                    } else {
+                        addButton.disabled = true;
+                        addButton.style.opacity = '0.6';
+                        addButton.style.cursor = 'not-allowed';
+                        addButton.textContent = 'Add';
+                    }
+                }
+            }
+
+            function updateUpdateButtonState(isValid) {
+                const updateButton = document.querySelector('#updateTeachingLoadModal .modal-btn.update');
+                if (updateButton) {
+                    if (isValid) {
+                        updateButton.disabled = false;
+                        updateButton.style.opacity = '1';
+                        updateButton.style.cursor = 'pointer';
+                        updateButton.textContent = 'Update';
+                    } else {
+                        updateButton.disabled = true;
+                        updateButton.style.opacity = '0.6';
+                        updateButton.style.cursor = 'not-allowed';
+                        updateButton.textContent = 'Add';
+                    }
+                }
+            }
+
             function validateAdd() {
                 const course = document.querySelector("#addTeachingLoadModal [name='teaching_load_course_code']");
                 const subject = document.querySelector("#addTeachingLoadModal [name='teaching_load_subject']");
+                const combo = document.getElementById('addSubjectCombo');
                 const day = document.querySelector("#addTeachingLoadModal [name='teaching_load_day_of_week']");
                 const tin = document.querySelector("#addTeachingLoadModal [name='teaching_load_time_in']");
                 const tout = document.querySelector("#addTeachingLoadModal [name='teaching_load_time_out']");
                 const room = document.querySelector("#addTeachingLoadModal [name='room_no']");
                 const instr = document.querySelector("#addTeachingLoadModal [name='faculty_id']");
+                const deptShort = document.querySelector("#addTeachingLoadModal [name='tl_department_short']");
+                const yearLevel = document.querySelector("#addTeachingLoadModal [name='tl_year_level']");
+                const section = document.querySelector("#addTeachingLoadModal [name='tl_section']");
+                const vCombo = isNotEmpty(combo && combo.value);
                 const vCourse = isNotEmpty(course && course.value) && minLen(course && course.value, 2);
                 const vSubject = isNotEmpty(subject && subject.value) && minLen(subject && subject.value, 2);
                 const vDay = isNotEmpty(day && day.value);
@@ -1129,6 +1448,9 @@
                 const vTout = isNotEmpty(tout && tout.value);
                 const vRoom = isNotEmpty(room && room.value);
                 const vInstr = isNotEmpty(instr && instr.value);
+                const vDeptShort = isNotEmpty(deptShort && deptShort.value);
+                const vYearLevel = isNotEmpty(yearLevel && yearLevel.value);
+                const vSection = isNotEmpty(section && section.value);
                 
                 // Time validation logic: time in must be earlier than time out
                 let timeLogicOk = true;
@@ -1147,10 +1469,21 @@
                     }
                 }
                 
-                setValidity(course, vCourse);
-                setMessage(course, vCourse ? '' : 'Course code is required');
-                setValidity(subject, vSubject);
-                setMessage(subject, vSubject ? '' : 'Subject is required');
+                // Check for potential time overlap (basic client-side check)
+                let overlapOk = true;
+                if (vDay && vTin && vTout && vRoom && timeLogicOk) {
+                    const overlapCheck = checkRealTimeOverlap(day.value, tin.value, tout.value, room.value);
+                    if (overlapCheck.hasOverlap) {
+                        overlapOk = false;
+                        if (timeLogicBox) {
+                            timeLogicBox.textContent = overlapCheck.message;
+                            timeLogicBox.style.display = 'block';
+                        }
+                    }
+                }
+                
+                setValidity(combo, vCombo);
+                setMessage(combo, vCombo ? '' : 'Course & Subject is required');
                 setValidity(day, vDay);
                 setMessage(day, vDay ? '' : 'Day is required');
                 setValidity(tin, vTin);
@@ -1161,18 +1494,33 @@
                 setMessage(room, vRoom ? '' : 'Room is required');
                 setValidity(instr, vInstr);
                 setMessage(instr, vInstr ? '' : 'Instructor is required');
-                return vCourse && vSubject && vDay && vTin && vTout && vRoom && vInstr && timeLogicOk;
+                setValidity(deptShort, vDeptShort);
+                setMessage(deptShort, vDeptShort ? '' : 'Department is required');
+                setValidity(yearLevel, vYearLevel);
+                setMessage(yearLevel, vYearLevel ? '' : 'Year level is required');
+                setValidity(section, vSection);
+                setMessage(section, vSection ? '' : 'Section is required');
+                
+                const isValid = vCombo && vCourse && vSubject && vDay && vTin && vTout && vRoom && vInstr && vDeptShort && vYearLevel && vSection && timeLogicOk && overlapOk;
+                updateAddButtonState(isValid);
+                
+                return isValid;
             }
 
             function validateUpdate() {
                 const form = document.getElementById('updateForm');
                 const course = form.querySelector("[name='teaching_load_course_code']");
                 const subject = form.querySelector("[name='teaching_load_subject']");
+                const combo = document.getElementById('updateSubjectCombo');
                 const day = form.querySelector("[name='teaching_load_day_of_week']");
                 const tin = form.querySelector("[name='teaching_load_time_in']");
                 const tout = form.querySelector("[name='teaching_load_time_out']");
                 const room = form.querySelector("[name='room_no']");
                 const instr = form.querySelector("[name='faculty_id']");
+                const deptShort = form.querySelector("[name='tl_department_short']");
+                const yearLevel = form.querySelector("[name='tl_year_level']");
+                const section = form.querySelector("[name='tl_section']");
+                const vCombo = isNotEmpty(combo && combo.value);
                 const vCourse = isNotEmpty(course && course.value) && minLen(course && course.value, 2);
                 const vSubject = isNotEmpty(subject && subject.value) && minLen(subject && subject.value, 2);
                 const vDay = isNotEmpty(day && day.value);
@@ -1180,6 +1528,9 @@
                 const vTout = isNotEmpty(tout && tout.value);
                 const vRoom = isNotEmpty(room && room.value);
                 const vInstr = isNotEmpty(instr && instr.value);
+                const vDeptShort = isNotEmpty(deptShort && deptShort.value);
+                const vYearLevel = isNotEmpty(yearLevel && yearLevel.value);
+                const vSection = isNotEmpty(section && section.value);
                 
                 // Time validation logic: time in must be earlier than time out
                 let timeLogicOk = true;
@@ -1198,10 +1549,24 @@
                     }
                 }
                 
-                setValidity(course, vCourse);
-                setMessage(course, vCourse ? '' : 'Course code is required');
-                setValidity(subject, vSubject);
-                setMessage(subject, vSubject ? '' : 'Subject is required');
+                // Check for potential time overlap (basic client-side check)
+                let overlapOk = true;
+                if (vDay && vTin && vTout && vRoom && timeLogicOk) {
+                    // Get the current teaching load ID being edited
+                    const form = document.getElementById('updateForm');
+                    const currentId = form ? form.action.split('/').pop() : null;
+                    const overlapCheck = checkRealTimeOverlap(day.value, tin.value, tout.value, room.value, currentId);
+                    if (overlapCheck.hasOverlap) {
+                        overlapOk = false;
+                        if (timeLogicBox) {
+                            timeLogicBox.textContent = overlapCheck.message;
+                            timeLogicBox.style.display = 'block';
+                        }
+                    }
+                }
+                
+                setValidity(combo, vCombo);
+                setMessage(combo, vCombo ? '' : 'Course & Subject is required');
                 setValidity(day, vDay);
                 setMessage(day, vDay ? '' : 'Day is required');
                 setValidity(tin, vTin);
@@ -1212,12 +1577,22 @@
                 setMessage(room, vRoom ? '' : 'Room is required');
                 setValidity(instr, vInstr);
                 setMessage(instr, vInstr ? '' : 'Instructor is required');
-                return vCourse && vSubject && vDay && vTin && vTout && vRoom && vInstr && timeLogicOk;
+                setValidity(deptShort, vDeptShort);
+                setMessage(deptShort, vDeptShort ? '' : 'Department is required');
+                setValidity(yearLevel, vYearLevel);
+                setMessage(yearLevel, vYearLevel ? '' : 'Year level is required');
+                setValidity(section, vSection);
+                setMessage(section, vSection ? '' : 'Section is required');
+                
+                const isValid = vCombo && vCourse && vSubject && vDay && vTin && vTout && vRoom && vInstr && vDeptShort && vYearLevel && vSection && timeLogicOk && overlapOk;
+                updateUpdateButtonState(isValid);
+                
+                return isValid;
             }
 
             // Real-time bindings
-            ['teaching_load_course_code', 'teaching_load_subject', 'teaching_load_day_of_week', 'teaching_load_time_in',
-                'teaching_load_time_out', 'room_no', 'faculty_id'
+            ['subject_combo', 'teaching_load_course_code', 'teaching_load_subject', 'teaching_load_day_of_week', 'teaching_load_time_in',
+                'teaching_load_time_out', 'room_no', 'faculty_id', 'tl_department_short', 'tl_year_level', 'tl_section'
             ].forEach(name => {
                 const el = document.querySelector(`#addTeachingLoadModal [name='${name}']`);
                 if (!el) return;
@@ -1228,8 +1603,8 @@
                     validateAdd();
                 });
             });
-            ['teaching_load_course_code', 'teaching_load_subject', 'teaching_load_day_of_week', 'teaching_load_time_in',
-                'teaching_load_time_out', 'room_no', 'faculty_id'
+            ['subject_combo', 'teaching_load_course_code', 'teaching_load_subject', 'teaching_load_day_of_week', 'teaching_load_time_in',
+                'teaching_load_time_out', 'room_no', 'faculty_id', 'tl_department_short', 'tl_year_level', 'tl_section'
             ].forEach(name => {
                 const el = document.querySelector(`#updateTeachingLoadModal [name='${name}']`);
                 if (!el) return;
@@ -1248,6 +1623,7 @@
                         window.tlSubmitAttempt = true;
                         if (!validateAdd()) {
                             e.preventDefault();
+                            showError('Validation Error', 'Please fix all errors before submitting. Check for time conflicts and complete all required fields.');
                         }
                     });
                 }
@@ -1257,10 +1633,110 @@
                         window.tlSubmitAttempt = true;
                         if (!validateUpdate()) {
                             e.preventDefault();
+                            showError('Validation Error', 'Please fix all errors before submitting. Check for time conflicts and complete all required fields.');
                         }
                     });
                 }
             })();
+        })();
+
+        // Sync course/subject hidden inputs when selecting combo
+        (function(){
+            const addCombo = document.getElementById('addSubjectCombo');
+            const addCode = document.getElementById('addCourseCodeHidden');
+            const addSubj = document.getElementById('addSubjectHidden');
+            function syncAdd(){
+                const val = (addCombo && addCombo.value) || '';
+                if(!val){ addCode.value=''; addSubj.value=''; return; }
+                const parts = val.split('|');
+                addCode.value = parts[0] || '';
+                addSubj.value = parts[1] || '';
+            }
+            if(addCombo){ addCombo.addEventListener('change', syncAdd); }
+
+            const updCombo = document.getElementById('updateSubjectCombo');
+            const updCode = document.getElementById('updateCourseCodeHidden');
+            const updSubj = document.getElementById('updateSubjectHidden');
+            function syncUpd(){
+                const val = (updCombo && updCombo.value) || '';
+                if(!val){ updCode.value=''; updSubj.value=''; return; }
+                const parts = val.split('|');
+                updCode.value = parts[0] || '';
+                updSubj.value = parts[1] || '';
+            }
+            if(updCombo){ updCombo.addEventListener('change', syncUpd); }
+        })();
+
+        // Dynamic subject options based on selected department (Add modal)
+        (function(){
+            // Department of Class controls filtering; Class Department is record-only
+            const deptSelect = document.getElementById('addDeptSelect');
+            const subjectCombo = document.getElementById('addSubjectCombo');
+            const allOptions = subjectCombo ? Array.from(subjectCombo.querySelectorAll('option')).slice(1) : [];
+
+            // Map legacy full department names to short codes used by teaching load
+            const departmentAliasToShort = {
+                'college of information technology': 'BSIT',
+                'college of education': 'BSEd',
+                'college of business administration': 'BSBA',
+                'college of hospitality management': 'BSHM',
+                'college of criminology': 'BSCrim',
+                'department of admin': 'ADMIN',
+                'college of library and information science': 'CLIS',
+                'college of arts and sciences': 'CAS',
+                'college of sociology': 'SOC',
+                'college of engineering': 'COE',
+                // Direct mapping for new format
+                'bsit': 'BSIT',
+                'bsed': 'BSEd',
+                'bsba': 'BSBA',
+                'bshm': 'BSHM',
+                'bscrim': 'BSCrim',
+                'admin': 'ADMIN',
+                'clis': 'CLIS',
+                'cas': 'CAS',
+                'soc': 'SOC',
+                'coe': 'COE'
+            };
+
+            function toShortCode(value){
+                if(!value) return '';
+                const v = String(value).trim();
+                if (/^(BSIT|BSEd|BSBA|BSHM|BSCrim|ADMIN|CLIS|CAS|SOC|COE)$/i.test(v)) return v.toUpperCase();
+                const mapped = departmentAliasToShort[v.toLowerCase()];
+                return mapped || v; // fallback to original if no mapping
+            }
+
+            function filterSubjects(){
+                const deptShort = toShortCode(deptSelect && deptSelect.value);
+                if(!subjectCombo) return;
+                subjectCombo.innerHTML = '<option value="">Select Course & Subject</option>';
+                subjectCombo.disabled = !deptShort;
+                if(!deptShort) return;
+                const matches = allOptions.filter(o => toShortCode(o.getAttribute('data-dept')) === deptShort);
+                if(matches.length === 0){
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = 'No subjects found for selected department';
+                    opt.disabled = true;
+                    subjectCombo.appendChild(opt);
+                    return;
+                }
+                matches.forEach(o => subjectCombo.appendChild(o.cloneNode(true)));
+            }
+            function handleDeptChange(){
+                // clear any previously selected subject and hidden fields
+                if(subjectCombo){ subjectCombo.value=''; }
+                const addCode = document.getElementById('addCourseCodeHidden');
+                const addSubj = document.getElementById('addSubjectHidden');
+                if(addCode) addCode.value = '';
+                if(addSubj) addSubj.value = '';
+                filterSubjects();
+            }
+
+            if(deptSelect){ deptSelect.addEventListener('change', handleDeptChange); }
+            // initialize
+            filterSubjects();
         })();
     </script>
 @endsection

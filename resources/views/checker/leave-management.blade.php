@@ -645,6 +645,7 @@
                     <div class="modal-form-group"><label>Slip Image</label><input type="file" name="lp_image"
                             accept="image/*" id="edit_lp_image">
                         <div class="validation-message" id="edit_lp_image_error"></div>
+                        
                     </div>
 
                     <div class="logic-error"
@@ -719,6 +720,14 @@
 
         function openModal(id) {
             document.getElementById(id).style.display = 'flex';
+            // Initialize button states
+            if (id === 'addModal') {
+                updateAddButtonState(false);
+                validateAddLeave();
+            } else if (id === 'editModal') {
+                updateEditButtonState(false);
+                validateEditLeave();
+            }
         }
 
         function closeModal(id) {
@@ -819,6 +828,37 @@
         }
 
         // =========================
+        // Button state management functions
+        // =========================
+        function updateAddButtonState(isValid) {
+            const addButton = document.querySelector('#addModal .modal-btn.add');
+            if (addButton) {
+                addButton.disabled = !isValid;
+                if (isValid) {
+                    addButton.style.opacity = '1';
+                    addButton.style.cursor = 'pointer';
+                } else {
+                    addButton.style.opacity = '0.6';
+                    addButton.style.cursor = 'not-allowed';
+                }
+            }
+        }
+
+        function updateEditButtonState(isValid) {
+            const editButton = document.querySelector('#editModal .modal-btn.add');
+            if (editButton) {
+                editButton.disabled = !isValid;
+                if (isValid) {
+                    editButton.style.opacity = '1';
+                    editButton.style.cursor = 'pointer';
+                } else {
+                    editButton.style.opacity = '0.6';
+                    editButton.style.cursor = 'not-allowed';
+                }
+            }
+        }
+
+        // =========================
         // Show-once-touched validation (Leave)
         // =========================
         function trim(v) {
@@ -865,66 +905,120 @@
             m.textContent = show ? (msg || '') : '';
         }
 
-        // Function to check for overlapping leave requests
-        function checkLeaveOverlap(facultyId, startDate, endDate, excludeId = null) {
-            const rows = document.querySelectorAll('.teaching-load-table tbody tr');
+        // Real-time leave overlap checking functions
+        async function checkLeaveOverlapAdd() {
+            const facultySelect = document.querySelector('#addModal [name="faculty_id"]');
+            const startDateField = document.querySelector('#addModal [name="leave_start_date"]');
+            const endDateField = document.querySelector('#addModal [name="leave_end_date"]');
+            const logicBox = document.querySelector('#addModal .logic-error');
             
-            for (let row of rows) {
-                // Skip empty rows and no-results rows
-                if (row.classList.contains('no-results') || row.cells.length < 7) continue;
-                
-                const cells = row.cells;
-                const facultyName = cells[0].textContent.trim();
-                const rowStartDate = cells[3].textContent.trim();
-                const rowEndDate = cells[4].textContent.trim();
-                
-                // Skip if not the same faculty
-                if (facultyName !== getLeaveFacultyNameById(facultyId)) continue;
-                
-                // Skip if this is the record being edited
-                if (excludeId) {
-                    const editBtn = row.querySelector('.edit-btn');
-                    if (editBtn && editBtn.getAttribute('data-id') === excludeId) continue;
+            if (!facultySelect || !startDateField || !endDateField || 
+                !facultySelect.value || !startDateField.value || !endDateField.value) {
+                if (logicBox) {
+                    // Only clear if the current message is about leave overlap
+                    const currentMessage = logicBox.textContent;
+                    if (currentMessage && currentMessage.includes('already has a leave request')) {
+                        logicBox.style.display = 'none';
+                        logicBox.textContent = '';
+                    }
                 }
-                
-                // Check for exact duplicate (same start and end dates)
-                if (startDate === rowStartDate && endDate === rowEndDate) {
-                    return `This faculty already has a leave request with the exact same dates (${rowStartDate} to ${rowEndDate}).`;
-                }
-                
-                // Check for date overlap
-                if (datesOverlap(startDate, endDate, rowStartDate, rowEndDate)) {
-                    return `This faculty already has a leave request from ${rowStartDate} to ${rowEndDate}.`;
-                }
+                return;
             }
+
+            try {
+                const response = await fetch('/checker/leaves/check-leave-overlap', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        faculty_id: facultySelect.value,
+                        start_date: startDateField.value,
+                        end_date: endDateField.value
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (logicBox) {
+                    if (data.has_overlap) {
+                        logicBox.textContent = data.message;
+                        logicBox.style.display = 'block';
+                    } else {
+                        // Only clear if the current message is about leave overlap
+                        const currentMessage = logicBox.textContent;
+                        if (currentMessage && currentMessage.includes('already has a leave request')) {
+                            logicBox.style.display = 'none';
+                            logicBox.textContent = '';
+                        }
+                    }
+                }
+                
+                // Trigger validation after leave overlap check
+                validateAddLeave();
+            } catch (error) {
+                console.error('Error checking leave overlap:', error);
+            }
+        }
+
+        async function checkLeaveOverlapEdit() {
+            const facultySelect = document.querySelector('#edit_faculty_id');
+            const startDateField = document.querySelector('#edit_leave_start_date');
+            const endDateField = document.querySelector('#edit_leave_end_date');
+            const logicBox = document.querySelector('#editModal .logic-error');
+            const editForm = document.getElementById('editForm');
+            const currentId = editForm ? editForm.action.split('/').pop() : null;
             
-            return null;
-        }
+            if (!facultySelect || !startDateField || !endDateField || 
+                !facultySelect.value || !startDateField.value || !endDateField.value) {
+                if (logicBox) {
+                    // Only clear if the current message is about leave overlap
+                    const currentMessage = logicBox.textContent;
+                    if (currentMessage && currentMessage.includes('already has a leave request')) {
+                        logicBox.style.display = 'none';
+                        logicBox.textContent = '';
+                    }
+                }
+                return;
+            }
 
-        // Function to check if two date ranges overlap
-        function datesOverlap(start1, end1, start2, end2) {
-            const start1Date = new Date(start1);
-            const end1Date = new Date(end1);
-            const start2Date = new Date(start2);
-            const end2Date = new Date(end2);
-            
-            // Two date ranges overlap if one starts before the other ends
-            return start1Date <= end2Date && start2Date <= end1Date;
-        }
+            try {
+                const response = await fetch('/checker/leaves/check-leave-overlap', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        faculty_id: facultySelect.value,
+                        start_date: startDateField.value,
+                        end_date: endDateField.value,
+                        exclude_id: currentId
+                    })
+                });
 
-        // Function to get faculty name by ID for leave management
-        function getLeaveFacultyNameById(facultyId) {
-            const facultySelect = document.querySelector('#facultySelect, #edit_faculty_id');
-            const option = facultySelect.querySelector(`option[value="${facultyId}"]`);
-            return option ? option.textContent.trim() : '';
-        }
-
-        // Function to check for conflicts with pass slips on overlapping dates
-        function checkPassConflict(facultyId, startDate, endDate) {
-            // This would need to check the pass management table, but since we're on the leave management page,
-            // we'll just return null for now. In a real implementation, you might want to make an AJAX call
-            // to check for pass conflicts or include pass data in the leave management page.
-            return null;
+                const data = await response.json();
+                
+                if (logicBox) {
+                    if (data.has_overlap) {
+                        logicBox.textContent = data.message;
+                        logicBox.style.display = 'block';
+                    } else {
+                        // Only clear if the current message is about leave overlap
+                        const currentMessage = logicBox.textContent;
+                        if (currentMessage && currentMessage.includes('already has a leave request')) {
+                            logicBox.style.display = 'none';
+                            logicBox.textContent = '';
+                        }
+                    }
+                }
+                
+                // Trigger validation after leave overlap check
+                validateEditLeave();
+            } catch (error) {
+                console.error('Error checking leave overlap:', error);
+            }
         }
 
         function validateAddLeave() {
@@ -966,26 +1060,20 @@
                 }
             }
             
-            // Check for overlapping leave requests
+            // Check for leave overlaps (synchronous check like date validation)
             if (logicOk && vFac && vSdt && vEdt) {
-                const overlapError = checkLeaveOverlap(fac.value, sdt.value, edt.value);
-                if (overlapError) {
+                const conflictMessage = logicBox ? logicBox.textContent : '';
+                if (conflictMessage && conflictMessage.includes('already has a leave request')) {
                     logicOk = false;
                     if (logicBox) {
-                        logicBox.textContent = overlapError;
+                        logicBox.textContent = conflictMessage;
                         logicBox.style.display = 'block';
                     }
-                }
-                
-                // Check for conflicts with pass slips on overlapping dates
-                if (logicOk) {
-                    const passConflict = checkPassConflict(fac.value, sdt.value, edt.value);
-                    if (passConflict) {
-                        logicOk = false;
-                        if (logicBox) {
-                            logicBox.textContent = passConflict;
-                            logicBox.style.display = 'block';
-                        }
+                } else {
+                    // Clear overlap messages if no longer valid
+                    if (logicBox && logicBox.textContent.includes('already has a leave request')) {
+                        logicBox.style.display = 'none';
+                        logicBox.textContent = '';
                     }
                 }
             }
@@ -1000,7 +1088,10 @@
             setMessage(edt, vEdt ? '' : 'End date is required');
             setValidity(img, vImg);
             setMessage(img, vImg ? '' : (isNotEmpty(img && img.value) ? 'Image size must be less than 2MB' : 'Slip image is required'));
-            return vFac && vPur && vSdt && vEdt && vImg && logicOk;
+            
+            const isValid = vFac && vPur && vSdt && vEdt && vImg && logicOk;
+            updateAddButtonState(isValid);
+            return isValid;
         }
 
         function validateEditLeave() {
@@ -1008,10 +1099,12 @@
             const pur = document.getElementById('edit_lp_purpose');
             const sdt = document.getElementById('edit_leave_start_date');
             const edt = document.getElementById('edit_leave_end_date');
+            const img = document.getElementById('edit_lp_image');
             const vFac = isNotEmpty(fac && fac.value);
             const vPur = isNotEmpty(pur && pur.value);
             const vSdt = isNotEmpty(sdt && sdt.value);
             const vEdt = isNotEmpty(edt && edt.value);
+            const vImg = !img || !img.files || img.files.length === 0 || validateImageSize(img);
             // Logic: start date <= end date; start not in past
             let logicOk = true;
             const logicBox = document.querySelector('#editModal .logic-error');
@@ -1040,28 +1133,20 @@
                 }
             }
             
-            // Check for overlapping leave requests (excluding current record being edited)
+            // Check for leave overlaps (synchronous check like date validation)
             if (logicOk && vFac && vSdt && vEdt) {
-                const editForm = document.getElementById('editForm');
-                const currentId = editForm.action.split('/').pop();
-                const overlapError = checkLeaveOverlap(fac.value, sdt.value, edt.value, currentId);
-                if (overlapError) {
+                const conflictMessage = logicBox ? logicBox.textContent : '';
+                if (conflictMessage && conflictMessage.includes('already has a leave request')) {
                     logicOk = false;
                     if (logicBox) {
-                        logicBox.textContent = overlapError;
+                        logicBox.textContent = conflictMessage;
                         logicBox.style.display = 'block';
                     }
-                }
-                
-                // Check for conflicts with pass slips on overlapping dates
-                if (logicOk) {
-                    const passConflict = checkPassConflict(fac.value, sdt.value, edt.value);
-                    if (passConflict) {
-                        logicOk = false;
-                        if (logicBox) {
-                            logicBox.textContent = passConflict;
-                            logicBox.style.display = 'block';
-                        }
+                } else {
+                    // Clear overlap messages if no longer valid
+                    if (logicBox && logicBox.textContent.includes('already has a leave request')) {
+                        logicBox.style.display = 'none';
+                        logicBox.textContent = '';
                     }
                 }
             }
@@ -1074,24 +1159,41 @@
             setMessage(sdt, vSdt ? '' : 'Start date is required');
             setValidity(edt, vEdt);
             setMessage(edt, vEdt ? '' : 'End date is required');
-            return vFac && vPur && vSdt && vEdt && logicOk;
+            setValidity(img, vImg);
+            setMessage(img, vImg ? '' : 'Image size must be less than 2MB');
+            
+            const isValid = vFac && vPur && vSdt && vEdt && vImg && logicOk;
+            updateEditButtonState(isValid);
+            return isValid;
         }
 
         ['#facultySelect', '#add_lp_purpose', '#add_leave_start_date', '#add_leave_end_date', '#addModal [name="lp_image"]'].forEach(sel => {
             const el = document.querySelector(sel);
             if (!el) return;
             const evt = el.tagName === 'SELECT' ? 'change' : 'input';
-            el.addEventListener(evt, validateAddLeave);
+            el.addEventListener(evt, function() {
+                validateAddLeave();
+                // Also check for leave overlaps when faculty or dates change
+                if (sel.includes('facultySelect') || sel.includes('leave_start_date') || sel.includes('leave_end_date')) {
+                    checkLeaveOverlapAdd();
+                }
+            });
             el.addEventListener('blur', () => {
                 el.dataset.touched = 'true';
                 validateAddLeave();
             });
         });
-        ['#edit_faculty_id', '#edit_lp_purpose', '#edit_leave_start_date', '#edit_leave_end_date'].forEach(sel => {
+        ['#edit_faculty_id', '#edit_lp_purpose', '#edit_leave_start_date', '#edit_leave_end_date', '#edit_lp_image'].forEach(sel => {
             const el = document.querySelector(sel);
             if (!el) return;
             const evt = el.tagName === 'SELECT' ? 'change' : 'input';
-            el.addEventListener(evt, validateEditLeave);
+            el.addEventListener(evt, function() {
+                validateEditLeave();
+                // Also check for leave overlaps when faculty or dates change
+                if (sel.includes('faculty_id') || sel.includes('leave_start_date') || sel.includes('leave_end_date')) {
+                    checkLeaveOverlapEdit();
+                }
+            });
             el.addEventListener('blur', () => {
                 el.dataset.touched = 'true';
                 validateEditLeave();
