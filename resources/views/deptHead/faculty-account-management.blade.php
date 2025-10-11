@@ -1,7 +1,7 @@
 @extends('layouts.appdeptHead')
 
 @section('title', 'Faculty Account Management - Tagoloan Community College')
-@section('accounts-active', 'active')
+@section('files-active', 'active')
 @section('faculty-account-active', 'active')
 
 @section('styles')
@@ -983,25 +983,43 @@
                 m.textContent = shouldDisplay ? (msg || '') : '';
             }
 
+        
             function validateAdd() {
                 const fn = document.getElementById('faculty_fname');
                 const ln = document.getElementById('faculty_lname');
                 const dp = document.getElementById('faculty_department');
                 const img = document.getElementById('faculty_images');
+                
+                // Basic field validations
                 const vfn = isNotEmpty(fn && fn.value) && isLetters(fn && fn.value);
                 const vln = isNotEmpty(ln && ln.value) && isLetters(ln && ln.value);
                 const vdp = isNotEmpty(dp && dp.value);
-                const vimg = validateImageSize(img);
+                
+                // Image validation - check if images are selected and valid size
+                const hasImages = img && img.files && img.files.length > 0;
+                const validImageSize = validateImageSize(img);
+                const vimg = hasImages && validImageSize;
+                
+                // Set field validations
                 setValidity(fn, vfn);
-                setMessage(fn, vfn ? '' : (isNotEmpty(fn && fn.value) ? 'First name is invalid' :
-                    'First name is required'));
+                setMessage(fn, vfn ? '' : (isNotEmpty(fn && fn.value) ? 'First name is invalid' : 'First name is required'));
+                
                 setValidity(ln, vln);
-                setMessage(ln, vln ? '' : (isNotEmpty(ln && ln.value) ? 'Last name is invalid' :
-                    'Last name is required'));
+                setMessage(ln, vln ? '' : (isNotEmpty(ln && ln.value) ? 'Last name is invalid' : 'Last name is required'));
+                
                 setValidity(dp, vdp);
                 setMessage(dp, vdp ? '' : 'Department is required');
+                
+                // Set image validation with proper error messages
                 setValidity(img, vimg);
-                setMessage(img, vimg ? '' : 'Image size must be less than 2MB');
+                if (!hasImages) {
+                    setMessage(img, 'Image is required');
+                } else if (!validImageSize) {
+                    setMessage(img, 'Image size must be less than 2MB');
+                } else {
+                    setMessage(img, '');
+                }
+                
                 return vfn && vln && vdp && vimg;
             }
 

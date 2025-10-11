@@ -18,6 +18,7 @@ class TeachingLoad extends Model
         'teaching_load_course_code', // corrected
         'teaching_load_subject',
         'teaching_load_day_of_week',
+        'teaching_load_class_section',
         'teaching_load_time_in',
         'teaching_load_time_out',
         'room_no',

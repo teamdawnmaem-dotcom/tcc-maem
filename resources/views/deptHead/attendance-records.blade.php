@@ -112,25 +112,26 @@
         }
         
         /* Column width adjustments */
-        .teaching-load-table th:nth-child(1), .teaching-load-table td:nth-child(1) { width: 10%; } /* Date */
-        .teaching-load-table th:nth-child(2), .teaching-load-table td:nth-child(2) { width: 12%; } /* Faculty Name */
-        .teaching-load-table th:nth-child(3), .teaching-load-table td:nth-child(3) { width: 12%; } /* Department */
-        .teaching-load-table th:nth-child(4), .teaching-load-table td:nth-child(4) { width: 8%; } /* Course Code */
-        .teaching-load-table th:nth-child(5), .teaching-load-table td:nth-child(5) { width: 12%; } /* Subject */
-        .teaching-load-table th:nth-child(6), .teaching-load-table td:nth-child(6) { width: 8%; } /* Day */
-        .teaching-load-table th:nth-child(7), .teaching-load-table td:nth-child(7) { 
-            width: 14%; 
+        .teaching-load-table th:nth-child(1), .teaching-load-table td:nth-child(1) { width: 8%; } /* Date */
+        .teaching-load-table th:nth-child(2), .teaching-load-table td:nth-child(2) { width: 10%; } /* Faculty Name */
+        .teaching-load-table th:nth-child(3), .teaching-load-table td:nth-child(3) { width: 10%; } /* Department */
+        .teaching-load-table th:nth-child(4), .teaching-load-table td:nth-child(4) { width: 7%; } /* Course Code */
+        .teaching-load-table th:nth-child(5), .teaching-load-table td:nth-child(5) { width: 10%; } /* Subject */
+        .teaching-load-table th:nth-child(6), .teaching-load-table td:nth-child(6) { width: 7%; } /* Class Section */
+        .teaching-load-table th:nth-child(7), .teaching-load-table td:nth-child(7) { width: 6%; } /* Day */
+        .teaching-load-table th:nth-child(8), .teaching-load-table td:nth-child(8) { 
+            width: 12%; 
             white-space: normal; 
             word-wrap: break-word;
             line-height: 1.2;
         } /* Time Schedule */
-        .teaching-load-table th:nth-child(8), .teaching-load-table td:nth-child(8) { width: 6%; } /* Time In */
-        .teaching-load-table th:nth-child(9), .teaching-load-table td:nth-child(9) { width: 6%; } /* Time Out */
-        .teaching-load-table th:nth-child(10), .teaching-load-table td:nth-child(10) { width: 8%; } /* Time Duration */
-        .teaching-load-table th:nth-child(11), .teaching-load-table td:nth-child(11) { width: 8%; } /* Room Name */
-        .teaching-load-table th:nth-child(12), .teaching-load-table td:nth-child(12) { width: 6%; } /* Building No */
-        .teaching-load-table th:nth-child(13), .teaching-load-table td:nth-child(13) { width: 6%; } /* Status */
-        .teaching-load-table th:nth-child(14), .teaching-load-table td:nth-child(14) { width: 8%; } /* Remarks */
+        .teaching-load-table th:nth-child(9), .teaching-load-table td:nth-child(9) { width: 5%; } /* Time In */
+        .teaching-load-table th:nth-child(10), .teaching-load-table td:nth-child(10) { width: 5%; } /* Time Out */
+        .teaching-load-table th:nth-child(11), .teaching-load-table td:nth-child(11) { width: 7%; } /* Time Duration */
+        .teaching-load-table th:nth-child(12), .teaching-load-table td:nth-child(12) { width: 6%; } /* Room Name */
+        .teaching-load-table th:nth-child(13), .teaching-load-table td:nth-child(13) { width: 5%; } /* Building No */
+        .teaching-load-table th:nth-child(14), .teaching-load-table td:nth-child(14) { width: 5%; } /* Status */
+        .teaching-load-table th:nth-child(15), .teaching-load-table td:nth-child(15) { width: 7%; } /* Remarks */
 
         /* Filter Styles - Clean & Neat Design */
         .filter-section {
@@ -491,6 +492,7 @@
                 <th>Department</th>
                 <th>Course code</th>
                 <th>Subject</th>
+                <th>Class Section</th>
                 <th>Day</th>
                 <th>Time Schedule</th>
                 <th>Time in</th>
@@ -510,6 +512,7 @@
                         <td>{{ $record->faculty->faculty_department }}</td>
                         <td>{{ $record->teachingLoad->teaching_load_course_code }}</td>
                         <td>{{ $record->teachingLoad->teaching_load_subject }}</td>
+                        <td>{{ $record->teachingLoad->teaching_load_class_section }}</td>
                         <td>{{ $record->teachingLoad->teaching_load_day_of_week }}</td>
                         <td>{{ \Carbon\Carbon::parse($record->teachingLoad->teaching_load_time_in)->format('h:i A') }} to {{ \Carbon\Carbon::parse($record->teachingLoad->teaching_load_time_out)->format('h:i A') }}</td>
                         <td>
@@ -550,7 +553,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="13" style="text-align:center; padding:20px;">No attendance records found</td>
+                        <td colspan="15" style="text-align:center; padding:20px;">No attendance records found</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -683,7 +686,7 @@
         function displayRecords(records) {
             const tbody = document.querySelector('.teaching-load-table tbody');
             if (records.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="13" class="no-records">No records found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="15" class="no-records">No records found</td></tr>';
                 return;
             }
             
@@ -694,6 +697,7 @@
                 <td>${record.faculty.faculty_department}</td>
                 <td>${record.teachingLoad.teaching_load_course_code}</td>
                 <td>${record.teachingLoad.teaching_load_subject}</td>
+                <td>${record.teachingLoad.teaching_load_class_section}</td>
                 <td>${record.teachingLoad.teaching_load_day_of_week}</td>
                 <td>${formatTime(record.teachingLoad.teaching_load_time_in)} to ${formatTime(record.teachingLoad.teaching_load_time_out)}</td>
                 <td>${formatTimeIn(record)}</td>

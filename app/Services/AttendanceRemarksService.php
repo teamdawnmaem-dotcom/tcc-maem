@@ -78,8 +78,13 @@ class AttendanceRemarksService
             return;
         }
 
-        // If no leave or pass slip found, set default remark
-        $record->update(['record_remarks' => '']);
+        // If no leave or pass slip found, preserve the original remarks
+        // Don't update remarks if they already contain attendance status (Present/Late/Absent)
+        $currentRemarks = $record->record_remarks;
+        if (empty($currentRemarks) || !in_array($currentRemarks, ['Present', 'Late', 'Absent'])) {
+            // Only clear remarks if they were empty or not a standard attendance status
+            $record->update(['record_remarks' => '']);
+        }
     }
 
     /**
@@ -262,7 +267,7 @@ class AttendanceRemarksService
         AttendanceRecord::where('faculty_id', $facultyId)
             ->where('record_status', 'Absent')
             ->where('record_remarks', 'On Leave')
-            ->whereBetween('record_time_in', [$start, $end])
+            ->whereBetween('record_date', [$start, $end])
             ->delete();
     }
 

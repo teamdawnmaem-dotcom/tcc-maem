@@ -2,7 +2,7 @@
 
 @section('title', 'Live Camera Feed - Tagoloan Community College')
 @section('monitoring-active', 'active')
-@section('live-camera-feed-active', 'active')
+@section('live-camera-active', 'active')
 
 @section('styles')
 	<style>
@@ -409,12 +409,11 @@
 					<th>Camera</th>
 					<th>Faculty</th>
 					<th>Status</th>
-					<th>Distance</th>
 				</tr>
 			</thead>
 			<tbody id="recognition-logs-body">
 				<tr>
-					<td colspan="5" style="text-align: center; padding: 40px; color: #999; font-style: italic;">
+					<td colspan="4" style="text-align: center; padding: 40px; color: #999; font-style: italic;">
 						Waiting for data...
 					</td>
 				</tr>
@@ -588,6 +587,9 @@
         // Start WebRTC for all cameras immediately
         cameras.forEach(cam => startWebRTC(cam, false));
         fetchRecognitionStatus();
+        
+        // Also start background recognition status fetching
+        setInterval(fetchRecognitionStatus, 2000);
     });
 
     async function fetchRecognitionStatus() {
@@ -612,103 +614,98 @@
             
             tbody.innerHTML = "";
             
-            // Get current recognition results
-            const results = data.results || {};
-            const currentTime = new Date();
-            const timeStr = currentTime.toLocaleString('en-US', {
-                timeZone: 'Asia/Manila',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            });
+            // Get recognition logs (multiple entries)
+            const recognitionLogs = data.recognition_logs || [];
+            console.log('Recognition logs:', recognitionLogs);
+            console.log('Number of logs:', recognitionLogs.length);
             
-            console.log('Recognition results:', results);
-            console.log('Number of results:', Object.keys(results).length);
-			
-            if (Object.keys(results).length === 0) {
+            if (recognitionLogs.length === 0) {
                 tbody.innerHTML = `<tr>
-                    <td colspan="5" style="text-align: center; padding: 40px; color: #999; font-style: italic;">
+                    <td colspan="4" style="text-align: center; padding: 40px; color: #999; font-style: italic;">
                         No recognition data available. Make sure the recognition service is running.
                     </td>
                 </tr>`;
                 return;
             }
-			
-			// Process recognition results
-			let hasResults = false;
-			Object.entries(results).forEach(([cameraId, result]) => {
-				console.log('Processing camera result:', cameraId, result); // Debug log
-				
-				// Always process results, even idle ones
-				if (result) {
-					const camera = cameras.find(cam => cam.camera_id == cameraId);
-					const cameraName = camera ? camera.camera_name : `Camera ${cameraId}`;
-					
-					let facultyName = 'Unknown';
-					let status = 'Unknown';
-					let distance = 'N/A';
-					let isScheduled = false;
-					
-					if (result.faculty_id && result.faculty_id !== null) {
-						// Find faculty name from faculty data
-						const faculty = faculties.find(f => f.faculty_id == result.faculty_id);
-						if (faculty) {
-							facultyName = `${faculty.faculty_fname} ${faculty.faculty_lname}`;
-							
-							// Check if this faculty is scheduled for this camera's room
-							const currentLoad = getCurrentLoadForRoom(camera.room_no);
-							if (currentLoad && currentLoad.faculty_id == result.faculty_id) {
-								isScheduled = true;
-							}
-						} else {
-							facultyName = `Faculty ID: ${result.faculty_id}`;
-						}
-						
-						status = result.status === 'recognized' ? 'Recognized' : 'Low Confidence';
-						distance = result.distance ? result.distance.toFixed(2) : 'N/A';
-					} else if (result.status === 'unknown_face') {
-						facultyName = 'Unknown Face';
-						status = 'Unknown';
-						distance = 'N/A';
-					} else if (result.status === 'idle') {
-						facultyName = 'No Detection';
-						status = 'Idle';
-						distance = 'N/A';
-					}
-					
-					// Add scheduling identifier
-					let facultyDisplay = facultyName;
-					if (result.faculty_id && result.faculty_id !== null) {
-						if (isScheduled) {
-							facultyDisplay = `<span class="scheduled-faculty">${facultyName} (Scheduled)</span>`;
-						} else {
-							facultyDisplay = `<span class="unscheduled-faculty">${facultyName} (Not Scheduled)</span>`;
-						}
-					}
-					
-					const row = `<tr>
-						<td>${timeStr}</td>
-						<td>${cameraName}</td>
-						<td>${facultyDisplay}</td>
-						<td>${status}</td>
-						<td>${distance}</td>
-					</tr>`;
-					tbody.innerHTML += row;
-					hasResults = true;
-				}
-			});
-			
-			// If no recognition results, show waiting message
-			if (!hasResults) {
-				tbody.innerHTML = `<tr>
-					<td colspan="5" style="text-align: center; padding: 40px; color: #999; font-style: italic;">
-						Waiting for data...
-					</td>
-				</tr>`;
-			}
+            
+            // Process recognition logs
+            let hasResults = false;
+            console.log('Total recognition logs received:', recognitionLogs.length);
+            recognitionLogs.forEach((log) => {
+                console.log('Processing recognition log:', log);
+                console.log('Faculty name from backend:', log.faculty_name);
+                console.log('Faculty ID from backend:', log.faculty_id);
+                
+                const camera = cameras.find(cam => cam.camera_id == log.camera_id);
+                const cameraName = camera ? camera.camera_name : `Camera ${log.camera_id}`;
+                
+                // Format timestamp
+                const logTime = new Date(log.timestamp);
+                const timeStr = logTime.toLocaleString('en-US', {
+                    timeZone: 'Asia/Manila',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true
+                });
+                
+                let facultyName = log.faculty_name || 'Unknown';
+                let status = log.status || 'Unknown';
+                let distance = log.distance ? log.distance.toFixed(2) : 'N/A';
+                let isScheduled = false;
+                
+                // Ensure we have a proper faculty name (not just ID or "Faculty X" format)
+                if ((facultyName === 'Unknown' || facultyName.startsWith('Faculty ')) && log.faculty_id && log.faculty_id !== null) {
+                    // Try to find faculty in the faculties array
+                    const faculty = faculties.find(f => f.faculty_id == log.faculty_id);
+                    if (faculty) {
+                        facultyName = `${faculty.faculty_fname} ${faculty.faculty_lname}`;
+                        console.log(`Resolved faculty name for ID ${log.faculty_id}: ${facultyName}`);
+                    } else {
+                        console.log(`Faculty ID ${log.faculty_id} not found in faculties array`);
+                        facultyName = `Faculty ${log.faculty_id}`;
+                    }
+                }
+                
+                // Check if this faculty is scheduled for this camera's room
+                if (log.faculty_id && log.faculty_id !== null && camera) {
+                    const currentLoad = getCurrentLoadForRoom(camera.room_no);
+                    if (currentLoad && currentLoad.faculty_id == log.faculty_id) {
+                        isScheduled = true;
+                    }
+                }
+                
+                // Add scheduling identifier
+                let facultyDisplay = facultyName;
+                if (log.faculty_id && log.faculty_id !== null) {
+                    if (isScheduled) {
+                        facultyDisplay = `<span class="scheduled-faculty">${facultyName} (Scheduled)</span>`;
+                    } else {
+                        facultyDisplay = `<span class="unscheduled-faculty">${facultyName} (Not Scheduled)</span>`;
+                    }
+                }
+                
+                const row = `<tr>
+                    <td>${timeStr}</td>
+                    <td>${cameraName}</td>
+                    <td>${facultyDisplay}</td>
+                    <td>${status}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+                hasResults = true;
+            });
+            
+            // If no recognition results, show waiting message
+            if (!hasResults) {
+                tbody.innerHTML = `<tr>
+                    <td colspan="4" style="text-align: center; padding: 40px; color: #999; font-style: italic;">
+                        Waiting for data...
+                    </td>
+                </tr>`;
+            }
 			
         } catch (err) {
             console.error("Error fetching recognition status:", err);
@@ -726,7 +723,7 @@
                     errorMessage = `Server error: ${err.message}`;
                 }
                 tbody.innerHTML = `<tr>
-                    <td colspan="5" style="text-align: center; padding: 40px; color: #999; font-style: italic;">
+                    <td colspan="4" style="text-align: center; padding: 40px; color: #999; font-style: italic;">
                         ${errorMessage}
                     </td>
                 </tr>`;

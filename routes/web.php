@@ -81,6 +81,13 @@ Route::prefix('deptHead')->middleware('role:department head')->group(function ()
     Route::post('/teaching-load', [TeachingLoadController::class, 'store'])->name('deptHead.teaching-load.store');
     Route::put('/teaching-load/{id}', [TeachingLoadController::class, 'update'])->name('deptHead.teaching-load.update');
     Route::delete('/teaching-load/{id}', [TeachingLoadController::class, 'destroy'])->name('deptHead.teaching-load.destroy');
+
+    // Subject Management
+    Route::get('/subjects', [\App\Http\Controllers\SubjectController::class, 'index'])->name('deptHead.subject.management');
+    Route::post('/subjects', [\App\Http\Controllers\SubjectController::class, 'store'])->name('deptHead.subjects.store');
+    Route::put('/subjects/{id}', [\App\Http\Controllers\SubjectController::class, 'update'])->name('deptHead.subjects.update');
+    Route::delete('/subjects/{id}', [\App\Http\Controllers\SubjectController::class, 'destroy'])->name('deptHead.subjects.destroy');
+    Route::post('/subjects/check-duplicate', [\App\Http\Controllers\SubjectController::class, 'checkDuplicate'])->name('deptHead.subjects.check-duplicate');
     
     // Live Feed
     Route::get('/live-camera-feed', [LiveCameraController::class, 'index'])->name('deptHead.live.camera.feed');
@@ -115,6 +122,8 @@ Route::prefix('deptHead')->middleware('role:department head')->group(function ()
     Route::post('/passes', [PassController::class, 'store'])->name('checker.passes.store');
     Route::put('/passes/{id}', [PassController::class, 'update'])->name('checker.passes.update');
     Route::delete('/passes/{id}', [PassController::class, 'destroy'])->name('checker.passes.destroy');
+    Route::post('/passes/check-leave-conflict', [PassController::class, 'checkLeaveConflict'])->name('checker.passes.check-leave-conflict');
+    Route::post('/passes/check-pass-overlap', [PassController::class, 'checkPassOverlap'])->name('checker.passes.check-pass-overlap');
       
     // Live Feed
     Route::get('/live-camera-feed', [LiveCameraController::class, 'index2'])->name('checker.live.camera.feed');
@@ -123,6 +132,9 @@ Route::prefix('deptHead')->middleware('role:department head')->group(function ()
     Route::get('/attendance-records', [CheckerController::class, 'attendanceRecords'])->name('checker.attendance.records');
     Route::get('/attendance-records/print', [CheckerController::class, 'attendanceRecordsPrint'])->name('checker.attendance.records.print');
     Route::get('/recognition-logs', [CheckerController::class, 'recognitionLogs'])->name('checker.recognition.logs');
+    
+    // Leave overlap checking
+    Route::post('/leaves/check-leave-overlap', [LeaveController::class, 'checkLeaveOverlap'])->name('checker.leaves.check-leave-overlap');
     
     
 

@@ -16,8 +16,9 @@ import os, json, datetime, threading, asyncio
 from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
 import cv2
 import numpy as np
-import face_recognition
 import requests
+import insightface
+from insightface.app import FaceAnalysis
 from dotenv import load_dotenv
 import time
 
@@ -39,12 +40,29 @@ STORAGE_PATH = os.getenv("LARAVEL_STORAGE_PATH", "../storage/app/public")
 
 MATCH_THRESHOLD = float(os.getenv("MATCH_THRESHOLD", "0.6"))
 
+# Initialize InsightFace with built-in RetinaFace
+print("Initializing InsightFace with built-in RetinaFace...")
+try:
+    # Initialize InsightFace with RetinaFace detector
+    face_app = FaceAnalysis(
+        name='buffalo_l', 
+        providers=['CPUExecutionProvider'],
+        allowed_modules=['detection', 'recognition']  # Use both detection and recognition
+    )
+    face_app.prepare(ctx_id=0, det_size=(640, 640))
+    print("✅ InsightFace with RetinaFace initialized")
+except Exception as e:
+    print(f"❌ Error initializing InsightFace models: {e}")
+    face_app = None
+
 # caches
 _cameras_cache = {}
 _schedules_cache = {}
 _presence_accumulator = {}
 _faculty_embeddings = {}
+_faculty_data_cache = {}  # Cache for faculty data to avoid repeated API calls
 _recognition_results = {}
+_recognition_logs = {}  # Track multiple recognition logs per camera
 _last_overlays = {}  # camera_id -> {"boxes": [ (left, top, right, bottom, (b,g,r), label) ], "expires_at": ts}
 _rtsp_tracks = {}
 _track_lock = threading.Lock()
@@ -57,10 +75,11 @@ _shared_captures = {}  # Shared video captures per camera
 _shared_frames = {}  # Latest frames per camera for sharing
 _frame_lock = threading.Lock()  # Lock for frame sharing
 _face_tracking_history = {}  # Track face positions for smoothing
+_persistent_bounding_boxes = {}  # Track persistent bounding boxes per camera
 
 # Face recognition settings
-RECOGNITION_INTERVAL = 0.5  # seconds between recognition attempts (WebRTC)
-BACKGROUND_RECOGNITION_INTERVAL = 5.0  # seconds for background processing
+RECOGNITION_INTERVAL = 1  # seconds between recognition attempts (WebRTC)
+BACKGROUND_RECOGNITION_INTERVAL = 1  # seconds for background processing
 PRESENCE_THRESHOLD = 1800  # 30 minutes in seconds
 LATE_THRESHOLD = 1800  # 30 minutes in seconds for late marking
 
@@ -97,6 +116,8 @@ def fetch_cameras():
             _cameras_cache[cid] = {
                 "camera_id": cid,
                 "room_no": c.get("room_no"),
+                "room_name": c.get("room_name"),
+                "room_building_no": c.get("room_building_no"),
                 "camera_live_feed": c.get("camera_live_feed")
             }
         return cams
@@ -116,7 +137,8 @@ def fetch_today_schedule():
                 "teaching_load_id": s.get("teaching_load_id"),
                 "faculty_id": s.get("faculty_id"),
                 "time_in": s.get("teaching_load_time_in"),
-                "time_out": s.get("teaching_load_time_out")
+                "time_out": s.get("teaching_load_time_out"),
+                "teaching_load_class_section": s.get("teaching_load_class_section")
             }
             _schedules_cache.setdefault(room, []).append(entry)
         return schedules
@@ -259,64 +281,16 @@ def check_late_threshold():
         
         # Check if 30 minutes have passed since class start
         if not late_info["late_threshold_reached"] and (now_min - start_time) >= 30:
-            late_info["late_threshold_reached"] = True
-            
-            # Check if faculty has been recognized
+            # Check if faculty has been recognized at all
             acc = _presence_accumulator.get(key)
-            if not acc or acc["seconds"] < PRESENCE_THRESHOLD:
-                # Mark as late
-                sched = None
-                for s in _schedules_cache.get(room_no, []):
-                    if s.get("teaching_load_id") == load_id:
-                        sched = s
-                        break
-                
-                if sched:
-                    faculty_id = sched.get("faculty_id")
-                    
-                    # Check leave/pass slip status
-                    faculty_status = check_faculty_status(
-                        faculty_id, 
-                        date_str, 
-                        sched.get("time_in"), 
-                        sched.get("time_out")
-                    )
-                    
-                    if faculty_status:
-                        record_status = "Absent"
-                        record_remarks = faculty_status
-                    else:
-                        record_status = "Absent"
-                        record_remarks = "Absent"
-                    
-                    # Find camera for this room
-                    camera_id = None
-                    for cam_id, cam_data in _cameras_cache.items():
-                        if str(cam_data.get("room_no")) == str(room_no):
-                            camera_id = cam_id
-                            break
-                    
-                    if camera_id:
-                        # Get schedule information for the new fields
-                        schedule_info = None
-                        for s in _schedules_cache.get(room_no, []):
-                            if s.get("teaching_load_id") == load_id:
-                                schedule_info = s
-                                break
-                        
-                        # Get time fields - instructor was not detected (late/absent)
-                        time_fields = get_attendance_time_fields(camera_id, faculty_id, load_id, was_detected=False)
-                        
-                        payload = {
-                            "faculty_id": int(faculty_id),
-                            "teaching_load_id": load_id,
-                            "camera_id": camera_id,
-                            "record_status": record_status,
-                            "record_remarks": record_remarks,
-                            **time_fields
-                        }
-                        threading.Thread(target=_post_attendance_dedup, args=(payload,), daemon=True).start()
-                        late_info["late_marked"] = True
+            if not acc or acc["seconds"] == 0:
+                # Faculty was not recognized in the first 30 minutes
+                late_info["late_threshold_reached"] = True
+                print(f"DEBUG: Late threshold reached for room {room_no}, load {load_id} - instructor was not recognized in first 30 minutes")
+            else:
+                # Faculty was recognized within first 30 minutes, so not late
+                print(f"DEBUG: Faculty was recognized within first 30 minutes for room {room_no}, load {load_id} - not marked as late")
+            # Don't post attendance here - let schedule end function determine final status
 
 # -------------------
 # Recognition time tracking
@@ -413,50 +387,10 @@ def record_presence_tick(camera_id: int, detected_faculty_id: int):
     acc["seconds"] += delta
     acc["last_ts"] = now_ts
 
-    # If reached 30 minutes (1800 seconds), post attendance
-    if acc["seconds"] >= PRESENCE_THRESHOLD:
-        # Check leave/pass slip status
-        import pytz
-        tz = pytz.timezone("Asia/Manila")
-        now = datetime.datetime.now(tz)
-        date_str = now.strftime("%Y-%m-%d")
-        
-        faculty_status = check_faculty_status(
-            detected_faculty_id, 
-            date_str, 
-            sched.get("time_in"), 
-            sched.get("time_out")
-        )
-        
-        if faculty_status:
-            record_status = "Absent"
-            record_remarks = faculty_status
-        else:
-            # Check if late threshold was reached
-            late_info = _late_tracking.get(key, {})
-            if late_info.get("late_threshold_reached", False):
-                record_status = "Late"
-                record_remarks = "Late"
-            else:
-                record_status = "Present"
-                record_remarks = "Present"
-        
-        # Get time fields - instructor was detected (present/late)
-        time_fields = get_attendance_time_fields(camera_id, detected_faculty_id, load_id, was_detected=True)
-        
-        print(f"Posting attendance - Time in: {time_fields['record_time_in']}, Time out: {time_fields['record_time_out']}, Duration: {time_fields['time_duration_seconds']}s")
-        
-        payload = {
-            "faculty_id": int(detected_faculty_id),
-            "teaching_load_id": load_id,
-            "camera_id": camera_id,
-            "record_status": record_status,
-            "record_remarks": record_remarks,
-            **time_fields
-        }
-        threading.Thread(target=_post_attendance_dedup, args=(payload,), daemon=True).start()
-        # Reset accumulator to avoid repeated posts
-        acc["seconds"] = 0.0
+    # Don't post attendance immediately when 30 minutes is reached
+    # Attendance will be posted when the schedule ends via check_schedule_end_and_mark_absent()
+    # Just accumulate the presence time for later evaluation
+    print(f"DEBUG: Accumulated {acc['seconds']} seconds for faculty {detected_faculty_id} in room {room_no}")
 
 def check_schedule_end_and_mark_absent():
     """Check if any schedules have ended and mark absent if 30min threshold not met."""
@@ -479,55 +413,89 @@ def check_schedule_end_and_mark_absent():
                 key = (room_no, load_id)
                 acc = _presence_accumulator.get(key)
                 
-                # If not enough presence accumulated, mark absent
-                if not acc or acc["seconds"] < PRESENCE_THRESHOLD:
-                    # Check leave/pass slip status
-                    faculty_status = check_faculty_status(
-                        faculty_id, 
-                        date_str, 
-                        sched.get("time_in"), 
-                        sched.get("time_out")
-                    )
+                # Check leave/pass slip status first
+                faculty_status = check_faculty_status(
+                    faculty_id, 
+                    date_str, 
+                    sched.get("time_in"), 
+                    sched.get("time_out")
+                )
+                
+                # Determine attendance status based on presence and leave/pass slip status
+                if faculty_status:
+                    # Faculty is on leave or has pass slip
+                    record_status = "Absent"
+                    record_remarks = faculty_status
+                elif not acc or acc["seconds"] < PRESENCE_THRESHOLD:
+                    # Not enough presence accumulated
+                    record_status = "Absent"
+                    record_remarks = "Absent"
+                    accumulated_time = acc["seconds"] if acc else 0
+                    print(f"DEBUG: Faculty only accumulated {accumulated_time} seconds (need {PRESENCE_THRESHOLD})")
+                else:
+                    # Sufficient presence accumulated (≥30 minutes)
+                    # Check if late threshold was reached (not recognized in first 30 minutes)
+                    late_info = _late_tracking.get(key, {})
+                    late_threshold_reached = late_info.get("late_threshold_reached", False)
+                    print(f"DEBUG: Faculty accumulated {acc['seconds']} seconds. Late threshold reached: {late_threshold_reached}")
                     
-                    if faculty_status:
-                        record_status = "Absent"
-                        record_remarks = faculty_status
+                    if late_threshold_reached:
+                        record_status = "Late"
+                        record_remarks = "Late"
+                        print(f"DEBUG: Faculty accumulated {acc['seconds']} seconds but was late (not recognized in first 30 min)")
                     else:
-                        record_status = "Absent"
-                        record_remarks = "Absent"
+                        record_status = "Present"
+                        record_remarks = "Present"
+                        print(f"DEBUG: Faculty accumulated {acc['seconds']} seconds and was on time")
+                
+                # Ensure remarks is never empty or None
+                if not record_remarks or record_remarks.strip() == "":
+                    record_remarks = record_status  # Use the same as status
+                    print(f"DEBUG: WARNING - Empty remarks detected, setting to '{record_remarks}'")
+                
+                print(f"DEBUG: Schedule ended - Status: {record_status}, Remarks: {record_remarks}")
+                
+                # Find camera for this room
+                camera_id = None
+                for cam_id, cam_data in _cameras_cache.items():
+                    if str(cam_data.get("room_no")) == str(room_no):
+                        camera_id = cam_id
+                        break
+                
+                if camera_id:
+                    # Get time fields - check if there was any recognition at all
+                    # If there was some recognition but not enough time, use actual times
+                    # If no recognition at all, use N/A
+                    has_recognition = False
+                    if acc and acc["seconds"] > 0:
+                        # There was some recognition, use actual times
+                        has_recognition = True
                     
-                    # Find camera for this room
-                    camera_id = None
-                    for cam_id, cam_data in _cameras_cache.items():
-                        if str(cam_data.get("room_no")) == str(room_no):
-                            camera_id = cam_id
-                            break
+                    time_fields = get_attendance_time_fields(camera_id, faculty_id, load_id, was_detected=has_recognition)
                     
-                    if camera_id:
-                        # Use Asia/Manila timezone for timestamp
-                        import pytz
-                        tz = pytz.timezone("Asia/Manila")
-                        now = datetime.datetime.now(tz)
-                        
-                        # Get schedule information for the new fields
-                        schedule_info = None
-                        for s in _schedules_cache.get(room_no, []):
-                            if s.get("teaching_load_id") == load_id:
-                                schedule_info = s
-                                break
-                        
-                        # Get time fields - instructor was not detected (absent)
-                        time_fields = get_attendance_time_fields(camera_id, faculty_id, load_id, was_detected=False)
-                        
-                        payload = {
-                            "faculty_id": int(faculty_id),
-                            "teaching_load_id": load_id,
-                            "camera_id": camera_id,
-                            "record_status": record_status,
-                            "record_remarks": record_remarks,
-                            **time_fields
-                        }
-                        threading.Thread(target=_post_attendance_dedup, args=(payload,), daemon=True).start()
+                    print(f"DEBUG: Before payload creation - record_status='{record_status}', record_remarks='{record_remarks}'")
+                    
+                    # Final validation before payload creation
+                    if not record_remarks or record_remarks.strip() == "":
+                        record_remarks = record_status  # Use the same as status
+                        print(f"DEBUG: WARNING - Empty remarks detected before payload creation, setting to '{record_remarks}'")
+                    
+                    payload = {
+                        "faculty_id": int(faculty_id),
+                        "teaching_load_id": load_id,
+                        "camera_id": camera_id,
+                        "record_status": record_status,
+                        "record_remarks": record_remarks,
+                        "teaching_load_class_section": sched.get("teaching_load_class_section"),
+                        **time_fields
+                    }
+                    
+                    print(f"DEBUG: Posting attendance for schedule end - Status: {record_status}, Remarks: {record_remarks}")
+                    print(f"DEBUG: Time fields: {time_fields}")
+                    print(f"DEBUG: Full payload: {payload}")
+                    print(f"DEBUG: Payload record_remarks type: {type(payload['record_remarks'])}, value: '{payload['record_remarks']}'")
+                    
+                    threading.Thread(target=_post_attendance_dedup, args=(payload,), daemon=True).start()
                 
                 # Clean up accumulator
                 if key in _presence_accumulator:
@@ -539,52 +507,109 @@ def fetch_faculty_embeddings():
         r.raise_for_status()
         data = r.json()
         _faculty_embeddings.clear()
+        _faculty_data_cache.clear()  # Clear and rebuild faculty data cache
+        
         for f in data:
             fid = int(f["faculty_id"])
+            
+            # Cache faculty data for name lookup
+            # The API returns faculty_name as concatenated string, so we need to handle it differently
+            faculty_name = f.get("faculty_name", "")
+            if faculty_name:
+                # Split the concatenated name back into first and last name
+                name_parts = faculty_name.strip().split(" ", 1)
+                faculty_fname = name_parts[0] if len(name_parts) > 0 else ""
+                faculty_lname = name_parts[1] if len(name_parts) > 1 else ""
+            else:
+                faculty_fname = ""
+                faculty_lname = ""
+            
+            _faculty_data_cache[fid] = {
+                "faculty_fname": faculty_fname,
+                "faculty_lname": faculty_lname,
+                "faculty_id": fid
+            }
+            
+            print(f"DEBUG: Cached faculty {fid}: {faculty_fname} {faculty_lname}")
+            
             emb = f.get("faculty_face_embedding")
             if not emb:
                 continue
             try:
                 arr_list = json.loads(emb) if isinstance(emb, str) else emb
                 emb_arrays = [np.array(e) for e in arr_list] if isinstance(arr_list[0], list) else [np.array(arr_list)]
+                
+                # Check if embeddings are compatible with current InsightFace format (512-dim)
+                if emb_arrays and len(emb_arrays[0]) != 512:
+                    print(f"⚠️  Faculty {fid} has incompatible embeddings ({len(emb_arrays[0])} dim). Regenerating...")
+                    # Trigger embedding regeneration for this faculty
+                    threading.Thread(target=update_faculty_embeddings_from_images, args=(fid,), daemon=True).start()
+                    continue
+                
                 _faculty_embeddings[fid] = emb_arrays
             except Exception as e:
                 print("embedding parse error:", fid, e)
         print("Loaded faculty embeddings:", list(_faculty_embeddings.keys()))
+        print("Loaded faculty data cache:", list(_faculty_data_cache.keys()))
         return data
     except Exception as e:
         print("fetch_faculty_embeddings error:", e)
         return []
 
 def get_faculty_name(faculty_id):
-    """Get faculty full name by ID."""
+    """Get faculty full name by ID using cached data."""
     try:
-        if not faculty_id:
+        if not faculty_id or faculty_id == "Unknown" or faculty_id == "unknown_face":
             return "Unknown"
         
-        # Try to get faculty name from the faculty data that was fetched
-        # Check if we have faculty data from the embeddings endpoint
+        # Convert to int for lookup
         try:
-            r = requests.get(FACULTY_EMBEDDINGS_ENDPOINT, timeout=5)
-            if r.status_code == 200:
-                faculty_data = r.json()
-                for faculty in faculty_data:
-                    if int(faculty.get("faculty_id")) == int(faculty_id):
-                        # Try to get first name and last name
-                        first_name = faculty.get("faculty_fname", "")
-                        last_name = faculty.get("faculty_lname", "")
-                        if first_name and last_name:
-                            return f"{first_name} {last_name}"
-                        elif first_name:
-                            return first_name
-                        elif last_name:
-                            return last_name
-                        else:
-                            return f"Faculty {faculty_id}"
-        except Exception as e:
-            print(f"Error fetching faculty data for ID {faculty_id}: {e}")
+            faculty_id_int = int(faculty_id)
+        except (ValueError, TypeError):
+            return f"Faculty {faculty_id}"
         
-        # Fallback to simple format
+        # Check cached faculty data first
+        print(f"DEBUG: Looking for faculty {faculty_id_int} in cache. Available: {list(_faculty_data_cache.keys())}")
+        if faculty_id_int in _faculty_data_cache:
+            faculty_data = _faculty_data_cache[faculty_id_int]
+            first_name = faculty_data.get("faculty_fname", "").strip()
+            last_name = faculty_data.get("faculty_lname", "").strip()
+            print(f"DEBUG: Found faculty data: {faculty_data}")
+            print(f"DEBUG: First name: '{first_name}', Last name: '{last_name}'")
+            
+            if first_name and last_name:
+                result = f"{first_name} {last_name}"
+                print(f"DEBUG: Returning full name: {result}")
+                return result
+            elif first_name:
+                print(f"DEBUG: Returning first name only: {first_name}")
+                return first_name
+            elif last_name:
+                print(f"DEBUG: Returning last name only: {last_name}")
+                return last_name
+            else:
+                print(f"DEBUG: No names found, returning Faculty {faculty_id}")
+                return f"Faculty {faculty_id}"
+        
+        # If not in cache, try to refresh faculty data
+        print(f"Faculty {faculty_id} not in cache, refreshing faculty data...")
+        try:
+            fetch_faculty_embeddings()  # This will update the cache
+            if faculty_id_int in _faculty_data_cache:
+                faculty_data = _faculty_data_cache[faculty_id_int]
+                first_name = faculty_data.get("faculty_fname", "").strip()
+                last_name = faculty_data.get("faculty_lname", "").strip()
+                
+                if first_name and last_name:
+                    return f"{first_name} {last_name}"
+                elif first_name:
+                    return first_name
+                elif last_name:
+                    return last_name
+        except Exception as e:
+            print(f"Error refreshing faculty data for ID {faculty_id}: {e}")
+        
+        # Final fallback
         return f"Faculty {faculty_id}"
     except Exception as e:
         print(f"Error getting faculty name for ID {faculty_id}: {e}")
@@ -595,10 +620,14 @@ def get_faculty_name(faculty_id):
 # -------------------
 def update_faculty_embeddings_from_images(faculty_id=None):
     """
-    Compute embeddings from stored faculty images.
+    Compute embeddings from stored faculty images using InsightFace's built-in RetinaFace.
     If faculty_id is provided, only update that faculty.
     """
     try:
+        if face_app is None:
+            print("InsightFace model not initialized")
+            return
+            
         r = requests.get(FACULTY_EMBEDDINGS_ENDPOINT, timeout=15)
         r.raise_for_status()
         faculty_data = r.json()
@@ -640,19 +669,28 @@ def update_faculty_embeddings_from_images(faculty_id=None):
                         print(f"File not found: {full_path}")
                         continue
                     
-                    # Load and process image
-                    img = face_recognition.load_image_file(full_path)
-                    print(f"Image loaded successfully: {img.shape}")
+                    # Load image using OpenCV
+                    img = cv2.imread(full_path)
+                    if img is None:
+                        print(f"Could not load image: {full_path}")
+                        continue
                     
-                    # Try different face detection models
-                    encodings = face_recognition.face_encodings(img, model="cnn")
-                    if not encodings:
-                        # Fallback to HOG model if CNN fails
-                        encodings = face_recognition.face_encodings(img, model="hog")
+                    # Convert BGR to RGB for InsightFace
+                    rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                    print(f"Image loaded successfully: {rgb_img.shape}")
                     
-                    if encodings:
-                        embeddings_list.extend(encodings)
-                        print(f"Found {len(encodings)} face(s) in {img_path}")
+                    # Use InsightFace's built-in RetinaFace for detection and recognition
+                    faces = face_app.get(rgb_img)
+                    
+                    if faces:
+                        print(f"Found {len(faces)} face(s) in {img_path}")
+                        
+                        # Process each detected face
+                        for face in faces:
+                            # Get the embedding directly from InsightFace
+                            embedding = face.embedding
+                            embeddings_list.append(embedding)
+                            print(f"Extracted embedding for face in {img_path}")
                     else:
                         print(f"No faces detected in {img_path}")
                         
@@ -664,19 +702,294 @@ def update_faculty_embeddings_from_images(faculty_id=None):
                 payload = {"faculty_id": fid, "faculty_face_embedding": json.dumps(emb_list_json)}
                 try:
                     # Use PUT method to update embeddings
-                    r_post = requests.put(FACULTY_EMBEDDINGS_ENDPOINT, json=payload, timeout=10)
+                    print(f"Updating embeddings for faculty_id {fid} with {len(embeddings_list)} face(s)")
+                    r_post = requests.put(FACULTY_EMBEDDINGS_ENDPOINT, json=payload, timeout=30)
+                    print(f"Response status: {r_post.status_code}")
+                    print(f"Response text: {r_post.text}")
+                    
                     if r_post.status_code in (200, 201):
                         print(f"Successfully updated embeddings for faculty_id {fid} with {len(embeddings_list)} face(s)")
                         _faculty_embeddings[fid] = embeddings_list
                     else:
                         print(f"Failed to update embeddings for faculty_id {fid}: {r_post.status_code} - {r_post.text}")
+                        # Try to parse error response
+                        try:
+                            error_data = r_post.json()
+                            print(f"Error details: {error_data}")
+                        except:
+                            print(f"Raw error response: {r_post.text}")
                 except Exception as e:
                     print(f"Error posting embeddings for faculty_id {fid}: {e}")
+                    import traceback
+                    traceback.print_exc()
             else:
                 print(f"No valid faces found for faculty_id {fid}")
+                # Still try to update with empty embeddings to clear old ones
+                try:
+                    payload = {"faculty_id": fid, "faculty_face_embedding": json.dumps([])}
+                    r_post = requests.put(FACULTY_EMBEDDINGS_ENDPOINT, json=payload, timeout=30)
+                    if r_post.status_code in (200, 201):
+                        print(f"Cleared embeddings for faculty_id {fid} (no faces detected)")
+                    else:
+                        print(f"Failed to clear embeddings for faculty_id {fid}: {r_post.status_code} - {r_post.text}")
+                except Exception as e:
+                    print(f"Error clearing embeddings for faculty_id {fid}: {e}")
 
     except Exception as e:
         print("update_faculty_embeddings_from_images error:", e)
+
+# -------------------
+# Face tracking history cleanup
+# -------------------
+def cleanup_face_tracking_history():
+	"""Clean up old face tracking history to prevent memory leaks."""
+	try:
+		import time
+		current_time = time.time()
+		cleanup_threshold = 300  # 5 minutes
+		
+		keys_to_remove = []
+		for key, history in _face_tracking_history.items():
+			# Check if this tracking entry is old and has no recent activity
+			if hasattr(history, 'last_activity'):
+				if current_time - history.get('last_activity', 0) > cleanup_threshold:
+					keys_to_remove.append(key)
+			elif len(history.get('positions', [])) == 0:
+				# Remove empty tracking entries
+				keys_to_remove.append(key)
+		
+		for key in keys_to_remove:
+			del _face_tracking_history[key]
+		
+		if keys_to_remove:
+			print(f"Cleaned up {len(keys_to_remove)} old face tracking entries")
+	except Exception as e:
+		print(f"Error cleaning up face tracking history: {e}")
+
+def update_persistent_bounding_box(camera_id, face_location, faculty_id, is_scheduled, presence_info, faculty_name=None):
+	"""Update persistent bounding box for a camera. Supports multiple faces per camera."""
+	try:
+		import time
+		current_time = time.time()
+		
+		# Initialize camera entry if not exists
+		if camera_id not in _persistent_bounding_boxes:
+			_persistent_bounding_boxes[camera_id] = {}
+		
+		# Create a unique key for this face (faculty_id + face position)
+		# Use faculty_id if available, otherwise use face position as identifier
+		if faculty_id and faculty_id != "Unknown" and faculty_id != "unknown_face":
+			face_key = f"faculty_{faculty_id}"
+		else:
+			# For unknown faces, use face position as identifier with tolerance
+			top, right, bottom, left = face_location
+			center_x = (left + right) // 2
+			center_y = (top + bottom) // 2
+			# Round to nearest 50 pixels to group nearby faces
+			rounded_x = (center_x // 50) * 50
+			rounded_y = (center_y // 50) * 50
+			face_key = f"unknown_{rounded_x}_{rounded_y}"
+		
+		# Get existing bounding box for this specific face if it exists
+		existing_bbox = _persistent_bounding_boxes[camera_id].get(face_key, {})
+		
+		# Calculate confidence based on detection consistency
+		confidence = 1.0  # Start with full confidence for new detection
+		if existing_bbox:
+			# If we have an existing bounding box, maintain high confidence
+			time_since_last = current_time - existing_bbox.get("last_seen", current_time)
+			if time_since_last < 2.0:  # Less than 2 seconds since last detection
+				confidence = min(1.0, existing_bbox.get("confidence", 0.5) + 0.2)
+			else:
+				confidence = 0.9  # High confidence even for gaps (face is still there)
+		
+		# Update or create bounding box entry for this specific face
+		_persistent_bounding_boxes[camera_id][face_key] = {
+			"face_location": face_location,
+			"faculty_id": faculty_id,
+			"is_scheduled": is_scheduled,
+			"presence_info": presence_info,
+			"faculty_name": faculty_name,
+			"last_seen": current_time,
+			"confidence": confidence,
+			"detection_count": existing_bbox.get("detection_count", 0) + 1,
+			"face_key": face_key
+		}
+		
+		print(f"DEBUG: Updated persistent bounding box for camera {camera_id}, face_key: {face_key}")
+		
+	except Exception as e:
+		print(f"Error updating persistent bounding box: {e}")
+
+def get_persistent_bounding_boxes(camera_id):
+	"""Get all persistent bounding boxes for a camera. Returns all faces detected."""
+	try:
+		import time
+		current_time = time.time()
+		
+		if camera_id not in _persistent_bounding_boxes:
+			return []
+		
+		# Get all faces for this camera
+		camera_faces = _persistent_bounding_boxes[camera_id]
+		active_faces = []
+		faces_to_remove = []
+		
+		# Check each face for timeout
+		for face_key, bbox_data in camera_faces.items():
+			time_since_last = current_time - bbox_data.get("last_seen", 0)
+			
+			# Remove bounding box if face has been gone for a shorter time (3 seconds)
+			# This ensures bounding boxes disappear quickly when faces move away
+			extended_timeout = 3.0  # 3 seconds - remove if face is gone
+			
+			# Check if bounding box has timed out (face completely gone)
+			if time_since_last > extended_timeout:
+				# Face has been gone for a very long time, mark for removal
+				faces_to_remove.append(face_key)
+			else:
+				# Face is still active, add to active faces
+				active_faces.append(bbox_data)
+		
+		# Remove timed out faces
+		for face_key in faces_to_remove:
+			del camera_faces[face_key]
+			print(f"DEBUG: Removed timed out face: {face_key}")
+		
+		print(f"DEBUG: Camera {camera_id} has {len(active_faces)} active faces")
+		return active_faces
+		
+	except Exception as e:
+		print(f"Error getting persistent bounding boxes: {e}")
+		return []
+
+def cleanup_persistent_bounding_boxes():
+	"""Clean up old persistent bounding boxes only when faces are truly gone."""
+	try:
+		import time
+		current_time = time.time()
+		cleanup_timeout = 10.0  # 10 seconds - clean up if face is completely gone
+		
+		cameras_to_remove = []
+		for camera_id, camera_faces in _persistent_bounding_boxes.items():
+			faces_to_remove = []
+			
+			# Check each face in this camera
+			for face_key, bbox_data in camera_faces.items():
+				if current_time - bbox_data.get("last_seen", 0) > cleanup_timeout:
+					faces_to_remove.append(face_key)
+			
+			# Remove timed out faces
+			for face_key in faces_to_remove:
+				del camera_faces[face_key]
+			
+			# If no faces left for this camera, mark camera for removal
+			if not camera_faces:
+				cameras_to_remove.append(camera_id)
+		
+		# Remove empty cameras
+		for camera_id in cameras_to_remove:
+			del _persistent_bounding_boxes[camera_id]
+		
+		if cameras_to_remove:
+			print(f"Cleaned up {len(cameras_to_remove)} empty cameras (all faces gone for >60s)")
+	except Exception as e:
+		print(f"Error cleaning up persistent bounding boxes: {e}")
+
+def add_recognition_log(camera_id, faculty_id, faculty_name, status, distance, teaching_load_id=None):
+	"""Add a recognition log entry for multiple face tracking."""
+	try:
+		import time
+		import pytz
+		
+		if camera_id not in _recognition_logs:
+			_recognition_logs[camera_id] = []
+		
+		# Get current time in Asia/Manila timezone
+		tz = pytz.timezone("Asia/Manila")
+		now = datetime.datetime.now(tz)
+		
+		# Ensure we have the full faculty name
+		full_faculty_name = faculty_name
+		if faculty_id and faculty_id != "Unknown" and faculty_id != "unknown_face":
+			# Try to get the full name from the faculty name function
+			print(f"Getting faculty name for ID: {faculty_id}")
+			full_name = get_faculty_name(faculty_id)
+			print(f"Retrieved faculty name: {full_name}")
+			if full_name and full_name != f"Faculty {faculty_id}":
+				full_faculty_name = full_name
+			elif faculty_name and faculty_name != "Unknown":
+				full_faculty_name = faculty_name
+			else:
+				full_faculty_name = f"Faculty {faculty_id}"
+		
+		# Create log entry
+		log_entry = {
+			"timestamp": now.isoformat(),
+			"faculty_id": faculty_id,
+			"faculty_name": full_faculty_name,
+			"status": status,
+			"distance": distance,
+			"teaching_load_id": teaching_load_id,
+			"camera_id": camera_id
+		}
+		
+		# Add to logs (keep last 50 entries per camera to prevent memory issues)
+		_recognition_logs[camera_id].append(log_entry)
+		if len(_recognition_logs[camera_id]) > 50:
+			_recognition_logs[camera_id] = _recognition_logs[camera_id][-50:]
+		
+		print(f"Added recognition log for camera {camera_id}: {full_faculty_name} ({status})")
+		
+	except Exception as e:
+		print(f"Error adding recognition log: {e}")
+
+def get_recognition_logs(camera_id=None, limit=20):
+	"""Get recognition logs for a specific camera or all cameras."""
+	try:
+		if camera_id:
+			# Return logs for specific camera
+			logs = _recognition_logs.get(camera_id, [])
+			return logs[-limit:] if limit else logs
+		else:
+			# Return logs for all cameras, sorted by timestamp
+			all_logs = []
+			for cam_id, logs in _recognition_logs.items():
+				for log in logs:
+					log['camera_id'] = cam_id
+					all_logs.append(log)
+			
+			# Sort by timestamp (newest first)
+			all_logs.sort(key=lambda x: x['timestamp'], reverse=True)
+			return all_logs[:limit] if limit else all_logs
+		
+	except Exception as e:
+		print(f"Error getting recognition logs: {e}")
+		return []
+
+def cleanup_old_recognition_logs():
+	"""Clean up old recognition logs to prevent memory buildup."""
+	try:
+		import time
+		import pytz
+		
+		tz = pytz.timezone("Asia/Manila")
+		current_time = datetime.datetime.now(tz)
+		cutoff_time = current_time - datetime.timedelta(hours=1)  # Keep logs for 1 hour
+		
+		for camera_id in list(_recognition_logs.keys()):
+			# Filter out old logs
+			_recognition_logs[camera_id] = [
+				log for log in _recognition_logs[camera_id]
+				if datetime.datetime.fromisoformat(log['timestamp'].replace('Z', '+00:00')) > cutoff_time
+			]
+			
+			# Remove empty camera entries
+			if not _recognition_logs[camera_id]:
+				del _recognition_logs[camera_id]
+		
+	except Exception as e:
+		print(f"Error cleaning up recognition logs: {e}")
 
 # -------------------
 # Simple frame processing
@@ -686,50 +999,132 @@ def update_faculty_embeddings_from_images(faculty_id=None):
 # face recognition processing
 # -------------------
 def detect_faces_optimized(frame):
-	"""Optimized face detection with better performance."""
+	"""Optimized face detection using InsightFace's built-in RetinaFace."""
 	try:
-		# Convert BGR to RGB for face_recognition
-		rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-		
-		# Use HOG model for faster and more reliable detection
-		face_locations = face_recognition.face_locations(rgb_frame, model="hog")
-		
-		if not face_locations:
+		if face_app is None:
+			print("Face models not initialized")
 			return [], []
 		
-		# Only compute encodings for detected faces
-		face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
-		return face_locations, face_encodings
+		# Convert BGR to RGB for InsightFace
+		rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+		
+		# Use InsightFace's built-in RetinaFace for detection and recognition
+		faces = face_app.get(rgb_frame)
+		
+		if not faces:
+			return [], []
+		
+		face_locations = []
+		face_encodings = []
+		
+		# Get frame dimensions
+		frame_height, frame_width = frame.shape[:2]
+		
+		# Process each detected face
+		for face in faces:
+			# Get bounding box coordinates
+			bbox = face.bbox
+			x1, y1, x2, y2 = bbox[0], bbox[1], bbox[2], bbox[3]
+			
+			# Debug logging for raw coordinates
+			print(f"DEBUG: Raw InsightFace bbox: {bbox}")
+			print(f"DEBUG: Raw coordinates - x1:{x1}, y1:{y1}, x2:{x2}, y2:{y2}")
+			
+			# Check if coordinates are normalized (0-1 range) or pixel coordinates
+			if x1 <= 1.0 and y1 <= 1.0 and x2 <= 1.0 and y2 <= 1.0:
+				# Convert normalized coordinates to pixel coordinates
+				x1 = int(x1 * frame_width)
+				y1 = int(y1 * frame_height)
+				x2 = int(x2 * frame_width)
+				y2 = int(y2 * frame_height)
+				print(f"DEBUG: Converted from normalized to pixel coordinates")
+			else:
+				# Coordinates are already in pixel format, just convert to int
+				x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+				print(f"DEBUG: Using pixel coordinates directly")
+			
+			# Ensure coordinates are within frame bounds
+			x1 = max(0, min(x1, frame_width - 1))
+			y1 = max(0, min(y1, frame_height - 1))
+			x2 = max(x1 + 1, min(x2, frame_width))
+			y2 = max(y1 + 1, min(y2, frame_height))
+			
+			# Convert to (top, right, bottom, left) format for compatibility
+			# InsightFace bbox format: [x_min, y_min, x_max, y_max] where (x_min,y_min) is top-left, (x_max,y_max) is bottom-right
+			top, right, bottom, left = y1, x2, y2, x1
+			
+			# Debug logging for coordinate verification
+			print(f"DEBUG: Final coordinates - x1:{x1}, y1:{y1}, x2:{x2}, y2:{y2}")
+			print(f"DEBUG: Converted to (top, right, bottom, left): ({top}, {right}, {bottom}, {left})")
+			print(f"DEBUG: Frame dimensions: {frame_width}x{frame_height}")
+			print(f"DEBUG: Face size - width:{x2-x1}, height:{y2-y1}")
+			
+			face_locations.append((top, right, bottom, left))
+			
+			# Get the embedding directly from InsightFace
+			embedding = face.embedding
+			face_encodings.append(embedding)
+		
+		return face_locations, face_encodings 
 	except Exception as e:
 		print(f"Error in face detection: {e}")
 		return [], []
 
 def match_faculty_optimized(face_encoding):
-	"""Optimized faculty matching with early exit."""
+	"""Optimized faculty matching with early exit using cosine similarity."""
 	try:
 		best_match = None
-		best_distance = float('inf')
+		best_similarity = -1.0  # Start with lowest similarity
+		
+		# Normalize the input encoding
+		face_encoding_norm = face_encoding / np.linalg.norm(face_encoding)
 		
 		for faculty_id, faculty_embeddings in _faculty_embeddings.items():
 			if not faculty_embeddings:
 				continue
 			
-			# Compare with all embeddings for this faculty
-			distances = face_recognition.face_distance(faculty_embeddings, face_encoding)
-			min_distance = min(distances)
-			
-			if min_distance < best_distance and min_distance < MATCH_THRESHOLD:
-				best_distance = min_distance
-				best_match = faculty_id
+			# Calculate cosine similarity with all embeddings for this faculty
+			max_similarity = -1.0
+			for faculty_embedding in faculty_embeddings:
+				# Check embedding dimension compatibility
+				if len(face_encoding) != len(faculty_embedding):
+					print(f"Embedding dimension mismatch: face={len(face_encoding)}, faculty={len(faculty_embedding)}")
+					# Skip this faculty if dimensions don't match
+					continue
 				
-				# Early exit if we find a very good match
-				if min_distance < MATCH_THRESHOLD * 0.5:
-					break
+				# Normalize faculty embedding
+				faculty_embedding_norm = faculty_embedding / np.linalg.norm(faculty_embedding)
+				# Calculate cosine similarity
+				similarity = np.dot(face_encoding_norm, faculty_embedding_norm)
+				max_similarity = max(max_similarity, similarity)
+			
+			# Only proceed if we found a valid similarity
+			if max_similarity > -1.0:
+				# Convert similarity to distance (1 - similarity)
+				distance = 1.0 - max_similarity
+				
+				# Check if this is a better match (lower distance = higher similarity)
+				if distance < (1.0 - MATCH_THRESHOLD) and max_similarity > best_similarity:
+					best_similarity = max_similarity
+					best_match = faculty_id
+					
+					# Early exit if we find a very good match
+					if max_similarity > 0.9:  # Very high similarity
+						break
 		
+		# Convert similarity back to distance for compatibility
+		# Handle inf values for JSON serialization
+		if best_similarity > -1.0:
+			best_distance = 1.0 - best_similarity
+			# Ensure distance is finite for JSON serialization
+			if not np.isfinite(best_distance):
+				best_distance = 1.0
+		else:
+			best_distance = 1.0  # Use 1.0 instead of inf
 		return best_match, best_distance
 	except Exception as e:
 		print(f"Error in faculty matching: {e}")
-		return None, float('inf')
+		return None, 1.0  # Return 1.0 instead of inf
 
 def smooth_face_position(camera_id, face_location, faculty_id):
 	"""Smooth face position to reduce jitter and improve tracking."""
@@ -740,22 +1135,33 @@ def smooth_face_position(camera_id, face_location, faculty_id):
 		if key not in _face_tracking_history:
 			_face_tracking_history[key] = {
 				"positions": [],
-				"max_history": 5  # Keep last 5 positions
+				"max_history": 3,  # Reduced to 3 for more responsive tracking
+				"last_valid_position": None
 			}
 		
 		history = _face_tracking_history[key]
 		top, right, bottom, left = face_location
 		
+		# Validate face location coordinates
+		if not _is_valid_face_location(face_location):
+			# If current position is invalid, use last valid position
+			if history["last_valid_position"]:
+				return history["last_valid_position"]
+			else:
+				return face_location
+		
 		# Add current position to history
 		history["positions"].append((top, right, bottom, left))
+		history["last_valid_position"] = face_location
+		history["last_activity"] = time.time()  # Track last activity time
 		
 		# Keep only recent positions
 		if len(history["positions"]) > history["max_history"]:
 			history["positions"].pop(0)
 		
-		# Calculate smoothed position using weighted average
+		# Calculate smoothed position using weighted average with confidence
 		if len(history["positions"]) >= 2:
-			# Weight recent positions more heavily
+			# Use weighted average (more recent positions get higher weight)
 			weights = [i + 1 for i in range(len(history["positions"]))]
 			total_weight = sum(weights)
 			
@@ -764,7 +1170,24 @@ def smooth_face_position(camera_id, face_location, faculty_id):
 			smoothed_bottom = sum(pos[2] * weight for pos, weight in zip(history["positions"], weights)) / total_weight
 			smoothed_left = sum(pos[3] * weight for pos, weight in zip(history["positions"], weights)) / total_weight
 			
-			return (int(smoothed_top), int(smoothed_right), int(smoothed_bottom), int(smoothed_left))
+			# Apply confidence-based smoothing (only smooth if change is reasonable)
+			current_pos = face_location
+			smoothed_location = (int(smoothed_top), int(smoothed_right), int(smoothed_bottom), int(smoothed_left))
+			
+			# Check if the smoothed position is too different from current (prevent large jumps)
+			max_change = 50  # Maximum pixels change allowed
+			top_diff = abs(smoothed_location[0] - current_pos[0])
+			right_diff = abs(smoothed_location[1] - current_pos[1])
+			bottom_diff = abs(smoothed_location[2] - current_pos[2])
+			left_diff = abs(smoothed_location[3] - current_pos[3])
+			
+			if (top_diff < max_change and right_diff < max_change and 
+				bottom_diff < max_change and left_diff < max_change and
+				_is_valid_face_location(smoothed_location)):
+				return smoothed_location
+			else:
+				# If change is too large or invalid, use current position
+				return face_location
 		else:
 			# Not enough history, return original position
 			return face_location
@@ -773,26 +1196,74 @@ def smooth_face_position(camera_id, face_location, faculty_id):
 		print(f"Error smoothing face position: {e}")
 		return face_location
 
+def _is_valid_face_location(face_location):
+	"""Check if face location coordinates are valid."""
+	try:
+		top, right, bottom, left = face_location
+		
+		# Basic coordinate validation
+		if not all(isinstance(coord, (int, float)) for coord in face_location):
+			return False
+		
+		# Check for reasonable face dimensions
+		if top >= bottom or left >= right:
+			return False
+		
+		# Check for minimum face size
+		face_width = right - left
+		face_height = bottom - top
+		if face_width < 20 or face_height < 20:
+			return False
+		
+		# Check for maximum face size (reasonable limits)
+		if face_width > 1000 or face_height > 1000:
+			return False
+		
+		# Check for non-negative coordinates
+		if any(coord < 0 for coord in face_location):
+			return False
+		
+		return True
+	except Exception:
+		return False
+
 def draw_stable_bounding_box(frame, face_location, faculty_id, is_scheduled, presence_info, faculty_name=None):
 	"""Draw a stable bounding box that stays on the face without flickering."""
 	try:
+		# Validate face location first
+		if not _is_valid_face_location(face_location):
+			return
+		
 		top, right, bottom, left = face_location
+		
+		# Debug logging for drawing coordinates
+		print(f"DEBUG: Drawing bounding box - Input coordinates: ({top}, {right}, {bottom}, {left})")
+		print(f"DEBUG: Drawing bounding box - Faculty ID: {faculty_id}, Scheduled: {is_scheduled}")
 		
 		# Get frame dimensions
 		frame_height, frame_width = frame.shape[:2]
 		
-		# Ensure coordinates are within frame bounds
-		left = max(0, min(left, frame_width - 1))
-		right = max(0, min(right, frame_width - 1))
-		top = max(0, min(top, frame_height - 1))
-		bottom = max(0, min(bottom, frame_height - 1))
+		# Clamp coordinates to frame bounds with proper validation
+		left = max(0, min(int(left), frame_width - 1))
+		right = max(left + 1, min(int(right), frame_width))
+		top = max(0, min(int(top), frame_height - 1))
+		bottom = max(top + 1, min(int(bottom), frame_height))
 		
-		# Ensure valid rectangle
+		# Debug logging for clamped coordinates
+		print(f"DEBUG: Drawing bounding box - Clamped coordinates: ({top}, {right}, {bottom}, {left})")
+		print(f"DEBUG: Drawing bounding box - Frame dimensions: {frame_width}x{frame_height}")
+		
+		# Final validation - ensure we have a valid rectangle
 		if top >= bottom or left >= right:
+			print(f"DEBUG: Invalid rectangle - top:{top}, right:{right}, bottom:{bottom}, left:{left}")
+			return
+		
+		# Ensure minimum size for visibility
+		if (right - left) < 10 or (bottom - top) < 10:
 			return
 		
 		# Set colors and thickness
-		thickness = 3
+		thickness = 2  # Slightly reduced for better performance
 		
 		if faculty_id:
 			if is_scheduled:
@@ -800,11 +1271,11 @@ def draw_stable_bounding_box(frame, face_location, faculty_id, is_scheduled, pre
 			else:
 				color = (0, 165, 255)  # Orange for wrong faculty
 			
-			# Draw main bounding box
+			# Draw main bounding box with rounded corners for better visibility
 			cv2.rectangle(frame, (left, top), (right, bottom), color, thickness)
 			
-			# Draw corner markers for better visibility
-			corner_size = 8
+			# Draw corner markers for better tracking
+			corner_size = min(12, (right - left) // 4, (bottom - top) // 4)
 			# Top-left
 			cv2.line(frame, (left, top), (left + corner_size, top), color, thickness)
 			cv2.line(frame, (left, top), (left, top + corner_size), color, thickness)
@@ -818,7 +1289,7 @@ def draw_stable_bounding_box(frame, face_location, faculty_id, is_scheduled, pre
 			cv2.line(frame, (right, bottom), (right - corner_size, bottom), color, thickness)
 			cv2.line(frame, (right, bottom), (right, bottom - corner_size), color, thickness)
 			
-			# Draw faculty name label
+			# Draw faculty name label with better positioning
 			if faculty_name and faculty_name != "Unknown":
 				label = faculty_name
 			else:
@@ -830,44 +1301,48 @@ def draw_stable_bounding_box(frame, face_location, faculty_id, is_scheduled, pre
 				label += " (Not Scheduled)"
 			
 			# Draw label with background
-			font_scale = 0.6
-			font_thickness = 2
+			font_scale = 0.5  # Slightly smaller for better fit
+			font_thickness = 1
 			(text_width, text_height), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)
 			
-			# Position text above the bounding box
+			# Position text above the bounding box with better bounds checking
 			text_x = max(5, min(left, frame_width - text_width - 5))
-			text_y = max(text_height + 5, min(top - 10, frame_height - 5))
+			text_y = max(text_height + 5, min(top - 5, frame_height - 5))
 			
-			# Draw text background
-			cv2.rectangle(frame, (text_x - 2, text_y - text_height - 2), 
-						 (text_x + text_width + 2, text_y + 2), (0, 0, 0), -1)
-			
-			# Draw text
-			cv2.putText(frame, label, (text_x, text_y), 
-					   cv2.FONT_HERSHEY_SIMPLEX, font_scale, color, font_thickness)
+			# Ensure text fits within frame
+			if text_x + text_width < frame_width and text_y - text_height > 0:
+				# Draw text background
+				cv2.rectangle(frame, (text_x - 2, text_y - text_height - 2), 
+							 (text_x + text_width + 2, text_y + 2), (0, 0, 0), -1)
+				
+				# Draw text
+				cv2.putText(frame, label, (text_x, text_y), 
+						   cv2.FONT_HERSHEY_SIMPLEX, font_scale, color, font_thickness)
 			
 			# Draw presence info for scheduled faculty
 			if presence_info and is_scheduled:
 				accumulated_minutes = int(presence_info["seconds"] / 60)
 				presence_text = f"Time: {accumulated_minutes}min / 30min"
 				
-				(presence_width, presence_height), _ = cv2.getTextSize(presence_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+				(presence_width, presence_height), _ = cv2.getTextSize(presence_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)
 				presence_x = max(5, min(left, frame_width - presence_width - 5))
-				presence_y = min(frame_height - 5, bottom + 20)
+				presence_y = min(frame_height - 5, bottom + 15)
 				
-				# Draw presence background
-				cv2.rectangle(frame, (presence_x - 2, presence_y - presence_height - 2), 
-							 (presence_x + presence_width + 2, presence_y + 2), (0, 0, 0), -1)
-				
-				# Draw presence text
-				cv2.putText(frame, presence_text, (presence_x, presence_y), 
-						   cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+				# Ensure presence text fits within frame
+				if presence_x + presence_width < frame_width and presence_y - presence_height > 0:
+					# Draw presence background
+					cv2.rectangle(frame, (presence_x - 2, presence_y - presence_height - 2), 
+								 (presence_x + presence_width + 2, presence_y + 2), (0, 0, 0), -1)
+					
+					# Draw presence text
+					cv2.putText(frame, presence_text, (presence_x, presence_y), 
+							   cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
 		else:
 			# Draw bounding box for unknown face
 			cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), thickness)  # Red
 			
 			# Draw corner markers
-			corner_size = 8
+			corner_size = min(12, (right - left) // 4, (bottom - top) // 4)
 			cv2.line(frame, (left, top), (left + corner_size, top), (0, 0, 255), thickness)
 			cv2.line(frame, (left, top), (left, top + corner_size), (0, 0, 255), thickness)
 			cv2.line(frame, (right, top), (right - corner_size, top), (0, 0, 255), thickness)
@@ -877,16 +1352,18 @@ def draw_stable_bounding_box(frame, face_location, faculty_id, is_scheduled, pre
 			cv2.line(frame, (right, bottom), (right - corner_size, bottom), (0, 0, 255), thickness)
 			cv2.line(frame, (right, bottom), (right, bottom - corner_size), (0, 0, 255), thickness)
 			
-			# Draw "Unknown" label
+			# Draw "Unknown" label with better positioning
 			text_x = max(5, min(left, frame_width - 80))
-			text_y = max(20, min(top - 10, frame_height - 5))
+			text_y = max(15, min(top - 5, frame_height - 5))
 			
-			# Draw text background
-			cv2.rectangle(frame, (text_x - 2, text_y - 20), (text_x + 80, text_y + 2), (0, 0, 0), -1)
-			
-			# Draw text
-			cv2.putText(frame, "Unknown", (text_x, text_y), 
-					   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+			# Ensure text fits within frame
+			if text_x + 80 < frame_width and text_y - 15 > 0:
+				# Draw text background
+				cv2.rectangle(frame, (text_x - 2, text_y - 15), (text_x + 80, text_y + 2), (0, 0, 0), -1)
+				
+				# Draw text
+				cv2.putText(frame, "Unknown", (text_x, text_y), 
+						   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
 			
 	except Exception as e:
 		print(f"Error drawing stable bounding box: {e}")
@@ -1055,28 +1532,45 @@ def log_recognition_event(camera_id, faculty_id, faculty_name, status, distance,
 		
 		def post_log():
 			try:
-				# Get detailed information from teaching load and related data
-				teaching_load_url = f"{API_BASE}/teaching-load-details"
-				payload = {
-					"teaching_load_id": teaching_load_id,
-					"faculty_id": faculty_id,
-					"camera_id": camera_id
-				}
-				
-				# Try to get detailed information
-				details_response = requests.post(teaching_load_url, json=payload, timeout=3)
-				if details_response.status_code == 200:
-					details = details_response.json()
-					room_name = details.get("room_name", f"Room {cam.get('room_no')}")
-					building_no = details.get("building_no", "Unknown")
-					camera_name = details.get("camera_name", f"Camera {camera_id}")
-					faculty_full_name = details.get("faculty_full_name", faculty_name or "Unknown")
+				# Only try to get detailed information if we have a valid teaching_load_id
+				# and the faculty_id is not None/Unknown
+				if teaching_load_id and faculty_id and faculty_id != "Unknown" and faculty_id != "unknown_face":
+					# Get detailed information from teaching load and related data
+					teaching_load_url = f"{API_BASE}/teaching-load-details"
+					payload = {
+						"teaching_load_id": teaching_load_id,
+						"faculty_id": faculty_id,
+						"camera_id": camera_id
+					}
+					
+					# Try to get detailed information
+					details_response = requests.post(teaching_load_url, json=payload, timeout=3)
+					if details_response.status_code == 200:
+						details = details_response.json()
+						room_name = details.get("room_name", cam.get("room_name", f"Room {cam.get('room_no')}"))
+						building_no = details.get("building_no", cam.get("room_building_no", "Unknown"))
+						camera_name = details.get("camera_name", f"Camera {camera_id}")
+						faculty_full_name = details.get("faculty_full_name", faculty_name or "Unknown")
+					else:
+						# Fallback to basic information
+						room_name = cam.get("room_name", f"Room {cam.get('room_no')}")
+						building_no = cam.get("room_building_no", "Unknown")
+						camera_name = f"Camera {camera_id}"
+						# Always try to get faculty full name, even for unscheduled faculty
+						if faculty_id and faculty_id != "Unknown" and faculty_id != "unknown_face":
+							faculty_full_name = get_faculty_name(faculty_id)
+						else:
+							faculty_full_name = faculty_name or "Unknown"
 				else:
-					# Fallback to basic information
-					room_name = f"Room {cam.get('room_no')}"
-					building_no = "Unknown"
+					# For unknown faces or unscheduled faculty, use basic information
+					room_name = cam.get("room_name", f"Room {cam.get('room_no')}")
+					building_no = cam.get("room_building_no", "Unknown")
 					camera_name = f"Camera {camera_id}"
-					faculty_full_name = faculty_name or "Unknown"
+					# Always try to get faculty full name, even for unscheduled faculty
+					if faculty_id and faculty_id != "Unknown" and faculty_id != "unknown_face":
+						faculty_full_name = get_faculty_name(faculty_id)
+					else:
+						faculty_full_name = faculty_name or "Unknown"
 				
 				# Prepare log data with Philippine timezone
 				import pytz
@@ -1110,7 +1604,7 @@ def log_recognition_event(camera_id, faculty_id, faculty_name, status, distance,
 		print(f"Error in log_recognition_event: {e}")
 
 def process_frame_for_recognition(frame, camera_id, scale_factor=1.0):
-	"""Optimized frame processing for face recognition."""
+	"""Optimized frame processing for face recognition with persistent bounding boxes."""
 	try:
 		# Get camera and schedule info
 		cam = _cameras_cache.get(camera_id)
@@ -1130,11 +1624,11 @@ def process_frame_for_recognition(frame, camera_id, scale_factor=1.0):
 		# Detect faces with optimized function
 		face_locations, face_encodings = detect_faces_optimized(frame)
 		
-		# Debug: Print face detection info (commented out to avoid console spam)
-		# if face_locations:
-		#	print(f"DEBUG: Detected {len(face_locations)} faces in frame")
+		# Track which faces were detected in this frame
+		current_frame_faces = set()
 		
-		# Process each detected face
+		# Process detected faces and update persistent bounding boxes
+		detected_faces = []
 		for face_encoding, face_location in zip(face_encodings, face_locations):
 			# Match faculty with optimized function
 			best_match, best_distance = match_faculty_optimized(face_encoding)
@@ -1152,8 +1646,24 @@ def process_frame_for_recognition(frame, camera_id, scale_factor=1.0):
 			# Log recognition event
 			faculty_name = faculty_full_name if best_match else "Unknown"
 			status = "recognized" if best_match else "unknown_face"
-			teaching_load_id = sched.get("teaching_load_id") if sched else None
 			
+			# Only use teaching_load_id if the detected faculty matches the scheduled faculty
+			# This prevents logging the scheduled faculty's info for unknown faces or wrong faculty
+			teaching_load_id = None
+			if sched and best_match and is_scheduled:
+				teaching_load_id = sched.get("teaching_load_id")
+			
+			# Add to recognition logs for multiple face tracking
+			add_recognition_log(
+				camera_id=camera_id,
+				faculty_id=best_match,
+				faculty_name=faculty_name,
+				status=status,
+				distance=best_distance,
+				teaching_load_id=teaching_load_id
+			)
+			
+			# Also log to database (existing function)
 			log_recognition_event(
 				camera_id=camera_id,
 				faculty_id=best_match,
@@ -1173,29 +1683,84 @@ def process_frame_for_recognition(frame, camera_id, scale_factor=1.0):
 					max(0, int(bottom / scale_factor)),
 					max(0, int(left / scale_factor))
 				)
+				print(f"DEBUG: Coordinate scaling - Original: ({top}, {right}, {bottom}, {left})")
+				print(f"DEBUG: Coordinate scaling - Scale factor: {scale_factor}")
+				print(f"DEBUG: Coordinate scaling - Scaled: {scaled_face_location}")
 			else:
 				scaled_face_location = face_location
+				print(f"DEBUG: No scaling needed - Using original coordinates: {face_location}")
 			
 			# Apply smoothing to reduce jitter
 			smoothed_location = smooth_face_position(camera_id, scaled_face_location, best_match)
 			
-			# Draw bounding box directly on frame for stable display
-			draw_stable_bounding_box(frame, smoothed_location, best_match, is_scheduled, presence_info, faculty_full_name)
+			# Update persistent bounding box
+			update_persistent_bounding_box(
+				camera_id, 
+				smoothed_location, 
+				best_match, 
+				is_scheduled, 
+				presence_info, 
+				faculty_full_name
+			)
 			
-			# Update recognition results
+			# Track this face as detected in current frame
+			if best_match and best_match != "Unknown" and best_match != "unknown_face":
+				current_frame_faces.add(f"faculty_{best_match}")
+			else:
+				# For unknown faces, use rounded position
+				top, right, bottom, left = smoothed_location
+				center_x = (left + right) // 2
+				center_y = (top + bottom) // 2
+				rounded_x = (center_x // 50) * 50
+				rounded_y = (center_y // 50) * 50
+				current_frame_faces.add(f"unknown_{rounded_x}_{rounded_y}")
+			
+			# Track detected faces for recognition results
+			detected_faces.append({
+				"faculty_id": best_match,
+				"distance": best_distance,
+				"is_scheduled": is_scheduled
+			})
+		
+		# Clean up faces that were not detected in current frame
+		if camera_id in _persistent_bounding_boxes:
+			faces_to_remove = []
+			for face_key in _persistent_bounding_boxes[camera_id].keys():
+				if face_key not in current_frame_faces:
+					faces_to_remove.append(face_key)
+			
+			for face_key in faces_to_remove:
+				del _persistent_bounding_boxes[camera_id][face_key]
+				print(f"DEBUG: Removed face not detected in current frame: {face_key}")
+		
+		# Draw all persistent bounding boxes (including those from previous frames)
+		persistent_boxes = get_persistent_bounding_boxes(camera_id)
+		for bbox_data in persistent_boxes:
+			draw_stable_bounding_box(
+				frame,
+				bbox_data["face_location"],
+				bbox_data["faculty_id"],
+				bbox_data["is_scheduled"],
+				bbox_data["presence_info"],
+				bbox_data["faculty_name"]
+			)
+		
+		# Update recognition results with latest detection
+		if detected_faces:
+			# Use the first detected face for recognition results
+			first_face = detected_faces[0]
 			import pytz
 			tz = pytz.timezone("Asia/Manila")
 			now = datetime.datetime.now(tz)
 			_recognition_results[camera_id].update({
 				"last_seen": now.isoformat(),
-				"faculty_id": best_match,
-				"status": "recognized" if best_match else "unknown_face",
-				"distance": best_distance if best_match else None,
+				"faculty_id": first_face["faculty_id"],
+				"status": "recognized" if first_face["faculty_id"] else "unknown_face",
+				"distance": first_face["distance"] if first_face["faculty_id"] else None,
 				"teaching_load_id": sched.get("teaching_load_id") if sched else None,
 				"timestamp": now.isoformat()
 			})
 		
-		# Bounding boxes are drawn directly on the frame
 		return frame
 		
 	except Exception as e:
@@ -1273,23 +1838,10 @@ class RTSPVideoTrack(VideoStreamTrack):
             
             if should_process:
                 try:
-                    # Use simple scaling with better face detection
-                    h, w = frame.shape[:2]
-                    scale = FRAME_SCALE_FACTOR if max(h, w) > MAX_FRAME_SIZE else 1.0
-                    
-                    if scale != 1.0:
-                        # Resize frame for processing
-                        small = cv2.resize(frame, (int(w * scale), int(h * scale)))
-                        # Process on scaled frame
-                        annotated_small = process_frame_for_recognition(small, self.camera_id, scale)
-                        # Resize back to original size
-                        if annotated_small is not None:
-                            frame = cv2.resize(annotated_small, (w, h))
-                    else:
-                        # Process on original frame
-                        processed_frame = process_frame_for_recognition(frame, self.camera_id, 1.0)
-                        if processed_frame is not None:
-                            frame = processed_frame
+                    # Process on original frame without scaling to avoid coordinate issues
+                    processed_frame = process_frame_for_recognition(frame, self.camera_id, 1.0)
+                    if processed_frame is not None:
+                        frame = processed_frame
                     
                     # Update shared frame for other connections
                     update_shared_frame(self.camera_id, frame)
@@ -1343,6 +1895,8 @@ def get_attendance_time_fields(camera_id: int, faculty_id: int, teaching_load_id
         recognition_times["time_in"] != ""
     )
     
+    # If was_detected=True, we expect to have recognition data
+    # If was_detected=False, we might still have some recognition data (insufficient time)
     if has_actual_recognition:
         print(f"DEBUG: Using actual recognition times: {recognition_times['time_in']}")
         return {
@@ -1364,6 +1918,15 @@ def get_attendance_time_fields(camera_id: int, faculty_id: int, teaching_load_id
 # -------------------
 def _post_attendance_dedup(payload):
     try:
+        # Validate payload before processing
+        if "record_remarks" not in payload or not payload["record_remarks"] or payload["record_remarks"].strip() == "":
+            # Use the record_status as the default remarks if remarks are empty
+            default_remarks = payload.get("record_status", "Absent")
+            payload["record_remarks"] = default_remarks
+            print(f"DEBUG: WARNING - Empty remarks in payload, setting to '{default_remarks}'")
+        
+        print(f"DEBUG: Final payload validation - record_remarks='{payload.get('record_remarks', 'MISSING')}'")
+        
         # Check if attendance already exists
         check_response = requests.post(ATTENDANCE_CHECK_ENDPOINT, json={
             "faculty_id": payload["faculty_id"],
@@ -1439,29 +2002,14 @@ def _process_camera_feed_background(camera_id: int, camera_feed: str, room_no: s
             now = time.time()
             if now - last_recognition_time >= BACKGROUND_RECOGNITION_INTERVAL:
                 try:
-                    # Use simple scaling for background processing
-                    h, w = frame.shape[:2]
-                    scale = FRAME_SCALE_FACTOR if max(h, w) > MAX_FRAME_SIZE else 1.0
-                    if scale != 1.0:
-                        # Resize frame for processing
-                        small = cv2.resize(frame, (int(w * scale), int(h * scale)))
-                        # Process on scaled frame
-                        processed_frame = process_frame_for_recognition(small, camera_id, scale)
-                        # Update shared frame with processed version
-                        if processed_frame is not None:
-                            update_shared_frame(camera_id, cv2.resize(processed_frame, (w, h)))
-                        else:
-                            # If processing fails, use original frame
-                            update_shared_frame(camera_id, frame)
+                    # Process on original frame without scaling to avoid coordinate issues
+                    processed_frame = process_frame_for_recognition(frame, camera_id, 1.0)
+                    # Update shared frame with processed version
+                    if processed_frame is not None:
+                        update_shared_frame(camera_id, processed_frame)
                     else:
-                        # Process on original frame
-                        processed_frame = process_frame_for_recognition(frame, camera_id, 1.0)
-                        # Update shared frame with processed version
-                        if processed_frame is not None:
-                            update_shared_frame(camera_id, processed_frame)
-                        else:
-                            # If processing fails, use original frame
-                            update_shared_frame(camera_id, frame)
+                        # If processing fails, use original frame
+                        update_shared_frame(camera_id, frame)
                 except Exception as e:
                     print(f"Error in background recognition for camera {camera_id}: {e}")
                     # Update with original frame if processing fails
@@ -1597,15 +2145,18 @@ async def status(request):
         schedules_json = convert_tuple_keys_to_strings(_schedules_cache)
         presence_accumulator_json = convert_tuple_keys_to_strings(_presence_accumulator)
         late_tracking_json = convert_tuple_keys_to_strings(_late_tracking)
-        
         recognition_tracking_json = convert_tuple_keys_to_strings(_recognition_tracking)
+        
+        # Get recent recognition logs (last 50 entries)
+        recognition_logs = get_recognition_logs(limit=50)
         
         return web.json_response({
             "results": results_json,
             "schedules": schedules_json,
             "presence_accumulator": presence_accumulator_json,
             "late_tracking": late_tracking_json,
-            "recognition_tracking": recognition_tracking_json
+            "recognition_tracking": recognition_tracking_json,
+            "recognition_logs": recognition_logs
         })
     except Exception as e:
         print(f"Error in status endpoint: {e}")
@@ -1638,6 +2189,40 @@ async def update_embeddings(request):
         print("Triggering embedding update for all faculty")
         threading.Thread(target=update_faculty_embeddings_from_images, args=(None,), daemon=True).start()
         return web.json_response({"status": "ok", "message": "Embedding update triggered for all faculty"})
+
+async def regenerate_all_embeddings(request):
+    """Regenerate all faculty embeddings with new InsightFace format."""
+    try:
+        print("🔄 Regenerating all faculty embeddings with InsightFace format...")
+        threading.Thread(target=update_faculty_embeddings_from_images, args=(None,), daemon=True).start()
+        return web.json_response({
+            "status": "ok", 
+            "message": "All faculty embeddings regeneration triggered. This may take a few minutes."
+        })
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+
+async def test_faculty_embedding(request):
+    """Test endpoint to debug faculty embedding issues."""
+    try:
+        body = await request.json()
+        faculty_id = body.get("faculty_id", 8)  # Default to faculty_id 8 for testing
+        
+        print(f"🧪 Testing embedding update for faculty_id {faculty_id}")
+        
+        # Test the embedding update function directly
+        update_faculty_embeddings_from_images(faculty_id)
+        
+        return web.json_response({
+            "status": "ok",
+            "message": f"Test embedding update completed for faculty_id {faculty_id}",
+            "faculty_id": faculty_id
+        })
+    except Exception as e:
+        print(f"Test embedding error: {e}")
+        import traceback
+        traceback.print_exc()
+        return web.json_response({"error": str(e)}, status=500)
 
 async def connection_stats(request):
     """Return statistics about active connections."""
@@ -1717,6 +2302,15 @@ async def background_tasks():
             # Clean up old recognition tracking data
             cleanup_old_recognition_tracking()
             
+            # Clean up old face tracking history
+            cleanup_face_tracking_history()
+            
+            # Clean up old persistent bounding boxes
+            cleanup_persistent_bounding_boxes()
+            
+            # Clean up old recognition logs
+            cleanup_old_recognition_logs()
+            
             # Refresh data every 5 minutes
             fetch_cameras()
             fetch_today_schedule()
@@ -1747,6 +2341,8 @@ def main():
     app.router.add_get("/status", status)
     app.router.add_get("/health", health)
     app.router.add_post("/update-embeddings", update_embeddings)
+    app.router.add_post("/regenerate-all-embeddings", regenerate_all_embeddings)
+    app.router.add_post("/test-faculty-embedding", test_faculty_embedding)
     app.router.add_get("/current-schedule", current_schedule)
     app.router.add_get("/connection-stats", connection_stats)
     app.router.add_post("/cleanup-connection", cleanup_connection)

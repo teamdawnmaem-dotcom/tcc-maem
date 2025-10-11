@@ -239,7 +239,7 @@
 
         .about-section {
             position: relative;
-            background: linear-gradient(rgba(139, 0, 0, 0.35), rgba(139, 0, 0, 0.85)), url("{{ asset('images/tcc-aboutus.jpg') }}") center/cover no-repeat;
+            background: linear-gradient(rgba(139, 0, 0, 0.35), rgba(139, 0, 0, 0.85)), url("{{ asset('images/TCC Image.png') }}") center/cover no-repeat;
             min-height: 100vh;
             padding: 80px 20px;
             display: flex;
@@ -418,7 +418,7 @@
             <div class="content-box animate-scale">
                 <div class="login-section animate-slide-left">
                     <div class="login-title animate-on-scroll">
-                        <h2>LOGIN (Staging)</h2>
+                        <h2>LOGIN</h2>
                         <p>Welcome User</p>
                     </div>
 

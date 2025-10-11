@@ -1,7 +1,6 @@
 @extends('layouts.appAdmin')
 
 @section('title', 'User Account Management - Tagoloan Community College')
-@section('accounts-active', 'active')
 @section('checker-account-active', 'active')
 
 @section('styles')

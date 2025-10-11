@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('faculty_lname', 50);
             $table->string('faculty_department', 50);
             $table->longText('faculty_images');
-            $table->text('faculty_face_embedding')->nullable();
+            $table->longText('faculty_face_embedding')->nullable();
             $table->timestamps();
         });
     }

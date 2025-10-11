@@ -448,7 +448,8 @@
                                 '{{ addslashes($pass->pass_slip_itinerary) }}',
                                 '{{ $pass->pass_slip_date }}',
                                 '{{ $pass->pass_slip_departure_time }}',
-                                '{{ $pass->pass_slip_arrival_time }}')">
+                                '{{ $pass->pass_slip_arrival_time }}',
+                                '{{ addslashes($pass->faculty->faculty_department) }}')">
                                         &#9998;
                                     </button>
                                     <button class="delete-btn"
@@ -801,6 +802,14 @@
 
         function openModal(id) {
             document.getElementById(id).style.display = 'flex';
+            // Initialize button states
+            if (id === 'addModal') {
+                updateAddButtonState(false);
+                validateAdd();
+            } else if (id === 'editModal') {
+                updateEditButtonState(false);
+                validateEdit();
+            }
         }
 
         function closeModal(id) {
@@ -886,56 +895,49 @@
 
         // Pre-fill when opening Update modal
         function openUpdateModal(lp_id, faculty_id, purpose, itinerary, date, departure, arrival, department) {
-            openModal('editModal');
+            // Open modal directly without calling openModal to avoid conflicts
+            document.getElementById('editModal').style.display = 'flex';
+            
+            // Fill all form fields
             document.getElementById('edit_faculty_id').value = faculty_id;
-
-            // Fill department for the pre-selected faculty
-            const facultySelect = document.getElementById('edit_faculty_id');
-            const selectedOption = facultySelect.querySelector(`option[value="${faculty_id}"]`);
-            document.getElementById('edit_faculty_department').value = selectedOption ? selectedOption.getAttribute(
-                'data-department') : '';
-
-            document.getElementById('edit_lp_purpose').value = purpose;
-            document.getElementById('edit_pass_slip_itinerary').value = itinerary;
-            document.getElementById('edit_pass_slip_date').value = date;
+            document.getElementById('edit_faculty_department').value = department || '';
+            document.getElementById('edit_lp_purpose').value = purpose || '';
+            document.getElementById('edit_pass_slip_itinerary').value = itinerary || '';
+            document.getElementById('edit_pass_slip_date').value = date || '';
             
-            // Convert readable time back to 24-hour format for form inputs
-            document.getElementById('edit_pass_slip_departure_time').value = convertTo24Hour(departure);
-            document.getElementById('edit_pass_slip_arrival_time').value = convertTo24Hour(arrival);
+            // Set time values directly (they're already in 24-hour format)
+            document.getElementById('edit_pass_slip_departure_time').value = departure || '';
+            document.getElementById('edit_pass_slip_arrival_time').value = arrival || '';
             
+            // Set form action
             document.getElementById('editForm').action = '/checker/passes/' + lp_id;
+            
+            // Clear any existing validation states and messages
+            const form = document.getElementById('editForm');
+            if (form) {
+                const inputs = form.querySelectorAll('input, select, textarea');
+                inputs.forEach(input => {
+                    input.classList.remove('valid', 'invalid');
+                    input.dataset.touched = 'false';
+                });
+                
+                const messages = form.querySelectorAll('.validation-message');
+                messages.forEach(msg => msg.textContent = '');
+                
+                const logicError = form.querySelector('.logic-error');
+                if (logicError) {
+                    logicError.style.display = 'none';
+                    logicError.textContent = '';
+                }
+            }
+            
+            // Initialize button state and trigger validation
+            updateEditButtonState(false);
+            setTimeout(() => {
+                validateEdit();
+            }, 100);
         }
 
-        // Convert readable time format (e.g., "10:30am") to 24-hour format (e.g., "10:30:00")
-        function convertTo24Hour(timeStr) {
-            if (!timeStr) return '';
-            
-            // Remove any extra spaces and convert to lowercase
-            timeStr = timeStr.trim().toLowerCase();
-            
-            // Check if it's already in 24-hour format (contains :)
-            if (timeStr.includes(':') && !timeStr.includes('am') && !timeStr.includes('pm')) {
-                return timeStr.includes(':') && timeStr.split(':').length === 2 ? timeStr + ':00' : timeStr;
-            }
-            
-            // Parse 12-hour format
-            const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(am|pm)/);
-            if (!match) return timeStr;
-            
-            let hours = parseInt(match[1]);
-            const minutes = match[2];
-            const period = match[3];
-            
-            // Convert to 24-hour format
-            if (period === 'am') {
-                if (hours === 12) hours = 0;
-            } else { // pm
-                if (hours !== 12) hours += 12;
-            }
-            
-            // Format with leading zeros
-            return `${hours.toString().padStart(2, '0')}:${minutes}:00`;
-        }
 
 
         function openDeleteModal(id) {
@@ -1121,7 +1123,14 @@
                 // Logical date/time validation: date cannot be in the past, and departure < arrival
                 let logicOk = true;
                 const logicBox = document.querySelector('#addModal .logic-error');
-                if (logicBox) logicBox.style.display = 'none';
+                if (logicBox) {
+                    // Only clear non-leave conflict messages
+                    const currentMessage = logicBox.textContent;
+                    if (!currentMessage || !currentMessage.includes('on leave')) {
+                        logicBox.style.display = 'none';
+                        logicBox.textContent = '';
+                    }
+                }
                 if (vDate) {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
@@ -1129,8 +1138,11 @@
                     if (theDate < today) {
                         logicOk = false;
                         if (logicBox) {
-                            logicBox.textContent = 'Date cannot be in the past.';
-                            logicBox.style.display = 'block';
+                            const currentMessage = logicBox.textContent;
+                            if (!currentMessage || !currentMessage.includes('on leave')) {
+                                logicBox.textContent = 'Date cannot be in the past.';
+                                logicBox.style.display = 'block';
+                            }
                         }
                     }
                 }
@@ -1141,8 +1153,11 @@
                     if (depTime && arrTime && depTime >= arrTime) {
                         logicOk = false;
                         if (logicBox) {
-                            logicBox.textContent = 'Arrival time must be later than departure time.';
-                            logicBox.style.display = 'block';
+                            const currentMessage = logicBox.textContent;
+                            if (!currentMessage || !currentMessage.includes('on leave')) {
+                                logicBox.textContent = 'Arrival time must be later than departure time.';
+                                logicBox.style.display = 'block';
+                            }
                         }
                     }
                 }
@@ -1153,8 +1168,11 @@
                     if (overlapError) {
                         logicOk = false;
                         if (logicBox) {
-                            logicBox.textContent = overlapError;
-                            logicBox.style.display = 'block';
+                            const currentMessage = logicBox.textContent;
+                            if (!currentMessage || !currentMessage.includes('on leave')) {
+                                logicBox.textContent = overlapError;
+                                logicBox.style.display = 'block';
+                            }
                         }
                     }
                     
@@ -1167,6 +1185,24 @@
                                 logicBox.textContent = leaveConflict;
                                 logicBox.style.display = 'block';
                             }
+                        }
+                    }
+                }
+                
+                // Check for leave conflicts and pass overlaps (synchronous check like departure/arrival time)
+                if (logicOk && vFac && vDate) {
+                    const conflictMessage = logicBox ? logicBox.textContent : '';
+                    if (conflictMessage && (conflictMessage.includes('on leave') || conflictMessage.includes('already has a pass slip'))) {
+                        logicOk = false;
+                        if (logicBox) {
+                            logicBox.textContent = conflictMessage;
+                            logicBox.style.display = 'block';
+                        }
+                    } else {
+                        // Clear conflict messages if no longer valid
+                        if (logicBox && (logicBox.textContent.includes('on leave') || logicBox.textContent.includes('already has a pass slip'))) {
+                            logicBox.style.display = 'none';
+                            logicBox.textContent = '';
                         }
                     }
                 }
@@ -1185,7 +1221,10 @@
                 setMessage(arr, vArr ? '' : 'Arrival time is required');
                 setValidity(img, vImg);
                 setMessage(img, vImg ? '' : (isNotEmpty(img && img.value) ? 'Image size must be less than 2MB' : 'Slip image is required'));
-                return vFac && vPur && vItin && vDate && vDep && vArr && vImg && logicOk;
+                
+                const isValid = vFac && vPur && vItin && vDate && vDep && vArr && vImg && logicOk;
+                updateAddButtonState(isValid);
+                return isValid;
             }
 
             function validateEdit() {
@@ -1195,16 +1234,25 @@
                 const date = document.getElementById('edit_pass_slip_date');
                 const dep = document.getElementById('edit_pass_slip_departure_time');
                 const arr = document.getElementById('edit_pass_slip_arrival_time');
+                const img = document.getElementById('edit_lp_image');
                 const vFac = isNotEmpty(fac && fac.value);
                 const vPur = isNotEmpty(pur && pur.value);
                 const vItin = isNotEmpty(itin && itin.value);
                 const vDate = isNotEmpty(date && date.value);
                 const vDep = isNotEmpty(dep && dep.value);
                 const vArr = isNotEmpty(arr && arr.value);
+                const vImg = !img || !img.files || img.files.length === 0 || validateImageSize(img);
                 // Logical date/time validation
                 let logicOk = true;
                 const logicBox = document.querySelector('#editModal .logic-error');
-                if (logicBox) logicBox.style.display = 'none';
+                if (logicBox) {
+                    // Only clear non-leave conflict messages
+                    const currentMessage = logicBox.textContent;
+                    if (!currentMessage || !currentMessage.includes('on leave')) {
+                        logicBox.style.display = 'none';
+                        logicBox.textContent = '';
+                    }
+                }
                 if (vDate) {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
@@ -1212,8 +1260,11 @@
                     if (theDate < today) {
                         logicOk = false;
                         if (logicBox) {
-                            logicBox.textContent = 'Date cannot be in the past.';
-                            logicBox.style.display = 'block';
+                            const currentMessage = logicBox.textContent;
+                            if (!currentMessage || !currentMessage.includes('on leave')) {
+                                logicBox.textContent = 'Date cannot be in the past.';
+                                logicBox.style.display = 'block';
+                            }
                         }
                     }
                 }
@@ -1221,8 +1272,11 @@
                     if (dep.value && arr.value && dep.value >= arr.value) {
                         logicOk = false;
                         if (logicBox) {
-                            logicBox.textContent = 'Arrival time must be later than departure time.';
-                            logicBox.style.display = 'block';
+                            const currentMessage = logicBox.textContent;
+                            if (!currentMessage || !currentMessage.includes('on leave')) {
+                                logicBox.textContent = 'Arrival time must be later than departure time.';
+                                logicBox.style.display = 'block';
+                            }
                         }
                     }
                 }
@@ -1235,8 +1289,11 @@
                     if (overlapError) {
                         logicOk = false;
                         if (logicBox) {
-                            logicBox.textContent = overlapError;
-                            logicBox.style.display = 'block';
+                            const currentMessage = logicBox.textContent;
+                            if (!currentMessage || !currentMessage.includes('on leave')) {
+                                logicBox.textContent = overlapError;
+                                logicBox.style.display = 'block';
+                            }
                         }
                     }
                     
@@ -1253,6 +1310,24 @@
                     }
                 }
                 
+                // Check for leave conflicts and pass overlaps (synchronous check like departure/arrival time)
+                if (logicOk && vFac && vDate) {
+                    const conflictMessage = logicBox ? logicBox.textContent : '';
+                    if (conflictMessage && (conflictMessage.includes('on leave') || conflictMessage.includes('already has a pass slip'))) {
+                        logicOk = false;
+                        if (logicBox) {
+                            logicBox.textContent = conflictMessage;
+                            logicBox.style.display = 'block';
+                        }
+                    } else {
+                        // Clear conflict messages if no longer valid
+                        if (logicBox && (logicBox.textContent.includes('on leave') || logicBox.textContent.includes('already has a pass slip'))) {
+                            logicBox.style.display = 'none';
+                            logicBox.textContent = '';
+                        }
+                    }
+                }
+                
                 setValidity(fac, vFac);
                 setMessage(fac, vFac ? '' : 'Faculty is required');
                 setValidity(pur, vPur);
@@ -1265,7 +1340,12 @@
                 setMessage(dep, vDep ? '' : 'Departure time is required');
                 setValidity(arr, vArr);
                 setMessage(arr, vArr ? '' : 'Arrival time is required');
-                return vFac && vPur && vItin && vDate && vDep && vArr && logicOk;
+                setValidity(img, vImg);
+                setMessage(img, vImg ? '' : 'Image size must be less than 2MB');
+                
+                const isValid = vFac && vPur && vItin && vDate && vDep && vArr && vImg && logicOk;
+                updateEditButtonState(isValid);
+                return isValid;
             }
 
             ['#addModal [name="faculty_id"]', '#addModal [name="lp_purpose"]', '#addModal [name="pass_slip_itinerary"]',
@@ -1275,24 +1355,78 @@
                 const el = document.querySelector(sel);
                 if (!el) return;
                 const evt = el.tagName === 'SELECT' ? 'change' : 'input';
-                el.addEventListener(evt, validateAdd);
+                el.addEventListener(evt, function() {
+                    validateAdd();
+                    // Also check for conflicts when faculty, date, or times change
+                    if (sel.includes('faculty_id') || sel.includes('pass_slip_date') || sel.includes('pass_slip_departure_time') || sel.includes('pass_slip_arrival_time')) {
+                        checkLeaveConflictAdd();
+                        checkPassOverlapAdd();
+                    }
+                });
                 el.addEventListener('blur', () => {
                     el.dataset.touched = 'true';
                     validateAdd();
                 });
             });
+
+            // Add real-time leave conflict checking for date field
+            const addDateField = document.querySelector('#addModal [name="pass_slip_date"]');
+            if (addDateField) {
+                addDateField.addEventListener('change', function() {
+                    checkLeaveConflictAdd();
+                    // Also check for pass overlaps when date changes
+                    checkPassOverlapAdd();
+                });
+            }
+
+            // Add real-time pass overlap checking for time fields
+            const addDepartureField = document.querySelector('#addModal [name="pass_slip_departure_time"]');
+            const addArrivalField = document.querySelector('#addModal [name="pass_slip_arrival_time"]');
+            if (addDepartureField) {
+                addDepartureField.addEventListener('change', checkPassOverlapAdd);
+            }
+            if (addArrivalField) {
+                addArrivalField.addEventListener('change', checkPassOverlapAdd);
+            }
             ['#edit_faculty_id', '#edit_lp_purpose', '#edit_pass_slip_itinerary', '#edit_pass_slip_date',
-                '#edit_pass_slip_departure_time', '#edit_pass_slip_arrival_time'
+                '#edit_pass_slip_departure_time', '#edit_pass_slip_arrival_time', '#edit_lp_image'
             ].forEach(sel => {
                 const el = document.querySelector(sel);
                 if (!el) return;
                 const evt = el.tagName === 'SELECT' ? 'change' : 'input';
-                el.addEventListener(evt, validateEdit);
+                el.addEventListener(evt, function() {
+                    validateEdit();
+                    // Also check for conflicts when faculty, date, or times change
+                    if (sel.includes('faculty_id') || sel.includes('pass_slip_date') || sel.includes('pass_slip_departure_time') || sel.includes('pass_slip_arrival_time')) {
+                        checkLeaveConflictEdit();
+                        checkPassOverlapEdit();
+                    }
+                });
                 el.addEventListener('blur', () => {
                     el.dataset.touched = 'true';
                     validateEdit();
                 });
             });
+
+            // Add real-time leave conflict checking for edit date field
+            const editDateField = document.querySelector('#edit_pass_slip_date');
+            if (editDateField) {
+                editDateField.addEventListener('change', function() {
+                    checkLeaveConflictEdit();
+                    // Also check for pass overlaps when date changes
+                    checkPassOverlapEdit();
+                });
+            }
+
+            // Add real-time pass overlap checking for edit time fields
+            const editDepartureField = document.querySelector('#edit_pass_slip_departure_time');
+            const editArrivalField = document.querySelector('#edit_pass_slip_arrival_time');
+            if (editDepartureField) {
+                editDepartureField.addEventListener('change', checkPassOverlapEdit);
+            }
+            if (editArrivalField) {
+                editArrivalField.addEventListener('change', checkPassOverlapEdit);
+            }
 
             (function() {
                 const addForm = document.querySelector('#addModal form');
@@ -1315,5 +1449,244 @@
                 }
             })();
         })();
+
+        // Button state management functions
+        function updateAddButtonState(isValid) {
+            const addButton = document.querySelector('#addModal .modal-btn.add');
+            if (addButton) {
+                addButton.disabled = !isValid;
+                if (isValid) {
+                    addButton.style.opacity = '1';
+                    addButton.style.cursor = 'pointer';
+                } else {
+                    addButton.style.opacity = '0.6';
+                    addButton.style.cursor = 'not-allowed';
+                }
+            }
+        }
+
+        function updateEditButtonState(isValid) {
+            const editButton = document.querySelector('#editModal .modal-btn.add');
+            if (editButton) {
+                editButton.disabled = !isValid;
+                if (isValid) {
+                    editButton.style.opacity = '1';
+                    editButton.style.cursor = 'pointer';
+                } else {
+                    editButton.style.opacity = '0.6';
+                    editButton.style.cursor = 'not-allowed';
+                }
+            }
+        }
+
+        // Real-time pass overlap checking functions
+        async function checkPassOverlapAdd() {
+            const facultySelect = document.querySelector('#addModal [name="faculty_id"]');
+            const dateField = document.querySelector('#addModal [name="pass_slip_date"]');
+            const departureField = document.querySelector('#addModal [name="pass_slip_departure_time"]');
+            const arrivalField = document.querySelector('#addModal [name="pass_slip_arrival_time"]');
+            const logicBox = document.querySelector('#addModal .logic-error');
+            
+            if (!facultySelect || !dateField || !departureField || !arrivalField || 
+                !facultySelect.value || !dateField.value || !departureField.value || !arrivalField.value) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/checker/passes/check-pass-overlap', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        faculty_id: facultySelect.value,
+                        date: dateField.value,
+                        departure_time: departureField.value,
+                        arrival_time: arrivalField.value
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (logicBox) {
+                    if (data.has_overlap) {
+                        logicBox.textContent = data.message;
+                        logicBox.style.display = 'block';
+                    } else {
+                        // Only clear if the current message is about pass overlap
+                        const currentMessage = logicBox.textContent;
+                        if (currentMessage && currentMessage.includes('already has a pass slip')) {
+                            logicBox.style.display = 'none';
+                            logicBox.textContent = '';
+                        }
+                    }
+                }
+                
+                // Trigger validation after pass overlap check
+                validateAdd();
+            } catch (error) {
+                console.error('Error checking pass overlap:', error);
+            }
+        }
+
+        async function checkPassOverlapEdit() {
+            const facultySelect = document.querySelector('#edit_faculty_id');
+            const dateField = document.querySelector('#edit_pass_slip_date');
+            const departureField = document.querySelector('#edit_pass_slip_departure_time');
+            const arrivalField = document.querySelector('#edit_pass_slip_arrival_time');
+            const logicBox = document.querySelector('#editModal .logic-error');
+            const editForm = document.getElementById('editForm');
+            const currentId = editForm ? editForm.action.split('/').pop() : null;
+            
+            if (!facultySelect || !dateField || !departureField || !arrivalField || 
+                !facultySelect.value || !dateField.value || !departureField.value || !arrivalField.value) {
+                return;
+            }
+
+            // Get the original times from the button data attributes
+            const editButton = document.querySelector(`button[onclick*="openUpdateModal"][data-id="${currentId}"]`);
+            const originalDeparture = editButton ? editButton.getAttribute('data-departure') : null;
+            const originalArrival = editButton ? editButton.getAttribute('data-arrival') : null;
+
+            try {
+                const response = await fetch('/checker/passes/check-pass-overlap', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        faculty_id: facultySelect.value,
+                        date: dateField.value,
+                        departure_time: departureField.value,
+                        arrival_time: arrivalField.value,
+                        exclude_id: currentId,
+                        current_departure: originalDeparture,
+                        current_arrival: originalArrival
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (logicBox) {
+                    if (data.has_overlap) {
+                        logicBox.textContent = data.message;
+                        logicBox.style.display = 'block';
+                    } else {
+                        // Only clear if the current message is about pass overlap
+                        const currentMessage = logicBox.textContent;
+                        if (currentMessage && currentMessage.includes('already has a pass slip')) {
+                            logicBox.style.display = 'none';
+                            logicBox.textContent = '';
+                        }
+                    }
+                }
+                
+                // Trigger validation after pass overlap check
+                validateEdit();
+            } catch (error) {
+                console.error('Error checking pass overlap:', error);
+            }
+        }
+
+        // Real-time leave conflict checking functions
+        async function checkLeaveConflictAdd() {
+            const facultySelect = document.querySelector('#addModal [name="faculty_id"]');
+            const dateField = document.querySelector('#addModal [name="pass_slip_date"]');
+            const logicBox = document.querySelector('#addModal .logic-error');
+            
+            if (!facultySelect || !dateField || !facultySelect.value || !dateField.value) {
+                if (logicBox) {
+                    logicBox.style.display = 'none';
+                    logicBox.textContent = '';
+                }
+                return;
+            }
+
+            try {
+                const response = await fetch('/checker/passes/check-leave-conflict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        faculty_id: facultySelect.value,
+                        date: dateField.value
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (logicBox) {
+                    if (data.on_leave) {
+                        logicBox.textContent = data.message;
+                        logicBox.style.display = 'block';
+                    } else {
+                        // Only clear if the current message is about leave conflict
+                        const currentMessage = logicBox.textContent;
+                        if (currentMessage && currentMessage.includes('on leave')) {
+                            logicBox.style.display = 'none';
+                            logicBox.textContent = '';
+                        }
+                    }
+                }
+                
+                // Trigger validation after leave conflict check
+                validateAdd();
+            } catch (error) {
+                console.error('Error checking leave conflict:', error);
+            }
+        }
+
+        async function checkLeaveConflictEdit() {
+            const facultySelect = document.querySelector('#edit_faculty_id');
+            const dateField = document.querySelector('#edit_pass_slip_date');
+            const logicBox = document.querySelector('#editModal .logic-error');
+            
+            if (!facultySelect || !dateField || !facultySelect.value || !dateField.value) {
+                if (logicBox) {
+                    logicBox.style.display = 'none';
+                    logicBox.textContent = '';
+                }
+                return;
+            }
+
+            try {
+                const response = await fetch('/checker/passes/check-leave-conflict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        faculty_id: facultySelect.value,
+                        date: dateField.value
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (logicBox) {
+                    if (data.on_leave) {
+                        logicBox.textContent = data.message;
+                        logicBox.style.display = 'block';
+                    } else {
+                        // Only clear if the current message is about leave conflict
+                        const currentMessage = logicBox.textContent;
+                        if (currentMessage && currentMessage.includes('on leave')) {
+                            logicBox.style.display = 'none';
+                            logicBox.textContent = '';
+                        }
+                    }
+                }
+                
+                // Trigger validation after leave conflict check
+                validateEdit();
+            } catch (error) {
+                console.error('Error checking leave conflict:', error);
+            }
+        }
     </script>
 @endsection

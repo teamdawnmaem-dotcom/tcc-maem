@@ -259,13 +259,20 @@
 
         .validation-message {
             position: absolute;
-            left: 0;
-            right: 12px;
-            bottom: 0;
-            font-size: 0.85rem;
+            left: 130px;
+            right: 10px;
+            bottom: -10px;
+            font-size: 0.8rem;
             color: #ff3636;
             pointer-events: none;
-            padding-left: 12px;
+            padding-left: 10px;
+            line-height: 1.1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .validation-message.show {
+            opacity: 1;
         }
 
         .modal-btn {
@@ -554,7 +561,7 @@
                         <td>{{ $camera->camera_ip_address }}</td>
                         <td>{{ $camera->camera_username }}</td>
                         <td>{{ $camera->camera_password }}</td>
-                        <td>{{ $camera->room->room_name ?? 'N/A' }}</td>
+                        <td>{{ $camera->room_no ?? 'N/A' }}</td>
                         <td>
                             <div class="action-btns">
                                 <button class="edit-btn"
@@ -648,18 +655,22 @@
                     <div class="modal-form-group">
                         <label>Camera Name :</label>
                         <input type="text" name="camera_name">
+                        <div class="validation-message"></div>
                     </div>
                     <div class="modal-form-group">
                         <label>Camera IP Address :</label>
                         <input type="text" name="camera_ip_address">
+                        <div class="validation-message"></div>
                     </div>
                     <div class="modal-form-group">
                         <label>Username :</label>
                         <input type="text" name="camera_username">
+                        <div class="validation-message"></div>
                     </div>
                     <div class="modal-form-group">
                         <label>Password :</label>
                         <input type="password" name="camera_password">
+                        <div class="validation-message"></div>
                     </div>
                     <div class="modal-form-group">
                         <label>Room No. :</label>
@@ -669,6 +680,10 @@
                                 <option value="{{ $room->room_no }}">{{ $room->room_name }}</option>
                             @endforeach
                         </select>
+                        <div class="validation-message"></div>
+                    </div>
+                    <div class="room-conflict-error"
+                        style="display:none; color:#ff3636; text-align:center; margin-top:6px; margin-bottom:6px; font-weight:600;">
                     </div>
                     <div class="modal-buttons">
                         <button type="submit" class="modal-btn add">Add</button>
@@ -754,18 +769,22 @@
                     <div class="modal-form-group">
                         <label>Camera Name :</label>
                         <input type="text" name="camera_name" id="updateCameraName">
+                        <div class="validation-message"></div>
                     </div>
                     <div class="modal-form-group">
                         <label>Camera IP Address :</label>
                         <input type="text" name="camera_ip_address" id="updateCameraIP">
+                        <div class="validation-message"></div>
                     </div>
                     <div class="modal-form-group">
                         <label>Username :</label>
                         <input type="text" name="camera_username" id="updateCameraUsername">
+                        <div class="validation-message"></div>
                     </div>
                     <div class="modal-form-group">
                         <label>Password :</label>
                         <input type="password" name="camera_password" id="updateCameraPassword">
+                        <div class="validation-message"></div>
                     </div>
                     <div class="modal-form-group">
                         <label>Room No. :</label>
@@ -775,6 +794,10 @@
                                 <option value="{{ $room->room_no }}">{{ $room->room_name }}</option>
                             @endforeach
                         </select>
+                        <div class="validation-message"></div>
+                    </div>
+                    <div class="room-conflict-error"
+                        style="display:none; color:#ff3636; text-align:center; margin-top:6px; margin-bottom:6px; font-weight:600;">
                     </div>
                     <div class="modal-buttons">
                         <button type="submit" class="modal-btn update">Update</button>
@@ -814,7 +837,113 @@
     <script>
         function openModal(modalId) {
             document.getElementById(modalId).style.display = 'flex';
+            
+            // Initialize button states when opening modals
+            if (modalId === 'addCameraModal') {
+                updateAddButtonState(false); // Start with disabled state
+                // Trigger validation for any pre-filled values
+                setTimeout(() => {
+                    validateAdd();
+                }, 100);
+            } else if (modalId === 'updateCameraModal') {
+                updateUpdateButtonState(false); // Start with disabled state
+                // Trigger validation for any pre-filled values
+                setTimeout(() => {
+                    validateUpdate();
+                }, 100);
+            }
         }
+
+        // Handle backend validation errors
+        function displayBackendErrors() {
+            // Check if there are any validation errors from the server
+            const openModalValue = '{{ session("open_modal") }}';
+            console.log('Backend errors check:', {
+                openModal: openModalValue,
+                hasRoomError: {{ $errors->has('room_no') ? 'true' : 'false' }},
+                roomError: '{{ $errors->first("room_no") }}'
+            });
+            
+            if (openModalValue) {
+                openModal(openModalValue);
+                
+                // Display backend errors in the form fields
+                @if($errors->has('room_no'))
+                    const roomField = document.querySelector(`#${openModalValue} [name="room_no"]`);
+                    if (roomField) {
+                        // Mark the field as touched so validation messages show
+                        roomField.dataset.touched = 'true';
+                        roomField.classList.add('invalid');
+                        setMessage(roomField, '{{ $errors->first("room_no") }}');
+                        console.log('Displayed room error:', '{{ $errors->first("room_no") }}');
+                    }
+                @endif
+                
+                @if($errors->has('camera_name'))
+                    const nameField = document.querySelector(`#${openModalValue} [name="camera_name"]`);
+                    if (nameField) {
+                        nameField.dataset.touched = 'true';
+                        nameField.classList.add('invalid');
+                        setMessage(nameField, '{{ $errors->first("camera_name") }}');
+                    }
+                @endif
+                
+                @if($errors->has('camera_ip_address'))
+                    const ipField = document.querySelector(`#${openModalValue} [name="camera_ip_address"]`);
+                    if (ipField) {
+                        ipField.dataset.touched = 'true';
+                        ipField.classList.add('invalid');
+                        setMessage(ipField, '{{ $errors->first("camera_ip_address") }}');
+                    }
+                @endif
+                
+                @if($errors->has('camera_username'))
+                    const userField = document.querySelector(`#${openModalValue} [name="camera_username"]`);
+                    if (userField) {
+                        userField.dataset.touched = 'true';
+                        userField.classList.add('invalid');
+                        setMessage(userField, '{{ $errors->first("camera_username") }}');
+                    }
+                @endif
+                
+                @if($errors->has('camera_password'))
+                    const passField = document.querySelector(`#${openModalValue} [name="camera_password"]`);
+                    if (passField) {
+                        passField.dataset.touched = 'true';
+                        passField.classList.add('invalid');
+                        setMessage(passField, '{{ $errors->first("camera_password") }}');
+                    }
+                @endif
+                
+                // Update button states after displaying backend errors
+                setTimeout(() => {
+                    if (openModalValue === 'addCameraModal') {
+                        validateAdd();
+                    } else if (openModalValue === 'updateCameraModal') {
+                        validateUpdate();
+                    }
+                }, 50);
+            }
+        }
+
+        // Call this when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            displayBackendErrors();
+            
+            // Show backend error alert if there are validation errors
+            @if($errors->any())
+                setTimeout(() => {
+                    if (window.Swal) {
+                        Swal.fire({ 
+                            icon: 'error', 
+                            title: 'Validation Error', 
+                            text: 'Please check the form fields for errors and fix them before submitting.',
+                            confirmButtonColor: '#8B0000' 
+                        });
+                    }
+                }, 500);
+            @endif
+        });
 
         function resetModalForm(modalId) {
             const modal = document.getElementById(modalId);
@@ -839,6 +968,13 @@
                 msg.textContent = '';
             });
 
+            // Clear room conflict error
+            const roomConflictBox = modal.querySelector('.room-conflict-error');
+            if (roomConflictBox) {
+                roomConflictBox.style.display = 'none';
+                roomConflictBox.textContent = '';
+            }
+
             window.camSubmitAttempt = false;
         }
 
@@ -859,6 +995,17 @@
             document.getElementById('updateCameraPassword').value = password;
             document.getElementById('updateCameraRoom').value = room_no;
             document.getElementById('updateCameraForm').action = '/deptHead/cameras/' + id;
+            
+            // Mark all fields as touched so validation messages show immediately
+            const roomField = document.getElementById('updateCameraRoom');
+            if (roomField) {
+                roomField.dataset.touched = 'true';
+            }
+            
+            // Validate the pre-filled form and update button state
+            setTimeout(() => {
+                validateUpdate();
+            }, 100);
         }
 
         function openDeleteModal(id) {
@@ -908,6 +1055,19 @@
         // Client-side Validation (Camera forms)
         // =========================
         (function() {
+            // Ensure SweetAlert2 is available
+            (function ensureSwal() {
+                if (window.Swal) return;
+                var s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+                document.head.appendChild(s);
+            })();
+
+            function showError(title, text) {
+                if (!window.Swal) return;
+                Swal.fire({ icon: 'error', title: title || 'Error', text: text || '', confirmButtonColor: '#8B0000' });
+            }
+
             function trim(v) {
                 return (v || '').trim();
             }
@@ -944,6 +1104,80 @@
                 }
                 const show = el.dataset.touched === 'true' || window.camSubmitAttempt === true;
                 m.textContent = show ? (msg || '') : '';
+                if (show && msg) {
+                    m.classList.add('show');
+                } else {
+                    m.classList.remove('show');
+                }
+            }
+
+            function updateAddButtonState(isValid) {
+                const addButton = document.querySelector('#addCameraModal .modal-btn.add');
+                if (addButton) {
+                    if (isValid) {
+                        addButton.disabled = false;
+                        addButton.style.opacity = '1';
+                        addButton.style.cursor = 'pointer';
+                        addButton.textContent = 'Add';
+                    } else {
+                        addButton.disabled = true;
+                        addButton.style.opacity = '0.6';
+                        addButton.style.cursor = 'not-allowed';
+                        addButton.textContent = 'Add';
+                    }
+                }
+            }
+
+            function updateUpdateButtonState(isValid) {
+                const updateButton = document.querySelector('#updateCameraModal .modal-btn.update');
+                if (updateButton) {
+                    if (isValid) {
+                        updateButton.disabled = false;
+                        updateButton.style.opacity = '1';
+                        updateButton.style.cursor = 'pointer';
+                        updateButton.textContent = 'Update';
+                    } else {
+                        updateButton.disabled = true;
+                        updateButton.style.opacity = '0.6';
+                        updateButton.style.cursor = 'not-allowed';
+                        updateButton.textContent = 'Add';
+                    }
+                }
+            }
+
+            function checkRoomAvailability(roomNo) {
+                if (!roomNo) return { available: true, message: '' };
+                
+                console.log('Checking room availability for:', roomNo);
+                
+                // Get all existing cameras from the table
+                const tableRows = document.querySelectorAll('.faculty-table tbody tr');
+                console.log('Found', tableRows.length, 'table rows');
+                
+                for (let row of tableRows) {
+                    // Skip the "no results" row if it exists
+                    if (row.classList.contains('no-results')) continue;
+                    
+                    const roomCell = row.cells[5]; // Room No. is the 6th column (index 5)
+                    const cameraNameCell = row.cells[1]; // Camera Name is the 2nd column (index 1)
+                    const cameraIdCell = row.cells[0]; // Camera ID is the 1st column (index 0)
+                    
+                    const roomText = roomCell ? roomCell.textContent.trim() : '';
+                    const cameraName = cameraNameCell ? cameraNameCell.textContent.trim() : 'Unknown Camera';
+                    const cameraId = cameraIdCell ? cameraIdCell.textContent.trim() : 'Unknown ID';
+                    
+                    console.log('Checking row - Room:', roomText, 'Camera:', cameraName, 'ID:', cameraId);
+                    
+                    if (roomText === roomNo) {
+                        console.log('Room conflict found!');
+                        return { 
+                            available: false, 
+                            message: `Room conflict with existing camera: ${cameraName} (ID: ${cameraId})` 
+                        };
+                    }
+                }
+                console.log('No room conflict found');
+                return { available: true, message: '' };
             }
 
             function validateAdd() {
@@ -957,6 +1191,38 @@
                 const vUser = isNotEmpty(user && user.value) && minLen(user && user.value, 3);
                 const vPass = isNotEmpty(pass && pass.value) && minLen(pass && pass.value, 6);
                 const vRoom = isNotEmpty(room && room.value);
+                
+                // Check room availability
+                let roomAvailable = true;
+                const roomConflictBox = document.querySelector('#addCameraModal .room-conflict-error');
+                if (roomConflictBox) roomConflictBox.style.display = 'none';
+                
+                if (vRoom) {
+                    console.log('Validating room:', room.value);
+                    const roomCheck = checkRoomAvailability(room.value);
+                    roomAvailable = roomCheck.available;
+                    console.log('Room check result:', roomCheck);
+                    if (!roomAvailable) {
+                        console.log('Setting room conflict message:', roomCheck.message);
+                        if (roomConflictBox) {
+                            roomConflictBox.textContent = roomCheck.message;
+                            roomConflictBox.style.display = 'block';
+                        }
+                        setValidity(room, false);
+                        setMessage(room, '');
+                    } else {
+                        console.log('Setting room as valid');
+                        if (roomConflictBox) roomConflictBox.style.display = 'none';
+                        setValidity(room, true);
+                        setMessage(room, '');
+                    }
+                } else {
+                    console.log('Room is empty, setting as required');
+                    if (roomConflictBox) roomConflictBox.style.display = 'none';
+                    setValidity(room, false);
+                    setMessage(room, 'Room is required');
+                }
+                
                 setValidity(name, vName);
                 setMessage(name, vName ? '' : 'Camera name is required');
                 setValidity(ip, vIP);
@@ -968,9 +1234,41 @@
                 setValidity(pass, vPass);
                 setMessage(pass, vPass ? '' : (isNotEmpty(pass && pass.value) ?
                     'Password must be at least 6 characters' : 'Password is required'));
-                setValidity(room, vRoom);
-                setMessage(room, vRoom ? '' : 'Room is required');
-                return vName && vIP && vUser && vPass && vRoom;
+                
+                const isValid = vName && vIP && vUser && vPass && vRoom && roomAvailable;
+                updateAddButtonState(isValid);
+                
+                return isValid;
+            }
+
+            function checkRoomAvailabilityForUpdate(roomNo, excludeCameraId) {
+                if (!roomNo) return { available: true, message: '' };
+                
+                // Get all existing cameras from the table
+                const tableRows = document.querySelectorAll('.faculty-table tbody tr');
+                for (let row of tableRows) {
+                    // Skip the "no results" row if it exists
+                    if (row.classList.contains('no-results')) continue;
+                    
+                    const cameraIdCell = row.cells[0]; // Camera ID is the 1st column (index 0)
+                    const roomCell = row.cells[5]; // Room No. is the 6th column (index 5)
+                    const cameraNameCell = row.cells[1]; // Camera Name is the 2nd column (index 1)
+                    
+                    // Skip the camera being updated
+                    if (cameraIdCell && cameraIdCell.textContent.trim() === excludeCameraId.toString()) {
+                        continue;
+                    }
+                    
+                    if (roomCell && roomCell.textContent.trim() === roomNo) {
+                        const cameraName = cameraNameCell ? cameraNameCell.textContent.trim() : 'Unknown Camera';
+                        const cameraId = cameraIdCell ? cameraIdCell.textContent.trim() : 'Unknown ID';
+                        return { 
+                            available: false, 
+                            message: `Room conflict with existing camera: ${cameraName} (ID: ${cameraId})` 
+                        };
+                    }
+                }
+                return { available: true, message: '' };
             }
 
             function validateUpdate() {
@@ -979,11 +1277,43 @@
                 const user = document.getElementById('updateCameraUsername');
                 const pass = document.getElementById('updateCameraPassword');
                 const room = document.getElementById('updateCameraRoom');
+                const cameraId = document.getElementById('updateCameraId');
                 const vName = isNotEmpty(name && name.value);
                 const vIP = isNotEmpty(ip && ip.value) && isIP(ip && ip.value);
                 const vUser = isNotEmpty(user && user.value) && minLen(user && user.value, 3);
                 const vPass = isNotEmpty(pass && pass.value) && minLen(pass && pass.value, 6);
                 const vRoom = isNotEmpty(room && room.value);
+                
+                // Check room availability (excluding current camera)
+                let roomAvailable = true;
+                const roomConflictBox = document.querySelector('#updateCameraModal .room-conflict-error');
+                if (roomConflictBox) roomConflictBox.style.display = 'none';
+                
+                if (vRoom && cameraId && cameraId.value) {
+                    const roomCheck = checkRoomAvailabilityForUpdate(room.value, cameraId.value);
+                    roomAvailable = roomCheck.available;
+                    if (!roomAvailable) {
+                        if (roomConflictBox) {
+                            roomConflictBox.textContent = roomCheck.message;
+                            roomConflictBox.style.display = 'block';
+                        }
+                        setValidity(room, false);
+                        setMessage(room, '');
+                    } else {
+                        if (roomConflictBox) roomConflictBox.style.display = 'none';
+                        setValidity(room, true);
+                        setMessage(room, '');
+                    }
+                } else if (!vRoom) {
+                    if (roomConflictBox) roomConflictBox.style.display = 'none';
+                    setValidity(room, false);
+                    setMessage(room, 'Room is required');
+                } else {
+                    if (roomConflictBox) roomConflictBox.style.display = 'none';
+                    setValidity(room, true);
+                    setMessage(room, '');
+                }
+                
                 setValidity(name, vName);
                 setMessage(name, vName ? '' : 'Camera name is required');
                 setValidity(ip, vIP);
@@ -995,9 +1325,11 @@
                 setValidity(pass, vPass);
                 setMessage(pass, vPass ? '' : (isNotEmpty(pass && pass.value) ?
                     'Password must be at least 6 characters' : 'Password is required'));
-                setValidity(room, vRoom);
-                setMessage(room, vRoom ? '' : 'Room is required');
-                return vName && vIP && vUser && vPass && vRoom;
+                
+                const isValid = vName && vIP && vUser && vPass && vRoom && roomAvailable;
+                updateUpdateButtonState(isValid);
+                
+                return isValid;
             }
 
             ['[name="camera_name"]', '[name="camera_ip_address"]', '[name="camera_username"]',
@@ -1006,7 +1338,11 @@
                 const el = document.querySelector(`#addCameraModal ${sel}`);
                 if (!el) return;
                 const evt = el.tagName === 'SELECT' ? 'change' : 'input';
-                el.addEventListener(evt, validateAdd);
+                el.addEventListener(evt, () => {
+                    // Mark field as touched immediately when user interacts
+                    el.dataset.touched = 'true';
+                    validateAdd();
+                });
                 el.addEventListener('blur', () => {
                     el.dataset.touched = 'true';
                     validateAdd();
@@ -1018,7 +1354,11 @@
                 const el = document.querySelector(sel);
                 if (!el) return;
                 const evt = el.tagName === 'SELECT' ? 'change' : 'input';
-                el.addEventListener(evt, validateUpdate);
+                el.addEventListener(evt, () => {
+                    // Mark field as touched immediately when user interacts
+                    el.dataset.touched = 'true';
+                    validateUpdate();
+                });
                 el.addEventListener('blur', () => {
                     el.dataset.touched = 'true';
                     validateUpdate();
@@ -1032,6 +1372,7 @@
                         window.camSubmitAttempt = true;
                         if (!validateAdd()) {
                             e.preventDefault();
+                            showError('Validation Error', 'Please fix all errors before submitting. Check for room conflicts and complete all required fields.');
                         }
                     });
                 }
@@ -1041,6 +1382,7 @@
                         window.camSubmitAttempt = true;
                         if (!validateUpdate()) {
                             e.preventDefault();
+                            showError('Validation Error', 'Please fix all errors before submitting. Check for room conflicts and complete all required fields.');
                         }
                     });
                 }

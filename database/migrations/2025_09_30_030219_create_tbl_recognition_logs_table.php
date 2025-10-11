@@ -20,9 +20,18 @@ return new class extends Migration
             $table->string('faculty_name', 200);
             $table->string('status', 50); // recognized, unknown_face, etc.
             $table->decimal('distance', 8, 6)->nullable(); // face recognition distance
-            $table->integer('faculty_id')->nullable();
-            $table->integer('camera_id')->nullable();
-            $table->integer('teaching_load_id')->nullable();
+             $table->foreignId('faculty_id')->nullable()
+                  ->constrained('tbl_faculty', 'faculty_id')
+                  ->cascadeOnDelete()
+                  ->cascadeOnUpdate();
+            $table->foreignId('camera_id')->nullable()
+                  ->constrained('tbl_camera', 'camera_id')
+                  ->cascadeOnDelete()
+                  ->cascadeOnUpdate();
+             $table->foreignId('teaching_load_id')->nullable()
+                  ->constrained('tbl_teaching_load', 'teaching_load_id')
+                  ->cascadeOnDelete()
+                  ->cascadeOnUpdate();
         });
     }
 

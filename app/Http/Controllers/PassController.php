@@ -27,7 +27,7 @@ class PassController extends Controller
             'pass_slip_date' => 'required|date',
             'pass_slip_departure_time' => 'required',
             'pass_slip_arrival_time' => 'required',
-            'lp_image' => 'nullable|image|max:2048',
+            'lp_image' => 'required|image|max:2048',
         ]);
 
         $data = $request->all();
@@ -84,7 +84,14 @@ class PassController extends Controller
 
         $data = $request->all();
         if ($request->hasFile('lp_image')) {
+            // Delete old image if it exists
+            if ($pass->lp_image) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($pass->lp_image);
+            }
             $data['lp_image'] = $request->file('lp_image')->store('passes', 'public');
+        } else {
+            // Keep the old image if no new image is uploaded
+            unset($data['lp_image']);
         }
 
         // Prevent pass slip when faculty is on leave for that date
@@ -99,10 +106,20 @@ class PassController extends Controller
                 ->withInput();
         }
 
+        // Store old date for reconciliation
+        $oldDate = $pass->pass_slip_date;
+        
         $pass->update($data);
 
         // Update attendance remarks for the pass slip date (reconcile)
         $remarksService = new AttendanceRemarksService();
+        
+        // First, reconcile the old date to remove old pass slip records
+        if ($oldDate !== $request->pass_slip_date) {
+            $remarksService->reconcilePassChange($request->faculty_id, $oldDate);
+        }
+        
+        // Then, reconcile the new date
         $remarksService->reconcilePassChange($request->faculty_id, $request->pass_slip_date);
         
         // Also create absent records for scheduled classes on pass slip date
@@ -150,7 +167,8 @@ class PassController extends Controller
             'faculty_id' => 'required|integer',
             'date' => 'required|date',
             'time_in' => 'required|string',
-            'time_out' => 'required|string'
+            'time_out' => 'required|string',
+            'teaching_load_class_section' => 'required|string',
         ]);
 
         $facultyId = $request->faculty_id;
@@ -183,5 +201,90 @@ class PassController extends Controller
         $end2 = \Carbon\Carbon::parse($end2);
 
         return $start1->lt($end2) && $start2->lt($end1);
+    }
+
+    /**
+     * Check if faculty is on leave for a specific date (for real-time validation)
+     */
+    public function checkLeaveConflict(Request $request)
+    {
+        $request->validate([
+            'faculty_id' => 'required|integer',
+            'date' => 'required|date',
+        ]);
+
+        $facultyId = $request->faculty_id;
+        $date = $request->date;
+
+        // Check if faculty has an active leave for this date
+        $onLeave = \App\Models\Leave::where('faculty_id', $facultyId)
+            ->where('leave_start_date', '<=', $date)
+            ->where('leave_end_date', '>=', $date)
+            ->exists();
+
+        return response()->json([
+            'on_leave' => $onLeave,
+            'message' => $onLeave ? 'Selected instructor is currently on leave for this date.' : null
+        ]);
+    }
+
+    /**
+     * Check if faculty has overlapping pass slip for a specific date and time (for real-time validation)
+     */
+    public function checkPassOverlap(Request $request)
+    {
+        $request->validate([
+            'faculty_id' => 'required|integer',
+            'date' => 'required|date',
+            'departure_time' => 'required|string',
+            'arrival_time' => 'required|string',
+            'exclude_id' => 'nullable|integer',
+            'current_departure' => 'nullable|string',
+            'current_arrival' => 'nullable|string',
+        ]);
+
+        $facultyId = $request->faculty_id;
+        $date = $request->date;
+        $departureTime = $request->departure_time;
+        $arrivalTime = $request->arrival_time;
+        $excludeId = $request->exclude_id;
+        $currentDeparture = $request->current_departure;
+        $currentArrival = $request->current_arrival;
+
+        // Check if faculty has any pass slips on the same date
+        $query = Pass::where('faculty_id', $facultyId)
+            ->where('pass_slip_date', $date);
+        
+        if ($excludeId) {
+            $query->where('lp_id', '!=', $excludeId);
+        }
+        
+        $existingPasses = $query->get();
+
+        foreach ($existingPasses as $pass) {
+            // Skip if this is the current record being edited and times are the same
+            if ($excludeId && $currentDeparture && $currentArrival && 
+                $pass->pass_slip_departure_time === $currentDeparture && 
+                $pass->pass_slip_arrival_time === $currentArrival) {
+                continue;
+            }
+            
+            // Check if times overlap
+            if ($this->timeOverlaps($departureTime, $arrivalTime, $pass->pass_slip_departure_time, $pass->pass_slip_arrival_time)) {
+                // Format times to 12-hour format
+                $formattedDeparture = \Carbon\Carbon::createFromFormat('H:i:s', $pass->pass_slip_departure_time)->format('g:i a');
+                $formattedArrival = \Carbon\Carbon::createFromFormat('H:i:s', $pass->pass_slip_arrival_time)->format('g:i a');
+                
+                return response()->json([
+                    'has_overlap' => true,
+                    'message' => "This instructor already has a pass slip from {$formattedDeparture} to {$formattedArrival} on this date."
+                ]);
+            }
+        }
+
+        return response()->json([
+            'has_overlap' => false,
+            'message' => null
+        ]);
     }
 }
