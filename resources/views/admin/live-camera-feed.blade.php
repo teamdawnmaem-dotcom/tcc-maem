@@ -386,6 +386,10 @@
 					<span class="schedule-value" id="schedule-course"></span>
 				</div>
 				<div class="schedule-item">
+					<span class="schedule-label">CLASS SECTION:</span>
+					<span class="schedule-value" id="schedule-class-section"></span>
+				</div>
+				<div class="schedule-item">
 					<span class="schedule-label">DEPARTMENT:</span>
 					<span class="schedule-value" id="schedule-department"></span>
 				</div>
@@ -432,7 +436,8 @@
 	console.log('Faculties data loaded:', faculties);
 	console.log('First faculty sample:', faculties.length > 0 ? faculties[0] : 'No faculties');
 
-	const WEBSOCKET_HOST = `http://${window.location.hostname}:5000`;
+	//const WEBSOCKET_HOST = `http://${window.location.hostname}:5000`;
+	const WEBSOCKET_HOST = `https://workspacevps.cloud/camera/api`;
 	const pcs = {}; // RTCPeerConnections per camera
 	const reconnectInterval = 1000; // 1 second before retry
 	const scheduleRefreshMs = 30000; // refresh schedule every 30s
@@ -786,6 +791,7 @@
 			document.getElementById('schedule-time').textContent = `${load.teaching_load_day_of_week}, ${timeIn} - ${timeOut}`;
 			document.getElementById('schedule-instructor').textContent = `${faculty.faculty_fname} ${faculty.faculty_lname}`;
 			document.getElementById('schedule-course').textContent = `${load.teaching_load_course_code} ${load.teaching_load_subject}`;
+			document.getElementById('schedule-class-section').textContent = load.teaching_load_class_section ?? '-';
 			document.getElementById('schedule-department').textContent = faculty.faculty_department ?? '';
 			
 			// Update faculty image
@@ -795,6 +801,7 @@
 			document.getElementById('schedule-time').textContent = 'No schedule';
 			document.getElementById('schedule-instructor').textContent = '-';
 			document.getElementById('schedule-course').textContent = '-';
+			document.getElementById('schedule-class-section').textContent = '-';
 			document.getElementById('schedule-department').textContent = '-';
 			
 			// Hide faculty image and show no schedule

@@ -47,14 +47,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
             transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             position: sticky;
             top: 0;
             z-index: 1;
             overflow: hidden;
         }
-        
+
         .logo-container::before {
             content: '';
             position: absolute;
@@ -62,28 +62,28 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
             transition: left 0.6s ease;
         }
-        
+
         .logo-container:hover::before {
             left: 100%;
         }
-        
+
         .sidebar-logo {
             width: 160px;
             display: block;
             transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+            filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
         }
-        
+
         .logo-container:hover .sidebar-logo {
             transform: scale(1.05);
         }
-        
+
         .logo-container:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.35);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
         }
 
         .nav-menu {
@@ -93,7 +93,8 @@
             padding: 0 15px 12px 15px;
         }
 
-        .nav-item, .sub-nav-item {
+        .nav-item,
+        .sub-nav-item {
             display: flex;
             align-items: center;
             gap: 16px;
@@ -112,46 +113,54 @@
             position: relative;
             overflow: hidden;
         }
-        
+
         /* Ensure icon color follows label via currentColor */
-        .nav-item svg, .sub-nav-item svg { 
-            display: inline-block; 
+        .nav-item svg,
+        .sub-nav-item svg {
+            display: inline-block;
         }
-        .nav-item svg *, .sub-nav-item svg * { 
-            stroke: currentColor !important; 
-            fill: none; 
+
+        .nav-item svg *,
+        .sub-nav-item svg * {
+            stroke: currentColor !important;
+            fill: none;
         }
-        
-        .nav-item::before, .sub-nav-item::before {
+
+        .nav-item::before,
+        .sub-nav-item::before {
             content: '';
             position: absolute;
             top: 0;
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
             transition: left 0.5s ease;
         }
-        
-        .nav-item:hover::before, .sub-nav-item:hover::before {
+
+        .nav-item:hover::before,
+        .sub-nav-item:hover::before {
             left: 100%;
         }
-        
-        .nav-item.active, .sub-nav-item.active {
+
+        .nav-item.active,
+        .sub-nav-item.active {
             background: linear-gradient(135deg, #fff2e6 0%, #ffe6d9 100%);
             color: #8B0000;
             box-shadow: 0 4px 15px rgba(255, 242, 230, 0.3);
             transform: translateX(4px);
         }
-        
-        .nav-item:hover, .sub-nav-item:hover {
+
+        .nav-item:hover,
+        .sub-nav-item:hover {
             background: rgba(255, 255, 255, 0.1);
             color: #fff;
             transform: translateX(6px);
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
-        
-        .nav-item.active:hover, .sub-nav-item.active:hover {
+
+        .nav-item.active:hover,
+        .sub-nav-item.active:hover {
             background: linear-gradient(135deg, #fff2e6 0%, #ffe6d9 100%);
             color: #8B0000;
             transform: translateX(4px);
@@ -166,36 +175,37 @@
             align-items: center;
             justify-content: center;
         }
-        
-        .nav-item:hover .nav-icon, .sub-nav-item:hover .nav-icon {
+
+        .nav-item:hover .nav-icon,
+        .sub-nav-item:hover .nav-icon {
             transform: scale(1.1);
         }
-        
-        .nav-item.has-dropdown { 
-            justify-content: space-between; 
+
+        .nav-item.has-dropdown {
+            justify-content: space-between;
             position: relative;
         }
-        
+
         .nav-item.has-dropdown::after {
             content: '▼';
             font-size: 0.7rem;
             transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             opacity: 0.8;
         }
-        
+
         .nav-item.has-dropdown.open::after {
             transform: rotate(180deg);
             opacity: 1;
         }
-        
+
         .nav-item.has-dropdown:hover::after {
             transform: scale(1.2);
         }
-        
+
         .nav-item.has-dropdown.open:hover::after {
             transform: rotate(180deg) scale(1.2);
         }
-        
+
         .sub-nav {
             background: rgba(0, 0, 0, 0.10);
             border-radius: 12px;
@@ -208,25 +218,25 @@
             max-height: 0;
             opacity: 0;
             transform: translateY(-10px);
-            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
         }
-        
-        .nav-item.open + .sub-nav { 
+
+        .nav-item.open+.sub-nav {
             display: flex;
             max-height: 300px;
             opacity: 1;
             transform: translateY(0);
         }
-        
-        .sub-nav-item { 
-            font-size: 0.95rem; 
-            font-weight: 500; 
+
+        .sub-nav-item {
+            font-size: 0.95rem;
+            font-weight: 500;
             padding: 10px 16px 10px 36px;
             margin: 4px 0;
             border-radius: 10px;
             position: relative;
         }
-        
+
         .sub-nav-item::after {
             content: '';
             position: absolute;
@@ -240,7 +250,7 @@
             opacity: 0.6;
             transition: all 0.3s ease;
         }
-        
+
         .sub-nav-item:hover::after {
             transform: translateY(-50%) scale(1.5);
             opacity: 1;
@@ -729,11 +739,11 @@
             .profile-modal .form-row {
                 grid-template-columns: 1fr;
             }
-            
+
             .profile-modal .modal-buttons {
                 flex-direction: column;
             }
-            
+
             .profile-modal .modal-btn {
                 max-width: none;
             }
@@ -749,7 +759,7 @@
             background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
+
         .logout-modal .modal-header {
             color: #dc3545;
             margin-bottom: 25px;
@@ -758,7 +768,7 @@
             letter-spacing: 0.5px;
             text-shadow: 0 2px 4px rgba(220, 53, 69, 0.1);
         }
-        
+
         .logout-modal .modal-content {
             margin-bottom: 35px;
             font-size: 1.1rem;
@@ -767,14 +777,14 @@
             font-weight: 500;
             padding: 0 10px;
         }
-        
+
         .logout-modal .modal-buttons {
             display: flex;
             gap: 16px;
             justify-content: center;
             margin-top: 10px;
         }
-        
+
         .logout-modal .modal-buttons .modal-btn {
             flex: 1;
             margin-top: 0;
@@ -791,7 +801,7 @@
             letter-spacing: 0.5px;
             min-width: 120px;
         }
-        
+
         .logout-modal .modal-btn::before {
             content: '';
             position: absolute;
@@ -799,40 +809,40 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
             transition: left 0.6s ease;
         }
-        
+
         .logout-modal .modal-btn:hover::before {
             left: 100%;
         }
-        
+
         .logout-modal .modal-btn.logout {
             background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
             color: #fff;
             box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
             border: 2px solid transparent;
         }
-        
+
         .logout-modal .modal-btn.logout:hover {
             background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
             transform: translateY(-3px);
             box-shadow: 0 8px 25px rgba(220, 53, 69, 0.5);
             border: 2px solid rgba(255, 255, 255, 0.2);
         }
-        
+
         .logout-modal .modal-btn.logout:active {
             transform: translateY(-1px);
             box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
         }
-        
+
         .logout-modal .modal-btn.cancel {
             background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%) !important;
             color: #fff !important;
             box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4) !important;
             border: 2px solid transparent !important;
         }
-        
+
         .logout-modal .modal-btn.cancel:hover {
             background: linear-gradient(135deg, #5a6268 0%, #495057 100%) !important;
             color: #fff !important;
@@ -840,12 +850,12 @@
             box-shadow: 0 8px 25px rgba(108, 117, 125, 0.5) !important;
             border: 2px solid rgba(255, 255, 255, 0.2) !important;
         }
-        
+
         .logout-modal .modal-btn.cancel:active {
             transform: translateY(-1px) !important;
             box-shadow: 0 4px 15px rgba(108, 117, 125, 0.4) !important;
         }
-        
+
         /* Logout Modal Icon */
         .logout-modal .modal-icon {
             width: 64px;
@@ -858,7 +868,7 @@
             justify-content: center;
             box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
         }
-        
+
         .logout-modal .modal-icon svg {
             width: 32px;
             height: 32px;
@@ -933,7 +943,9 @@
                     onclick="window.location.href='{{ route('checker.pass.management') }}'">Pass Slip</div>
             </div>
 
-            <div class="nav-item has-dropdown @yield('monitoring-active') @if (trim($__env->yieldContent('monitoring-active')) == 'active' || trim($__env->yieldContent('live-camera-active')) == 'active' || trim($__env->yieldContent('recognition-logs-active')) == 'active') open @endif"
+            <div class="nav-item has-dropdown @yield('monitoring-active') @if (trim($__env->yieldContent('monitoring-active')) == 'active' ||
+                    trim($__env->yieldContent('live-camera-active')) == 'active' ||
+                    trim($__env->yieldContent('recognition-logs-active')) == 'active') open @endif"
                 onclick="toggleDropdown(this, 'monitoring')">
                 <span class="nav-icon" style="display:inline-flex;align-items:center;justify-content:center;">
                     <svg width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -943,7 +955,9 @@
                     </svg>
                 </span> Monitoring
             </div>
-            <div class="sub-nav" id="monitoring-subnav" @if (trim($__env->yieldContent('monitoring-active')) == 'active' || trim($__env->yieldContent('live-camera-active')) == 'active' || trim($__env->yieldContent('recognition-logs-active')) == 'active') style="display:flex;" @endif>
+            <div class="sub-nav" id="monitoring-subnav" @if (trim($__env->yieldContent('monitoring-active')) == 'active' ||
+                    trim($__env->yieldContent('live-camera-active')) == 'active' ||
+                    trim($__env->yieldContent('recognition-logs-active')) == 'active') style="display:flex;" @endif>
                 <!-- Cameras and Rooms removed due to missing checker blade files -->
                 <div class="sub-nav-item @yield('live-camera-active')"
                     onclick="window.location.href='{{ route('checker.live.camera.feed') }}'">Live Camera Feed</div>
@@ -1006,8 +1020,11 @@
     </div>
 
     <!-- Global Loader -->
-    <div id="globalLoader" class="loader-overlay" aria-hidden="true" style="position:fixed; inset:0; background:rgba(255,255,255,0.8); display:none; align-items:center; justify-content:center; z-index:2000; flex-direction:column; gap:12px;">
-        <div class="loader-spinner" style="width:44px; height:44px; border:4px solid #eee; border-top-color:#8B0000; border-radius:50%; animation: spin 0.9s linear infinite;"></div>
+    <div id="globalLoader" class="loader-overlay" aria-hidden="true"
+        style="position:fixed; inset:0; background:rgba(255,255,255,0.8); display:none; align-items:center; justify-content:center; z-index:2000; flex-direction:column; gap:12px;">
+        <div class="loader-spinner"
+            style="width:44px; height:44px; border:4px solid #eee; border-top-color:#8B0000; border-radius:50%; animation: spin 0.9s linear infinite;">
+        </div>
         <div class="loader-text" style="color:#8B0000; font-weight:bold; font-size:0.95rem;">Loading...</div>
     </div>
 
@@ -1017,7 +1034,8 @@
         <div class="modal-box">
             <div class="modal-header">Update Profile</div>
 
-            <form id="accountSettingsForm" class="modal-form" method="POST" action="{{ route('checker.account.update') }}">
+            <form id="accountSettingsForm" class="modal-form" method="POST"
+                action="{{ route('checker.account.update') }}">
                 @csrf
                 @method('PUT')
 
@@ -1027,29 +1045,27 @@
                 <!-- Personal Information Section -->
                 <div class="form-section">
                     <div class="form-section-title">Personal Information</div>
-                    
+
                     <!-- Account Role -->
                     <div class="modal-form-group">
                         <label for="accountRole">Account Role</label>
-                        <input name="user_role" type="text" id="accountRole" 
-                               value="{{ auth()->user()->user_role }}" readonly>
+                        <input name="user_role" type="text" id="accountRole"
+                            value="{{ auth()->user()->user_role }}" readonly>
                     </div>
 
                     <!-- Name Fields -->
                     <div class="form-row">
                         <div class="modal-form-group">
                             <label for="fname">First Name</label>
-                            <input name="user_fname" type="text" id="fname" 
-                                   value="{{ auth()->user()->user_fname }}" 
-                                   placeholder="Enter first name" required>
+                            <input name="user_fname" type="text" id="fname"
+                                value="{{ auth()->user()->user_fname }}" placeholder="Enter first name" required>
                             <div class="field-error" id="fname-error"></div>
                         </div>
 
                         <div class="modal-form-group">
                             <label for="lname">Last Name</label>
-                            <input name="user_lname" type="text" id="lname" 
-                                   value="{{ auth()->user()->user_lname }}" 
-                                   placeholder="Enter last name" required>
+                            <input name="user_lname" type="text" id="lname"
+                                value="{{ auth()->user()->user_lname }}" placeholder="Enter last name" required>
                             <div class="field-error" id="lname-error"></div>
                         </div>
                     </div>
@@ -1057,9 +1073,8 @@
                     <!-- Username -->
                     <div class="modal-form-group">
                         <label for="username">Username</label>
-                        <input name="username" type="text" id="username" 
-                               value="{{ auth()->user()->username }}" 
-                               placeholder="Enter username" required>
+                        <input name="username" type="text" id="username" value="{{ auth()->user()->username }}"
+                            placeholder="Enter username" required>
                         <div class="field-error" id="username-error"></div>
                     </div>
                 </div>
@@ -1067,12 +1082,12 @@
                 <!-- Security Section -->
                 <div class="form-section">
                     <div class="form-section-title">Security Settings</div>
-                    
+
                     <!-- Old Password -->
                     <div class="modal-form-group">
                         <label for="oldPassword">Current Password</label>
-                        <input name="current_password" type="password" id="oldPassword" 
-                               placeholder="Enter current password">
+                        <input name="current_password" type="password" id="oldPassword"
+                            placeholder="Enter current password">
                         <div class="field-error" id="current_password-error"></div>
                     </div>
 
@@ -1080,15 +1095,15 @@
                     <div class="form-row">
                         <div class="modal-form-group">
                             <label for="newPassword">New Password</label>
-                            <input name="new_password" type="password" id="newPassword" 
-                                   placeholder="Enter new password">
+                            <input name="new_password" type="password" id="newPassword"
+                                placeholder="Enter new password">
                             <div class="field-error" id="new_password-error"></div>
                         </div>
 
                         <div class="modal-form-group">
                             <label for="confirmPassword">Confirm Password</label>
-                            <input name="new_password_confirmation" type="password" id="confirmPassword" 
-                                   placeholder="Confirm new password">
+                            <input name="new_password_confirmation" type="password" id="confirmPassword"
+                                placeholder="Confirm new password">
                             <div class="field-error" id="new_password_confirmation-error"></div>
                         </div>
                     </div>
@@ -1097,7 +1112,8 @@
                 <!-- Buttons -->
                 <div class="modal-buttons">
                     <button type="submit" class="modal-btn update">Update Profile</button>
-                    <button type="button" class="modal-btn cancel" onclick="closeModal('accountSettingsModal')">Cancel</button>
+                    <button type="button" class="modal-btn cancel"
+                        onclick="closeModal('accountSettingsModal')">Cancel</button>
                 </div>
             </form>
         </div>
@@ -1107,16 +1123,17 @@
     <div id="logoutModal" class="modal-overlay logout-modal" style="display:none;">
         <div class="modal-box">
             <div class="modal-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                    <polyline points="16,17 21,12 16,7"/>
-                    <line x1="21" y1="12" x2="9" y2="12"/>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16,17 21,12 16,7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
                 </svg>
             </div>
             <div class="modal-header">LOGOUT</div>
             <div class="modal-content">
                 Are you sure you want to logout from your account?<br>
-               
+
             </div>
             <div class="modal-buttons">
                 <button class="modal-btn logout" onclick="logout()">Logout</button>
@@ -1127,18 +1144,24 @@
 
     <script>
         // Hook global loader
-        (function(){
+        (function() {
             const loader = document.getElementById('globalLoader');
             let suppressLoader = false;
-            function showLoader(){ if(loader && !suppressLoader && !window.suppressLoader) loader.style.display = 'flex'; }
-            document.addEventListener('submit', function(e){
+
+            function showLoader() {
+                if (loader && !suppressLoader && !window.suppressLoader) loader.style.display = 'flex';
+            }
+            document.addEventListener('submit', function(e) {
                 const form = e.target;
                 const isValid = !form || typeof form.checkValidity !== 'function' ? true : form.checkValidity();
-                setTimeout(function(){ if(isValid && !e.defaultPrevented) showLoader(); }, 0);
+                setTimeout(function() {
+                    if (isValid && !e.defaultPrevented) showLoader();
+                }, 0);
             }, true);
             // Do not show loader for link navigations or unload
-            window.addEventListener('beforeunload', function(){});
+            window.addEventListener('beforeunload', function() {});
         })();
+
         function toggleDropdown(element, subnavId) {
             const allDropdowns = document.querySelectorAll('.nav-item.has-dropdown');
             allDropdowns.forEach(dropdown => {
@@ -1203,7 +1226,7 @@
             const form = e.target;
             const formData = new FormData(form);
             const feedback = document.getElementById('accountFeedback');
-            
+
             // Clear previous errors and feedback
             clearAllErrors();
             hideFeedback();
@@ -1215,46 +1238,46 @@
             submitBtn.disabled = true;
 
             fetch(form.action, {
-                method: "POST",
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(async res => {
-                const data = await res.json();
-                
-                if (!res.ok) {
-                    if (data.errors) {
-                        displayFieldErrors(data.errors);
-                        showFeedback('Please correct the errors below.', 'error');
-                    } else {
-                        showFeedback(data.message || 'An error occurred. Please try again.', 'error');
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
-                    throw new Error('Validation failed');
-                }
-                return data;
-            })
-            .then(data => {
-                showFeedback(data.success || 'Profile updated successfully!', 'success');
-                
-                // Auto-close modal after 2 seconds
-                setTimeout(() => {
-                    closeModal('accountSettingsModal');
-                    location.reload();
-                }, 2000);
-            })
-            .catch(err => {
-                console.error('Error:', err);
-                if (!feedback.classList.contains('error')) {
-                    showFeedback('An unexpected error occurred. Please try again.', 'error');
-                }
-            })
-            .finally(() => {
-                // Reset button state
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-            });
+                })
+                .then(async res => {
+                    const data = await res.json();
+
+                    if (!res.ok) {
+                        if (data.errors) {
+                            displayFieldErrors(data.errors);
+                            showFeedback('Please correct the errors below.', 'error');
+                        } else {
+                            showFeedback(data.message || 'An error occurred. Please try again.', 'error');
+                        }
+                        throw new Error('Validation failed');
+                    }
+                    return data;
+                })
+                .then(data => {
+                    showFeedback(data.success || 'Profile updated successfully!', 'success');
+
+                    // Auto-close modal after 2 seconds
+                    setTimeout(() => {
+                        closeModal('accountSettingsModal');
+                        location.reload();
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('Error:', err);
+                    if (!feedback.classList.contains('error')) {
+                        showFeedback('An unexpected error occurred. Please try again.', 'error');
+                    }
+                })
+                .finally(() => {
+                    // Reset button state
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                });
         });
 
         // Helper functions for form validation
@@ -1264,7 +1287,7 @@
                 error.textContent = '';
                 error.style.display = 'none';
             });
-            
+
             // Remove error classes
             document.querySelectorAll('.modal-form-group').forEach(group => {
                 group.classList.remove('has-error');
@@ -1276,7 +1299,7 @@
                 const field = document.querySelector(`[name="${fieldName}"]`);
                 const errorElement = document.getElementById(`${fieldName}-error`);
                 const formGroup = field?.closest('.modal-form-group');
-                
+
                 if (field && errorElement && formGroup) {
                     errorElement.textContent = errors[fieldName][0];
                     errorElement.style.display = 'block';
@@ -1303,7 +1326,7 @@
             input.addEventListener('blur', function() {
                 validateField(this);
             });
-            
+
             input.addEventListener('input', function() {
                 if (this.classList.contains('error')) {
                     validateField(this);
@@ -1314,29 +1337,30 @@
         function validateField(field) {
             const formGroup = field.closest('.modal-form-group');
             const errorElement = formGroup.querySelector('.field-error');
-            
+
             // Clear previous error state
             formGroup.classList.remove('has-error');
             if (errorElement) {
                 errorElement.style.display = 'none';
                 errorElement.textContent = '';
             }
-            
+
             // Basic validation
             if (field.hasAttribute('required') && !field.value.trim()) {
                 showFieldError(field, 'This field is required.');
                 return false;
             }
-            
+
             // Email validation for username
             if (field.name === 'username' && field.value) {
                 const usernameRegex = /^[a-zA-Z0-9_]{3,}$/;
                 if (!usernameRegex.test(field.value)) {
-                    showFieldError(field, 'Username must be at least 3 characters and contain only letters, numbers, and underscores.');
+                    showFieldError(field,
+                        'Username must be at least 3 characters and contain only letters, numbers, and underscores.');
                     return false;
                 }
             }
-            
+
             // Password confirmation
             if (field.name === 'new_password_confirmation') {
                 const newPassword = document.getElementById('newPassword');
@@ -1345,14 +1369,14 @@
                     return false;
                 }
             }
-            
+
             return true;
         }
 
         function showFieldError(field, message) {
             const formGroup = field.closest('.modal-form-group');
             const errorElement = formGroup.querySelector('.field-error');
-            
+
             formGroup.classList.add('has-error');
             if (errorElement) {
                 errorElement.textContent = message;
@@ -1360,45 +1384,99 @@
             }
         }
     </script>
-    
+
     <!-- SweetAlert2 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
+
     <!-- SweetAlert2 Custom Styles -->
     <style>
         .swal2-popup-custom {
             border-radius: 12px !important;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
         }
+
         .swal2-title-custom {
             color: #8B0000 !important;
             font-weight: bold !important;
         }
+
         .swal2-content-custom {
             color: #333 !important;
         }
     </style>
     <!-- Global SweetAlert2 helpers and confirm handlers -->
     <script>
-        (function(){
+        (function() {
             window.SwalUtils = {
-                error: function(title, text){ if(window.Swal){ Swal.fire({ icon:'error', title: title||'Error', text: text||'', confirmButtonColor:'#8B0000' }); } },
-                info: function(title, text){ if(window.Swal){ Swal.fire({ icon:'info', title: title||'Info', text: text||'', confirmButtonColor:'#8B0000' }); } },
-                success: function(title, text){ if(window.Swal){ Swal.fire({ icon:'success', title: title||'Success', text: text||'', confirmButtonColor:'#8B0000' }); } },
-                confirmDelete: async function(opts){ if(!window.Swal) return { isConfirmed:true }; return await Swal.fire({ icon:'warning', title:(opts&&opts.title)||'Are you sure?', text:(opts&&opts.text)||'This action cannot be undone.', showCancelButton:true, confirmButtonText:(opts&&opts.confirmText)||'Delete', cancelButtonText:(opts&&opts.cancelText)||'Cancel', confirmButtonColor:'#ff3636', cancelButtonColor:'#800000' }); },
-                incompleteFields: function(){ if(window.Swal){ Swal.fire({ icon:'error', title:'Incomplete fields', text:'Please fill out Subject Code, Description, and Department.', confirmButtonColor:'#8B0000' }); } }
+                error: function(title, text) {
+                    if (window.Swal) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: title || 'Error',
+                            text: text || '',
+                            confirmButtonColor: '#8B0000'
+                        });
+                    }
+                },
+                info: function(title, text) {
+                    if (window.Swal) {
+                        Swal.fire({
+                            icon: 'info',
+                            title: title || 'Info',
+                            text: text || '',
+                            confirmButtonColor: '#8B0000'
+                        });
+                    }
+                },
+                success: function(title, text) {
+                    if (window.Swal) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: title || 'Success',
+                            text: text || '',
+                            confirmButtonColor: '#8B0000'
+                        });
+                    }
+                },
+                confirmDelete: async function(opts) {
+                    if (!window.Swal) return {
+                        isConfirmed: true
+                    };
+                    return await Swal.fire({
+                        icon: 'warning',
+                        title: (opts && opts.title) || 'Are you sure?',
+                        text: (opts && opts.text) || 'This action cannot be undone.',
+                        showCancelButton: true,
+                        confirmButtonText: (opts && opts.confirmText) || 'Delete',
+                        cancelButtonText: (opts && opts.cancelText) || 'Cancel',
+                        confirmButtonColor: '#ff3636',
+                        cancelButtonColor: '#800000'
+                    });
+                },
+                incompleteFields: function() {
+                    if (window.Swal) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Incomplete fields',
+                            text: 'Please fill out Subject Code, Description, and Department.',
+                            confirmButtonColor: '#8B0000'
+                        });
+                    }
+                }
             };
-            document.addEventListener('submit', async function(e){
+            document.addEventListener('submit', async function(e) {
                 const form = e.target;
-                if(form && form.dataset && form.dataset.swalConfirm === 'delete'){
+                if (form && form.dataset && form.dataset.swalConfirm === 'delete') {
                     e.preventDefault();
                     const res = await window.SwalUtils.confirmDelete({});
-                    if(res && res.isConfirmed){ form.submit(); }
+                    if (res && res.isConfirmed) {
+                        form.submit();
+                    }
                 }
             }, true);
         })();
     </script>
-    
+
     @yield('scripts')
 </body>
 

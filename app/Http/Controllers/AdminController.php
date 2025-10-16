@@ -264,10 +264,29 @@ public function attendanceRecordsPrint(Request $request)
 
     $pdf = \PDF::loadView('admin.attendance-records-pdf', [
         'records' => $records,
-        'generatedAt' => now('Asia/Manila')
-    ])->setPaper('a4', 'portrait');
+        'generatedAt' => now('Asia/Manila'),
+        'generatedBy' => auth()->user()->name ?? 'Administrator',
+        'curriculumYear' => $request->curriculumYear ?? now()->format('Y'),
+        'dateFrom' => $request->startDate ?? null,
+        'dateTo' => $request->endDate ?? null,
+        'department' => $request->department ?? null,
+        'subject' => $request->subject ?? null,
+        'faculty' => $request->instructor ? \App\Models\Faculty::find($request->instructor)?->faculty_fname . ' ' . \App\Models\Faculty::find($request->instructor)?->faculty_lname : null,
+        'status' => $request->status ?? null,
+        'room' => $request->room ?? null,
+        'courseCode' => $request->courseCode ?? null,
+        'day' => $request->day ?? null,
+        'building' => $request->building ?? null,
+        'remarks' => $request->remarks ?? null,
+        'search' => $request->search ?? null,
+    ])->setPaper('a4', 'landscape')
+      ->setOptions([
+          'isHtml5ParserEnabled' => true,
+          'isRemoteEnabled' => true,
+          'defaultFont' => 'DejaVu Sans'
+      ]);
 
-    return $pdf->download('attendance-records.pdf');
+    return $pdf->download('attendance-records-report-' . now()->format('Y-m-d') . '.pdf');
 }
 
 public function recognitionLogs(Request $request)

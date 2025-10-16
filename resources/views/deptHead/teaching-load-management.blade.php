@@ -647,10 +647,34 @@
                 <div class="modal-form" style="padding: 24px 24px 24px;">
                     <style>
                         #addTeachingLoadModal .modal-form {
+                            display: flex;
+                            flex-direction: column;
+                            gap: 20px;
+                            margin-bottom: 0;
+                        }
+
+                        #addTeachingLoadModal .form-section {
                             display: grid;
                             grid-template-columns: 1fr 1fr;
                             gap: 18px 24px;
-                            margin-bottom: 0;
+                        }
+
+                        #addTeachingLoadModal .form-section.full-width {
+                            grid-template-columns: 1fr;
+                        }
+
+                        #addTeachingLoadModal .section-title {
+                            grid-column: 1 / span 2;
+                            font-size: 1.2rem;
+                            font-weight: bold;
+                            color: #8B0000;
+                            margin-bottom: 10px;
+                            padding-bottom: 8px;
+                            border-bottom: 2px solid #8B0000;
+                        }
+
+                        #addTeachingLoadModal .form-section.full-width .section-title {
+                            grid-column: 1 / span 2;
                         }
 
                         #addTeachingLoadModal .modal-form-group {
@@ -700,7 +724,6 @@
                             gap: 12px;
                             justify-content: center;
                             margin-top: 12px;
-                            grid-column: 1 / span 2;
                         }
 
                         #addTeachingLoadModal .modal-btn.add {
@@ -716,109 +739,117 @@
                         }
                     </style>
 
-                    <div class="modal-form-group full-width">
-                        <label>Instructor :</label>
-                        <select name="faculty_id">
-                            <option value="">Select Instructor</option>
-                            @foreach ($faculties as $faculty)
-                                <option value="{{ $faculty->faculty_id }}">{{ $faculty->faculty_fname }}
-                                    {{ $faculty->faculty_lname }}</option>
-                            @endforeach
-                        </select>
+                    <!-- Instructor Information Section -->
+                    <div class="form-section full-width">
+                        <div class="section-title">Instructor Information</div>
+                        <div class="modal-form-group full-width">
+                            <label>Instructor :</label>
+                            <select name="faculty_id">
+                                <option value="">Select Instructor</option>
+                                @foreach ($faculties as $faculty)
+                                    <option value="{{ $faculty->faculty_id }}">{{ $faculty->faculty_fname }}
+                                        {{ $faculty->faculty_lname }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="section-title"></div>
+                        <div class="modal-form-group full-width">
+                            <label>Course Department:</label>
+                            <select name="department" id="addDeptSelect">
+                                <option value="">Select Department</option>
+                                <option value="Department of Admin">Department of Admin</option>
+                                <option value="College of Information Technology">College of Information Technology</option>
+                                <option value="College of Library and Information Science">College of Library and Information Science</option>
+                                <option value="College of Criminology">College of Criminology</option>
+                                <option value="College of Arts and Sciences">College of Arts and Sciences</option>
+                                <option value="College of Hospitality Management">College of Hospitality Management</option>
+                                <option value="College of Sociology">College of Sociology</option>
+                                <option value="College of Engineering">College of Engineering</option>
+                                <option value="College of Education">College of Education</option>
+                                <option value="College of Business Administration">College of Business Administration</option>
+                            </select>
+                        </div>
+                        <div class="modal-form-group full-width">
+                            <label>Course & Subject :</label>
+                            <select name="subject_combo" id="addSubjectCombo" disabled>
+                                <option value="">Select Course & Subject</option>
+                                @foreach(($subjectsOptions ?? collect()) as $opt)
+                                    <option value="{{ $opt->code }}|{{ $opt->name }}" data-code="{{ $opt->code }}" data-name="{{ $opt->name }}" data-dept="{{ $opt->department }}">{{ $opt->code }} - {{ $opt->name }}</option>
+                                @endforeach
+                            </select>
+                            <input type="hidden" name="teaching_load_course_code" id="addCourseCodeHidden">
+                            <input type="hidden" name="teaching_load_subject" id="addSubjectHidden">
+                        </div>
                     </div>
-                    <div class="modal-form-group full-width">
-                        <label>Department of Class:</label>
-                        <select name="department" id="addDeptSelect">
-                            <option value="">Select Department</option>
-                            <option value="Department of Admin">Department of Admin</option>
-                            <option value="College of Information Technology">College of Information Technology</option>
-                            <option value="College of Library and Information Science">College of Library and Information Science</option>
-                            <option value="College of Criminology">College of Criminology</option>
-                            <option value="College of Arts and Sciences">College of Arts and Sciences</option>
-                            <option value="College of Hospitality Management">College of Hospitality Management</option>
-                            <option value="College of Sociology">College of Sociology</option>
-                            <option value="College of Engineering">College of Engineering</option>
-                            <option value="College of Education">College of Education</option>
-                            <option value="College of Business Administration">College of Business Administration</option>
-                        </select>
-                    </div>
-                    
-                    <div class="modal-form-group full-width">
-                        <label>Course & Subject :</label>
-                        <select name="subject_combo" id="addSubjectCombo" disabled>
-                            <option value="">Select Course & Subject</option>
-                            @foreach(($subjectsOptions ?? collect()) as $opt)
-                                <option value="{{ $opt->code }}|{{ $opt->name }}" data-code="{{ $opt->code }}" data-name="{{ $opt->name }}" data-dept="{{ $opt->department }}">{{ $opt->code }} - {{ $opt->name }}</option>
-                            @endforeach
-                        </select>
-                        <input type="hidden" name="teaching_load_course_code" id="addCourseCodeHidden">
-                        <input type="hidden" name="teaching_load_subject" id="addSubjectHidden">
-                    </div>
-                    <!-- New dropdowns: Department (short), Year level, Section -->
-                    <div class="modal-form-group">
-                        <label>Class Department:</label>
-                        <select name="tl_department_short" id="tl_department_short_add">
-                            <option value="">Select Department</option>
-                            <option value="BSIT">BSIT</option>
-                            <option value="BSEd">BSEd</option>
-                            <option value="BSBA">BSBA</option>
-                            <option value="BSHM">BSHM</option>
-                            <option value="BSCrim">BSCrim</option>
-                            <option value="ADMIN">ADMIN</option>
-                            <option value="CLIS">CLIS</option>
-                            <option value="CAS">CAS</option>
-                            <option value="SOC">SOC</option>
-                            <option value="COE">COE</option>
-                        </select>
-                    </div>
-                    <div class="modal-form-group">
-                        <label>Year :</label>
-                        <select name="tl_year_level" id="tl_year_level_add">
-                            <option value="">Select Year</option>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                        </select>
-                    </div>
-                    <div class="modal-form-group">
-                        <label>Section :</label>
-                        <select name="tl_section" id="tl_section_add">
-                            <option value="">Select Section</option>
-                            <option value="A">A</option>
-                            <option value="B">B</option>
-                            <option value="C">C</option>
-                            <option value="D">D</option>
-                            <option value="E">E</option>
-                            <option value="F">F</option>
-                            <option value="G">G</option>
-                        </select>
-                    </div>
-                    <div class="modal-form-group">
-                        <label>Day of Week :</label>
-                        <select name="teaching_load_day_of_week">
-                            <option value="">Select Day</option>
-                            @foreach (['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as $day)
-                                <option value="{{ $day }}">{{ $day }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="modal-form-group">
-                        <label>Time In :</label>
-                        <input type="time" name="teaching_load_time_in">
-                    </div>
-                    <div class="modal-form-group">
-                        <label>Time Out :</label>
-                        <input type="time" name="teaching_load_time_out">
-                    </div>
-                    <div class="modal-form-group">
-                        <label>Room :</label>
-                        <select name="room_no">
-                            <option value="">Select Room</option>
-                            @foreach ($rooms as $room)
-                                <option value="{{ $room->room_no }}">{{ $room->room_no }}</option>
-                            @endforeach
-                        </select>
+
+                    <!-- Class Information Section -->
+                    <div class="form-section">
+                        <div class="section-title">Class Information</div>
+                        <div class="modal-form-group">
+                            <label>Class Department:</label>
+                            <select name="tl_department_short" id="tl_department_short_add">
+                                <option value="">Select Department</option>
+                                <option value="BSIT">BSIT</option>
+                                <option value="BSEd">BSEd</option>
+                                <option value="BSBA">BSBA</option>
+                                <option value="BSHM">BSHM</option>
+                                <option value="BSCrim">BSCrim</option>
+                                <option value="ADMIN">ADMIN</option>
+                                <option value="CLIS">CLIS</option>
+                                <option value="CAS">CAS</option>
+                                <option value="SOC">SOC</option>
+                                <option value="COE">COE</option>
+                            </select>
+                        </div>
+                        <div class="modal-form-group">
+                            <label>Year :</label>
+                            <select name="tl_year_level" id="tl_year_level_add">
+                                <option value="">Select Year</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                            </select>
+                        </div>
+                        <div class="modal-form-group">
+                            <label>Section :</label>
+                            <select name="tl_section" id="tl_section_add">
+                                <option value="">Select Section</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="D">D</option>
+                                <option value="E">E</option>
+                                <option value="F">F</option>
+                                <option value="G">G</option>
+                            </select>
+                        </div>
+                        <div class="modal-form-group">
+                            <label>Day of Week :</label>
+                            <select name="teaching_load_day_of_week">
+                                <option value="">Select Day</option>
+                                @foreach (['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as $day)
+                                    <option value="{{ $day }}">{{ $day }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="modal-form-group">
+                            <label>Time In :</label>
+                            <input type="time" name="teaching_load_time_in">
+                        </div>
+                        <div class="modal-form-group">
+                            <label>Time Out :</label>
+                            <input type="time" name="teaching_load_time_out">
+                        </div>
+                        <div class="modal-form-group">
+                            <label>Room :</label>
+                            <select name="room_no">
+                                <option value="">Select Room</option>
+                                @foreach ($rooms as $room)
+                                    <option value="{{ $room->room_no }}">{{ $room->room_no }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
                     <div class="time-logic-error"
                         style="display:none; color:#ff3636; text-align:center; margin-top:6px; margin-bottom:6px; font-weight:600; grid-column: 1 / span 2;">
@@ -847,10 +878,34 @@
                 <div class="modal-form" style="padding: 24px 24px 24px;">
                     <style>
                         #updateTeachingLoadModal .modal-form {
+                            display: flex;
+                            flex-direction: column;
+                            gap: 20px;
+                            margin-bottom: 0;
+                        }
+
+                        #updateTeachingLoadModal .form-section {
                             display: grid;
                             grid-template-columns: 1fr 1fr;
                             gap: 18px 24px;
-                            margin-bottom: 0;
+                        }
+
+                        #updateTeachingLoadModal .form-section.full-width {
+                            grid-template-columns: 1fr;
+                        }
+
+                        #updateTeachingLoadModal .section-title {
+                            grid-column: 1 / span 2;
+                            font-size: 1.2rem;
+                            font-weight: bold;
+                            color: #8B0000;
+                            margin-bottom: 10px;
+                            padding-bottom: 8px;
+                            border-bottom: 2px solid #8B0000;
+                        }
+
+                        #updateTeachingLoadModal .form-section.full-width .section-title {
+                            grid-column: 1;
                         }
 
                         #updateTeachingLoadModal .modal-form-group {
@@ -900,7 +955,6 @@
                             gap: 12px;
                             justify-content: center;
                             margin-top: 12px;
-                            grid-column: 1 / span 2;
                         }
 
                         /* Update button: match Add button green styling */
@@ -917,107 +971,116 @@
                             border-color: #5bb3f5;
                         }
                     </style>
-                    <div class="modal-form-group full-width">
-                        <label>Instructor :</label>
-                        <select name="faculty_id">
-                            <option value="">Select Instructor</option>
-                            @foreach ($faculties as $faculty)
-                                <option value="{{ $faculty->faculty_id }}">{{ $faculty->faculty_fname }}
-                                    {{ $faculty->faculty_lname }}</option>
-                            @endforeach
-                        </select>
+
+                    <!-- Instructor Information Section -->
+                    <div class="form-section full-width">
+                        <div class="section-title">Instructor Information</div>
+                        <div class="modal-form-group full-width">
+                            <label>Instructor :</label>
+                            <select name="faculty_id">
+                                <option value="">Select Instructor</option>
+                                @foreach ($faculties as $faculty)
+                                    <option value="{{ $faculty->faculty_id }}">{{ $faculty->faculty_fname }}
+                                        {{ $faculty->faculty_lname }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="modal-form-group full-width">
+                            <label>Department :</label>
+                            <select name="department" id="updateDeptSelect">
+                                <option value="">Select Department</option>
+                                <option value="Department of Admin">Department of Admin</option>
+                                <option value="College of Information Technology">College of Information Technology</option>
+                                <option value="College of Library and Information Science">College of Library and Information Science</option>
+                                <option value="College of Criminology">College of Criminology</option>
+                                <option value="College of Arts and Sciences">College of Arts and Sciences</option>
+                                <option value="College of Hospitality Management">College of Hospitality Management</option>
+                                <option value="College of Sociology">College of Sociology</option>
+                                <option value="College of Engineering">College of Engineering</option>
+                                <option value="College of Education">College of Education</option>
+                                <option value="College of Business Administration">College of Business Administration</option>
+                            </select>
+                        </div>
+                        <div class="modal-form-group full-width">
+                            <label>Course & Subject :</label>
+                            <select name="subject_combo" id="updateSubjectCombo">
+                                <option value="">Select Course & Subject</option>
+                                @foreach(($subjectsOptions ?? collect()) as $opt)
+                                    <option value="{{ $opt->code }}|{{ $opt->name }}" data-code="{{ $opt->code }}" data-name="{{ $opt->name }}">{{ $opt->code }} - {{ $opt->name }}</option>
+                                @endforeach
+                            </select>
+                            <input type="hidden" name="teaching_load_course_code" id="updateCourseCodeHidden">
+                            <input type="hidden" name="teaching_load_subject" id="updateSubjectHidden">
+                        </div>
                     </div>
-                    <div class="modal-form-group full-width">
-                        <label>Department :</label>
-                        <select name="department" id="updateDeptSelect">
-                            <option value="">Select Department</option>
-                            <option value="Department of Admin">Department of Admin</option>
-                            <option value="College of Information Technology">College of Information Technology</option>
-                            <option value="College of Library and Information Science">College of Library and Information Science</option>
-                            <option value="College of Criminology">College of Criminology</option>
-                            <option value="College of Arts and Sciences">College of Arts and Sciences</option>
-                            <option value="College of Hospitality Management">College of Hospitality Management</option>
-                            <option value="College of Sociology">College of Sociology</option>
-                            <option value="College of Engineering">College of Engineering</option>
-                            <option value="College of Education">College of Education</option>
-                            <option value="College of Business Administration">College of Business Administration</option>
-                        </select>
-                    </div>
-                    <div class="modal-form-group full-width">
-                        <label>Course & Subject :</label>
-                        <select name="subject_combo" id="updateSubjectCombo">
-                            <option value="">Select Course & Subject</option>
-                            @foreach(($subjectsOptions ?? collect()) as $opt)
-                                <option value="{{ $opt->code }}|{{ $opt->name }}" data-code="{{ $opt->code }}" data-name="{{ $opt->name }}">{{ $opt->code }} - {{ $opt->name }}</option>
-                            @endforeach
-                        </select>
-                        <input type="hidden" name="teaching_load_course_code" id="updateCourseCodeHidden">
-                        <input type="hidden" name="teaching_load_subject" id="updateSubjectHidden">
-                    </div>
-                    <!-- New dropdowns: Department (short), Year level, Section -->
-                    <div class="modal-form-group">
-                        <label>Department :</label>
-                        <select name="tl_department_short" id="tl_department_short_update">
-                            <option value="">Select Department</option>
-                            <option value="BSIT">BSIT</option>
-                            <option value="BSEd">BSEd</option>
-                            <option value="BSBA">BSBA</option>
-                            <option value="BSHM">BSHM</option>
-                            <option value="BSCrim">BSCrim</option>
-                            <option value="ADMIN">ADMIN</option>
-                            <option value="CLIS">CLIS</option>
-                            <option value="CAS">CAS</option>
-                            <option value="SOC">SOC</option>
-                            <option value="COE">COE</option>
-                        </select>
-                    </div>
-                    <div class="modal-form-group">
-                        <label>Year :</label>
-                        <select name="tl_year_level" id="tl_year_level_update">
-                            <option value="">Select Year</option>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                        </select>
-                    </div>
-                    <div class="modal-form-group">
-                        <label>Section :</label>
-                        <select name="tl_section" id="tl_section_update">
-                        <option value="">Select Section</option>
-                            <option value="A">A</option>
-                            <option value="B">B</option>
-                            <option value="C">C</option>
-                            <option value="D">D</option>
-                            <option value="E">E</option>
-                            <option value="F">F</option>
-                            <option value="G">G</option>
-                        </select>
-                    </div>
-                    <div class="modal-form-group">
-                        <label>Day of Week :</label>
-                        <select name="teaching_load_day_of_week">
-                            @foreach (['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as $day)
-                                <option value="{{ $day }}">{{ $day }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="modal-form-group">
-                        <label>Time In :</label>
-                        <input type="time" name="teaching_load_time_in">
-                    </div>
-                    <div class="modal-form-group">
-                        <label>Time Out :</label>
-                        <input type="time" name="teaching_load_time_out">
-                    </div>
-                    <div class="modal-form-group">
-                        <label>Room :</label>
-                        <select name="room_no">
-                            <option value="">Select Room</option>
-                            @foreach ($rooms as $room)
-                                <option value="{{ $room->room_no }}">{{ $room->room_no }}</option>
-                            @endforeach
-                        </select>
+
+                    <!-- Class Information Section -->
+                    <div class="form-section">
+                        <div class="section-title">Class Information</div>
+                        <div class="modal-form-group">
+                            <label>Department :</label>
+                            <select name="tl_department_short" id="tl_department_short_update">
+                                <option value="">Select Department</option>
+                                <option value="BSIT">BSIT</option>
+                                <option value="BSEd">BSEd</option>
+                                <option value="BSBA">BSBA</option>
+                                <option value="BSHM">BSHM</option>
+                                <option value="BSCrim">BSCrim</option>
+                                <option value="ADMIN">ADMIN</option>
+                                <option value="CLIS">CLIS</option>
+                                <option value="CAS">CAS</option>
+                                <option value="SOC">SOC</option>
+                                <option value="COE">COE</option>
+                            </select>
+                        </div>
+                        <div class="modal-form-group">
+                            <label>Year :</label>
+                            <select name="tl_year_level" id="tl_year_level_update">
+                                <option value="">Select Year</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                            </select>
+                        </div>
+                        <div class="modal-form-group">
+                            <label>Section :</label>
+                            <select name="tl_section" id="tl_section_update">
+                            <option value="">Select Section</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="D">D</option>
+                                <option value="E">E</option>
+                                <option value="F">F</option>
+                                <option value="G">G</option>
+                            </select>
+                        </div>
+                        <div class="modal-form-group">
+                            <label>Day of Week :</label>
+                            <select name="teaching_load_day_of_week">
+                                @foreach (['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as $day)
+                                    <option value="{{ $day }}">{{ $day }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="modal-form-group">
+                            <label>Time In :</label>
+                            <input type="time" name="teaching_load_time_in">
+                        </div>
+                        <div class="modal-form-group">
+                            <label>Time Out :</label>
+                            <input type="time" name="teaching_load_time_out">
+                        </div>
+                        <div class="modal-form-group">
+                            <label>Room :</label>
+                            <select name="room_no">
+                                <option value="">Select Room</option>
+                                @foreach ($rooms as $room)
+                                    <option value="{{ $room->room_no }}">{{ $room->room_no }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
                     <div class="time-logic-error"
                         style="display:none; color:#ff3636; text-align:center; margin-top:6px; margin-bottom:6px; font-weight:600; grid-column: 1 / span 2;">
