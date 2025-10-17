@@ -101,6 +101,13 @@
         flex-direction: column;
     }
 
+    .filter-group:has(button) {
+        display: flex;
+        flex-direction: row;
+        gap: 15px;
+        align-items: end;
+    }
+
     .filter-label {
         font-weight: 600;
         color: #495057;
@@ -136,7 +143,7 @@
     }
 
     .filter-btn, .clear-btn {
-        padding: 12px 24px;
+        padding: 15px 32px;
         border: none;
         border-radius: 8px;
         font-weight: 600;
@@ -145,6 +152,9 @@
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        white-space: nowrap;
+        min-width: 200px;
+        width: auto;
     }
 
     .filter-btn {
@@ -287,7 +297,7 @@
 <div class="faculty-header">
     <div class="faculty-title-group">
         <div class="faculty-title">Recognition Logs</div>
-        <div class="faculty-subtitle">Face Recognition Monitoring</div>
+        <div class="faculty-subtitle">  </div>
     </div>
 </div>
 
@@ -342,11 +352,10 @@
                 <!-- Will be populated by JavaScript -->
             </select>
         </div>
-    </div>
-    
-    <div class="filter-actions">
-        <button class="filter-btn" onclick="applyFilters()">Apply Filters</button>
-        <button class="clear-btn" onclick="clearFilters()">Clear All</button>
+        <div class="filter-group">
+            <button class="filter-btn" onclick="applyFilters()">Apply Filters</button>
+            <button class="clear-btn" onclick="clearFilters()">Clear All</button>
+        </div>
     </div>
     
     <div class="search-section">

@@ -110,28 +110,101 @@
         .teaching-load-table tr:hover {
             background: #fff2e6;
         }
-        
+
         /* Column width adjustments */
-        .teaching-load-table th:nth-child(1), .teaching-load-table td:nth-child(1) { width: 8%; } /* Date */
-        .teaching-load-table th:nth-child(2), .teaching-load-table td:nth-child(2) { width: 10%; } /* Faculty Name */
-        .teaching-load-table th:nth-child(3), .teaching-load-table td:nth-child(3) { width: 10%; } /* Department */
-        .teaching-load-table th:nth-child(4), .teaching-load-table td:nth-child(4) { width: 7%; } /* Course Code */
-        .teaching-load-table th:nth-child(5), .teaching-load-table td:nth-child(5) { width: 10%; } /* Subject */
-        .teaching-load-table th:nth-child(6), .teaching-load-table td:nth-child(6) { width: 7%; } /* Class Section */
-        .teaching-load-table th:nth-child(7), .teaching-load-table td:nth-child(7) { width: 6%; } /* Day */
-        .teaching-load-table th:nth-child(8), .teaching-load-table td:nth-child(8) { 
-            width: 12%; 
-            white-space: normal; 
+        .teaching-load-table th:nth-child(1),
+        .teaching-load-table td:nth-child(1) {
+            width: 8%;
+        }
+
+        /* Date */
+        .teaching-load-table th:nth-child(2),
+        .teaching-load-table td:nth-child(2) {
+            width: 10%;
+        }
+
+        /* Faculty Name */
+        .teaching-load-table th:nth-child(3),
+        .teaching-load-table td:nth-child(3) {
+            width: 10%;
+        }
+
+        /* Department */
+        .teaching-load-table th:nth-child(4),
+        .teaching-load-table td:nth-child(4) {
+            width: 7%;
+        }
+
+        /* Course Code */
+        .teaching-load-table th:nth-child(5),
+        .teaching-load-table td:nth-child(5) {
+            width: 10%;
+        }
+
+        /* Subject */
+        .teaching-load-table th:nth-child(6),
+        .teaching-load-table td:nth-child(6) {
+            width: 7%;
+        }
+
+        /* Class Section */
+        .teaching-load-table th:nth-child(7),
+        .teaching-load-table td:nth-child(7) {
+            width: 6%;
+        }
+
+        /* Day */
+        .teaching-load-table th:nth-child(8),
+        .teaching-load-table td:nth-child(8) {
+            width: 12%;
+            white-space: normal;
             word-wrap: break-word;
             line-height: 1.2;
-        } /* Time Schedule */
-        .teaching-load-table th:nth-child(9), .teaching-load-table td:nth-child(9) { width: 5%; } /* Time In */
-        .teaching-load-table th:nth-child(10), .teaching-load-table td:nth-child(10) { width: 5%; } /* Time Out */
-        .teaching-load-table th:nth-child(11), .teaching-load-table td:nth-child(11) { width: 7%; } /* Time Duration */
-        .teaching-load-table th:nth-child(12), .teaching-load-table td:nth-child(12) { width: 6%; } /* Room Name */
-        .teaching-load-table th:nth-child(13), .teaching-load-table td:nth-child(13) { width: 5%; } /* Building No */
-        .teaching-load-table th:nth-child(14), .teaching-load-table td:nth-child(14) { width: 5%; } /* Status */
-        .teaching-load-table th:nth-child(15), .teaching-load-table td:nth-child(15) { width: 7%; } /* Remarks */
+        }
+
+        /* Time Schedule */
+        .teaching-load-table th:nth-child(9),
+        .teaching-load-table td:nth-child(9) {
+            width: 5%;
+        }
+
+        /* Time In */
+        .teaching-load-table th:nth-child(10),
+        .teaching-load-table td:nth-child(10) {
+            width: 5%;
+        }
+
+        /* Time Out */
+        .teaching-load-table th:nth-child(11),
+        .teaching-load-table td:nth-child(11) {
+            width: 7%;
+        }
+
+        /* Time Duration */
+        .teaching-load-table th:nth-child(12),
+        .teaching-load-table td:nth-child(12) {
+            width: 6%;
+        }
+
+        /* Room Name */
+        .teaching-load-table th:nth-child(13),
+        .teaching-load-table td:nth-child(13) {
+            width: 5%;
+        }
+
+        /* Building No */
+        .teaching-load-table th:nth-child(14),
+        .teaching-load-table td:nth-child(14) {
+            width: 5%;
+        }
+
+        /* Status */
+        .teaching-load-table th:nth-child(15),
+        .teaching-load-table td:nth-child(15) {
+            width: 7%;
+        }
+
+        /* Remarks */
 
         /* Filter Styles - Clean & Neat Design */
         .filter-section {
@@ -230,9 +303,9 @@
         .filter-actions {
             display: flex;
             gap: 15px;
-            flex-wrap: wrap;
-            align-items: end;
-            justify-content: flex-start;
+            flex-wrap: nowrap;
+            align-items: center;
+            justify-content: flex-end;
             margin-top: 20px;
             flex: 0 0 auto;
         }
@@ -240,7 +313,7 @@
         .filter-btn,
         .clear-btn,
         .print-btn {
-            padding: 12px 24px;
+            padding: 15px 24px;
             border: none;
             border-radius: 8px;
             font-size: 0.9rem;
@@ -251,6 +324,9 @@
             letter-spacing: 0.5px;
             position: relative;
             overflow: hidden;
+            white-space: nowrap;
+            min-width: 150px;
+            width: auto;
         }
 
         .filter-btn {
@@ -355,7 +431,7 @@
 @section('content')
     <div class="faculty-header">
         <div class="faculty-title-group">
-            <div class="faculty-title">Real-Time Attendance Records</div>
+            <div class="faculty-title">Attendance Records</div>
             <div class="faculty-subtitle"></div>
         </div>
         <div class="faculty-actions-row">
@@ -379,7 +455,8 @@
                 <select class="filter-select" id="departmentFilter">
                     <option value="">All Departments</option>
                     <option value="College of Information Technology">College of Information Technology</option>
-                    <option value="College of Library and Information Science">College of Library and Information Science</option>
+                    <option value="College of Library and Information Science">College of Library and Information Science
+                    </option>
                     <option value="College of Criminology">College of Criminology</option>
                     <option value="College of Arts and Sciences">College of Arts and Sciences</option>
                     <option value="College of Hospitality Management">College of Hospitality Management</option>
@@ -434,12 +511,12 @@
             </div>
             <div class="filter-group">
                 <label class="filter-label">Status</label>
-            <select class="filter-select" id="statusFilter">
-                <option value="">All Status</option>
-                <option value="Present">Present</option>
-                <option value="Absent">Absent</option>
-                <option value="Late">Late</option>
-            </select>
+                <select class="filter-select" id="statusFilter">
+                    <option value="">All Status</option>
+                    <option value="Present">Present</option>
+                    <option value="Absent">Absent</option>
+                    <option value="Late">Late</option>
+                </select>
             </div>
             <div class="filter-group">
                 <label class="filter-label">Remarks</label>
@@ -452,15 +529,18 @@
                     <option value="With Pass Slip">With Pass Slip</option>
                 </select>
             </div>
-            <div class="filter-actions">
+            <div class="filter-group">
                 <button class="filter-btn" onclick="applyFilters()">Apply Filters</button>
+            </div>
+            <div class="filter-group">
                 <button class="clear-btn" onclick="clearFilters()">Clear All</button>
             </div>
         </div>
 
         <div class="search-section">
             <div class="search-group">
-                <input type="text" class="search-input" id="searchInput" placeholder="Search by faculty name, course code, subject, room, building...">
+                <input type="text" class="search-input" id="searchInput"
+                    placeholder="Search by faculty name, course code, subject, room, building...">
             </div>
             <div class="search-actions">
                 <form id="printForm" method="GET" action="{{ route('deptHead.attendance.records.print') }}"
@@ -485,25 +565,25 @@
 
     <div class="teaching-load-table-container">
         <table class="teaching-load-table">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Faculty Name</th>
-                <th>Department</th>
-                <th>Course code</th>
-                <th>Subject</th>
-                <th>Class Section</th>
-                <th>Day</th>
-                <th>Time Schedule</th>
-                <th>Time in</th>
-                <th>Time out</th>
-                <th>Time duration</th>
-                <th>Room name</th>
-                <th>Building no.</th>
-                <th>Status</th>
-                <th>Remarks</th>
-            </tr>
-        </thead>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Faculty Name</th>
+                    <th>Department</th>
+                    <th>Course code</th>
+                    <th>Subject</th>
+                    <th>Class Section</th>
+                    <th>Day</th>
+                    <th>Time Schedule</th>
+                    <th>Time in</th>
+                    <th>Time out</th>
+                    <th>Time duration</th>
+                    <th>Room name</th>
+                    <th>Building no.</th>
+                    <th>Status</th>
+                    <th>Remarks</th>
+                </tr>
+            </thead>
             <tbody>
                 @forelse ($records as $record)
                     <tr>
@@ -514,35 +594,43 @@
                         <td>{{ $record->teachingLoad->teaching_load_subject }}</td>
                         <td>{{ $record->teachingLoad->teaching_load_class_section }}</td>
                         <td>{{ $record->teachingLoad->teaching_load_day_of_week }}</td>
-                        <td>{{ \Carbon\Carbon::parse($record->teachingLoad->teaching_load_time_in)->format('h:i A') }} to {{ \Carbon\Carbon::parse($record->teachingLoad->teaching_load_time_out)->format('h:i A') }}</td>
+                        <td>{{ \Carbon\Carbon::parse($record->teachingLoad->teaching_load_time_in)->format('h:i A') }} to
+                            {{ \Carbon\Carbon::parse($record->teachingLoad->teaching_load_time_out)->format('h:i A') }}
+                        </td>
                         <td>
-                            @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP' || !$record->record_time_in)
+                            @if (strtoupper(trim($record->record_remarks)) === 'ON LEAVE' ||
+                                    strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP' ||
+                                    !$record->record_time_in)
                                 <span style="color: #999;">N/A</span>
                             @else
                                 {{ \Carbon\Carbon::parse($record->record_time_in)->format('h:i A') }}
                             @endif
                         </td>
                         <td>
-                            @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP' || !$record->record_time_out)
+                            @if (strtoupper(trim($record->record_remarks)) === 'ON LEAVE' ||
+                                    strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP' ||
+                                    !$record->record_time_out)
                                 <span style="color: #999;">N/A</span>
                             @else
                                 {{ \Carbon\Carbon::parse($record->record_time_out)->format('h:i A') }}
                             @endif
                         </td>
                         <td>
-                            @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP')
+                            @if (strtoupper(trim($record->record_remarks)) === 'ON LEAVE' ||
+                                    strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP')
                                 <span style="color: #999;">0</span>
                             @elseif($record->time_duration_seconds == 0)
                                 <span style="color: #999;">0</span>
                             @else
-                                {{ intval($record->time_duration_seconds / 60) }}m {{ $record->time_duration_seconds % 60 }}s
+                                {{ intval($record->time_duration_seconds / 60) }}m
+                                {{ $record->time_duration_seconds % 60 }}s
                             @endif
                         </td>
                         <td>{{ $record->camera->room->room_name }}</td>
                         <td>{{ $record->camera->room->room_building_no }}</td>
                         <td>{{ $record->record_status }}</td>
                         <td>
-                            @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE')
+                            @if (strtoupper(trim($record->record_remarks)) === 'ON LEAVE')
                                 <span class="remarks-on-leave">{{ $record->record_remarks }}</span>
                             @elseif(strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP')
                                 <span class="remarks-on-pass-slip">{{ $record->record_remarks }}</span>
@@ -572,11 +660,11 @@
         function setCurrentDateFilter() {
             const today = new Date();
             const todayString = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
-            
+
             // Set both start and end date to today
             document.getElementById('startDate').value = todayString;
             document.getElementById('endDate').value = todayString;
-            
+
             // Update current filters with correct parameter names
             currentFilters.startDate = todayString;
             currentFilters.endDate = todayString;
@@ -621,7 +709,7 @@
                 const teachingLoadsResponse = await fetch('/api/teaching-loads');
                 if (teachingLoadsResponse.ok) {
                     const teachingLoads = await teachingLoadsResponse.json();
-                    
+
                     // Course codes
                     const courseCodes = [...new Set(teachingLoads.map(tl => tl.teaching_load_course_code))];
                     const courseCodeSelect = document.getElementById('courseCodeFilter');
@@ -642,7 +730,7 @@
                         subjectSelect.appendChild(option);
                     });
                 }
-                
+
                 return true; // Indicate successful completion
             } catch (error) {
                 console.error('Error loading filters:', error);
@@ -689,8 +777,8 @@
                 tbody.innerHTML = '<tr><td colspan="15" class="no-records">No records found</td></tr>';
                 return;
             }
-            
-        tbody.innerHTML = records.map(record => `
+
+            tbody.innerHTML = records.map(record => `
             <tr>
                 <td>${formatDate(record.record_time_in)}</td>
                 <td>${record.faculty.faculty_fname} ${record.faculty.faculty_lname}</td>
@@ -713,18 +801,18 @@
 
         // Helper functions
         function formatTime(timeString) {
-            return new Date(timeString).toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
+            return new Date(timeString).toLocaleTimeString('en-US', {
+                hour: 'numeric',
                 minute: '2-digit',
-                hour12: true 
+                hour12: true
             });
         }
 
         function formatDate(dateString) {
-            return new Date(dateString).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+            return new Date(dateString).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
             });
         }
 
@@ -762,7 +850,7 @@
 
         function formatRemarks(remarks) {
             if (!remarks) return '';
-            
+
             const upperRemarks = remarks.toUpperCase();
             if (upperRemarks === 'ON LEAVE') {
                 return `<span class="remarks-on-leave">${remarks}</span>`;
@@ -777,78 +865,78 @@
             // You can add a toast notification here if needed
         }
 
-// Apply filters
-function applyFilters() {
-    // Get current filter values
-    const startDate = document.getElementById('startDate').value;
-    const endDate = document.getElementById('endDate').value;
-    const department = document.getElementById('departmentFilter').value;
-    const instructor = document.getElementById('instructorFilter').value;
-    const courseCode = document.getElementById('courseCodeFilter').value;
-    const subject = document.getElementById('subjectFilter').value;
-    const day = document.getElementById('dayFilter').value;
-    const room = document.getElementById('roomFilter').value;
-    const building = document.getElementById('buildingFilter').value;
-    const status = document.getElementById('statusFilter').value;
-    const remarks = document.getElementById('remarksFilter').value;
-    const search = document.getElementById('searchInput').value;
-    
-    // Build URL with parameters
-    const url = new URL(window.location);
-    
-    // Clear all existing parameters first
-    url.search = '';
-    
-    // Add parameters only if they have values
-    if (startDate) url.searchParams.set('startDate', startDate);
-    if (endDate) url.searchParams.set('endDate', endDate);
-    if (department) url.searchParams.set('department', department);
-    if (instructor) url.searchParams.set('instructor', instructor);
-    if (courseCode) url.searchParams.set('course_code', courseCode);
-    if (subject) url.searchParams.set('subject', subject);
-    if (day) url.searchParams.set('day', day);
-    if (room) url.searchParams.set('room', room);
-    if (building) url.searchParams.set('building', building);
-    if (status) url.searchParams.set('status', status);
-    if (remarks) url.searchParams.set('remarks', remarks);
-    if (search) url.searchParams.set('search', search);
-    
-    // Reload page with new parameters
-    window.location.href = url.toString();
-}
+        // Apply filters
+        function applyFilters() {
+            // Get current filter values
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const department = document.getElementById('departmentFilter').value;
+            const instructor = document.getElementById('instructorFilter').value;
+            const courseCode = document.getElementById('courseCodeFilter').value;
+            const subject = document.getElementById('subjectFilter').value;
+            const day = document.getElementById('dayFilter').value;
+            const room = document.getElementById('roomFilter').value;
+            const building = document.getElementById('buildingFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            const remarks = document.getElementById('remarksFilter').value;
+            const search = document.getElementById('searchInput').value;
 
-// Clear all filters
-function clearFilters() {
-    // Reload page without any parameters
-    window.location.href = window.location.pathname;
-}
+            // Build URL with parameters
+            const url = new URL(window.location);
+
+            // Clear all existing parameters first
+            url.search = '';
+
+            // Add parameters only if they have values
+            if (startDate) url.searchParams.set('startDate', startDate);
+            if (endDate) url.searchParams.set('endDate', endDate);
+            if (department) url.searchParams.set('department', department);
+            if (instructor) url.searchParams.set('instructor', instructor);
+            if (courseCode) url.searchParams.set('course_code', courseCode);
+            if (subject) url.searchParams.set('subject', subject);
+            if (day) url.searchParams.set('day', day);
+            if (room) url.searchParams.set('room', room);
+            if (building) url.searchParams.set('building', building);
+            if (status) url.searchParams.set('status', status);
+            if (remarks) url.searchParams.set('remarks', remarks);
+            if (search) url.searchParams.set('search', search);
+
+            // Reload page with new parameters
+            window.location.href = url.toString();
+        }
+
+        // Clear all filters
+        function clearFilters() {
+            // Reload page without any parameters
+            window.location.href = window.location.pathname;
+        }
 
 
-// Search logs
-function searchLogs() {
-    // Get search input value
-    const searchValue = document.getElementById('searchInput').value;
-    
-    // Build URL with current parameters plus search
-    const url = new URL(window.location);
-    
-    if (searchValue) {
-        url.searchParams.set('search', searchValue);
-    } else {
-        url.searchParams.delete('search');
-    }
-    
-    // Reload page with search parameter
-    window.location.href = url.toString();
-}
+        // Search logs
+        function searchLogs() {
+            // Get search input value
+            const searchValue = document.getElementById('searchInput').value;
 
-// Search on Enter key
-document.querySelector('.search-input').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        searchLogs();
-    }
-});
+            // Build URL with current parameters plus search
+            const url = new URL(window.location);
+
+            if (searchValue) {
+                url.searchParams.set('search', searchValue);
+            } else {
+                url.searchParams.delete('search');
+            }
+
+            // Reload page with search parameter
+            window.location.href = url.toString();
+        }
+
+        // Search on Enter key
+        document.querySelector('.search-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchLogs();
+            }
+        });
 
 
         // Populate filter fields from URL parameters on page load
@@ -866,7 +954,7 @@ document.querySelector('.search-input').addEventListener('keydown', function(e) 
             document.getElementById('statusFilter').value = urlParams.get('status') || '';
             document.getElementById('remarksFilter').value = urlParams.get('remarks') || '';
             document.getElementById('searchInput').value = urlParams.get('search') || '';
-            
+
             // Also populate currentFilters from URL parameters
             currentFilters = {
                 startDate: urlParams.get('startDate') || '',
@@ -882,7 +970,7 @@ document.querySelector('.search-input').addEventListener('keydown', function(e) 
                 remarks: urlParams.get('remarks') || '',
                 search: urlParams.get('search') || ''
             };
-            
+
             // Remove empty filters
             Object.keys(currentFilters).forEach(key => {
                 if (!currentFilters[key]) {
@@ -894,7 +982,7 @@ document.querySelector('.search-input').addEventListener('keydown', function(e) 
         // Sync hidden print inputs with current filters
         function syncPrintInputs() {
             const urlParams = new URLSearchParams(window.location.search);
-            
+
             document.getElementById('printStartDate').value = urlParams.get('startDate') || '';
             document.getElementById('printEndDate').value = urlParams.get('endDate') || '';
             document.getElementById('printDepartment').value = urlParams.get('department') || '';
@@ -913,10 +1001,10 @@ document.querySelector('.search-input').addEventListener('keydown', function(e) 
         document.addEventListener('DOMContentLoaded', async function() {
             // Set current date as default filter
             setCurrentDateFilter();
-            
+
             // Load filter options first
             await loadFilters();
-            
+
             // Then populate filters from URL
             populateFiltersFromURL();
 

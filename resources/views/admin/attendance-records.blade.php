@@ -210,9 +210,9 @@
     .filter-actions {
         display: flex;
         gap: 15px;
-        flex-wrap: wrap;
-        align-items: end;
-        justify-content: flex-start;
+        flex-wrap: nowrap;
+        align-items: center;
+        justify-content: flex-end;
         margin-top: 20px;
         flex: 0 0 auto;
     }
@@ -229,6 +229,9 @@
         letter-spacing: 0.5px;
         position: relative;
         overflow: hidden;
+        white-space: nowrap;
+        min-width: 150px;
+        width: auto;
     }
 
     .filter-btn {
@@ -333,8 +336,8 @@
 @section('content')
 <div class="faculty-header">
     <div class="faculty-title-group">
-        <div class="faculty-title">Real-Time Attendance</div>
-        <div class="faculty-subtitle">Records</div>
+        <div class="faculty-title">Attendance Records</div>
+        <div class="faculty-subtitle"></div>
     </div>
     <div class="faculty-actions-row">
         <!-- Search and Print moved to filter section -->
@@ -430,8 +433,10 @@
                     <option value="With Pass Slip">With Pass Slip</option>
             </select>
         </div>
-        <div class="filter-actions">
+        <div class="filter-group">
             <button class="filter-btn" onclick="applyFilters()">Apply Filters</button>
+        </div>
+        <div class="filter-group">
             <button class="clear-btn" onclick="clearFilters()">Clear All</button>
         </div>
     </div>
