@@ -565,7 +565,7 @@
                         <td>
                             <div class="action-btns">
                                 <button class="edit-btn"
-                                    onclick="openUpdateModal({{ $camera->camera_id }}, '{{ $camera->camera_name }}', '{{ $camera->camera_ip_address }}', '{{ $camera->camera_username }}', '{{ $camera->camera_password }}', '{{ $camera->room_no }}')">&#9998;</button>
+                                    onclick="openUpdateModal({{ $camera->camera_id }})">&#9998;</button>
                                 <button class="delete-btn"
                                     onclick="openDeleteModal({{ $camera->camera_id }})">&#128465;</button>
                             </div>
@@ -986,26 +986,40 @@
             }
         }
 
-        function openUpdateModal(id, name, ip, username, password, room_no) {
-            openModal('updateCameraModal');
-            document.getElementById('updateCameraId').value = id;
-            document.getElementById('updateCameraName').value = name;
-            document.getElementById('updateCameraIP').value = ip;
-            document.getElementById('updateCameraUsername').value = username;
-            document.getElementById('updateCameraPassword').value = password;
-            document.getElementById('updateCameraRoom').value = room_no;
-            document.getElementById('updateCameraForm').action = '/deptHead/cameras/' + id;
-            
-            // Mark all fields as touched so validation messages show immediately
-            const roomField = document.getElementById('updateCameraRoom');
-            if (roomField) {
-                roomField.dataset.touched = 'true';
+
+        function openUpdateModal(id) {
+            let camera = @json($cameras).find(c => c.camera_id === id);
+            if (camera) {
+                document.getElementById('updateCameraId').value = camera.camera_id;
+                document.getElementById('updateCameraName').value = camera.camera_name;
+                document.getElementById('updateCameraIP').value = camera.camera_ip_address;
+                document.getElementById('updateCameraUsername').value = camera.camera_username;
+                document.getElementById('updateCameraPassword').value = camera.camera_password;
+                document.getElementById('updateCameraRoom').value = camera.room_no || '';
+                document.getElementById('updateCameraForm').action = '/deptHead/cameras/' + id;
+                
+                // Mark all fields as touched so validation shows immediately
+                const fields = [
+                    document.getElementById('updateCameraName'),
+                    document.getElementById('updateCameraIP'),
+                    document.getElementById('updateCameraUsername'),
+                    document.getElementById('updateCameraPassword'),
+                    document.getElementById('updateCameraRoom')
+                ];
+                
+                fields.forEach(field => {
+                    if (field) {
+                        field.dataset.touched = 'true';
+                    }
+                });
+                
+                openModal('updateCameraModal');
+                
+                // Validate the pre-filled form and update button state
+                setTimeout(() => {
+                    validateUpdate();
+                }, 100);
             }
-            
-            // Validate the pre-filled form and update button state
-            setTimeout(() => {
-                validateUpdate();
-            }, 100);
         }
 
         function openDeleteModal(id) {
@@ -1140,7 +1154,7 @@
                         updateButton.disabled = true;
                         updateButton.style.opacity = '0.6';
                         updateButton.style.cursor = 'not-allowed';
-                        updateButton.textContent = 'Add';
+                        updateButton.textContent = 'Update';
                     }
                 }
             }
