@@ -1,4 +1,4 @@
-@extends('layouts.appchecker')
+@extends('layouts.appChecker')
 
 @section('title', 'Archived Attendance Records - Tagoloan Community College')
 @section('reports-active', 'active')
