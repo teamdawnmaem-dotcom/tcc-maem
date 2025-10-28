@@ -120,6 +120,12 @@
             background: #fff2e6;
         }
 
+        .faculty-row:hover {
+            background: #e8f4fd !important;
+            transform: scale(1.01);
+            transition: all 0.2s ease;
+        }
+
         /* Make only the table area scroll vertically */
         .faculty-table-scroll {
             max-height: 670px;
@@ -477,21 +483,21 @@
                 </thead>
                 <tbody>
                     @forelse($faculties as $faculty)
-                        <tr>
+                        <tr class="faculty-row" data-faculty-id="{{ $faculty->faculty_id }}" style="cursor: pointer;">
                             <td>{{ $faculty->faculty_id }}</td>
                             <td>{{ $faculty->faculty_fname }}</td>
                             <td>{{ $faculty->faculty_lname }}</td>
                             <td>{{ $faculty->faculty_department }}</td>
                             <td>
                                 <button class="view-btn"
-                                    onclick='openViewImageModal(@json($faculty->faculty_images))'>&#128065;</button>
+                                    onclick='event.stopPropagation(); openViewImageModal(@json($faculty->faculty_images))'>&#128065;</button>
                             </td>
                             <td>
                                 <div class="action-btns">
                                     <button class="edit-btn"
-                                        onclick="openUpdateModal({{ $faculty->faculty_id }})">&#9998;</button>
+                                        onclick="event.stopPropagation(); openUpdateModal({{ $faculty->faculty_id }})">&#9998;</button>
                                     <button class="delete-btn"
-                                        onclick="openDeleteModal({{ $faculty->faculty_id }})">&#128465;</button>
+                                        onclick="event.stopPropagation(); openDeleteModal({{ $faculty->faculty_id }})">&#128465;</button>
                                 </div>
                             </td>
                         </tr>
@@ -800,6 +806,44 @@
             <button type="button" class="modal-btn cancel" onclick="closeModal('viewImagesModal')">Close</button>
         </div>
     </div>
+
+    <!-- View Teaching Loads Modal -->
+    <div id="viewTeachingLoadsModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box" style="width: 900px; max-width: 95vw; padding: 0; overflow: hidden; border-radius: 8px;">
+            <div class="modal-header-custom" style="margin-bottom: 0;">FACULTY TEACHING LOADS</div>
+            <div style="padding: 20px;">
+                <div id="facultyInfo" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #8B0000;">
+                    <h3 id="facultyName" style="margin: 0 0 5px 0; color: #8B0000; font-size: 1.2rem;"></h3>
+                    <p id="facultyDepartment" style="margin: 0; color: #666; font-size: 1rem;"></p>
+                </div>
+                <div id="teachingLoadsContainer" style="max-height: 400px; overflow-y: auto;">
+                    <div id="teachingLoadsTable" style="display: none;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="background: #8B0000; color: white;">
+                                    <th style="padding: 10px; text-align: center; border: none;">Course Code</th>
+                                    <th style="padding: 10px; text-align: center; border: none;">Subject</th>
+                                    <th style="padding: 10px; text-align: center; border: none;">Class Section</th>
+                                    <th style="padding: 10px; text-align: center; border: none;">Day</th>
+                                    <th style="padding: 10px; text-align: center; border: none;">Time In</th>
+                                    <th style="padding: 10px; text-align: center; border: none;">Time Out</th>
+                                    <th style="padding: 10px; text-align: center; border: none;">Room</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teachingLoadsTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="noTeachingLoads" style="text-align: center; padding: 40px; color: #666; font-style: italic; display: none;">
+                        No teaching loads assigned to this faculty member.
+                    </div>
+                </div>
+                <div style="margin-top: 20px; text-align: center;">
+                    <button type="button" class="modal-btn cancel" onclick="closeModal('viewTeachingLoadsModal')">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('scripts')
@@ -883,6 +927,105 @@
 
             openModal('viewImagesModal');
         }
+
+        // Function to open teaching loads modal
+        function openTeachingLoadsModal(facultyId, facultyName, facultyDepartment) {
+            // Set faculty info
+            document.getElementById('facultyName').textContent = facultyName;
+            document.getElementById('facultyDepartment').textContent = facultyDepartment;
+            
+            // Show loading state
+            document.getElementById('teachingLoadsTable').style.display = 'none';
+            document.getElementById('noTeachingLoads').style.display = 'none';
+            
+            // Fetch teaching loads
+            fetch(`/api/faculty/${facultyId}/teaching-loads`)
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('teachingLoadsTableBody');
+                    tableBody.innerHTML = '';
+                    
+                    if (data.length > 0) {
+                        let currentDay = '';
+                        data.forEach((load, index) => {
+                            // Add day separator if it's a new day
+                            if (load.teaching_load_day_of_week !== currentDay) {
+                                currentDay = load.teaching_load_day_of_week;
+                                
+                                // Add day header row
+                                const dayHeaderRow = document.createElement('tr');
+                                dayHeaderRow.style.background = '#f8f9fa';
+                                dayHeaderRow.style.borderTop = '2px solid #8B0000';
+                                dayHeaderRow.innerHTML = `
+                                    <td colspan="7" style="padding: 12px; text-align: center; font-weight: bold; color: #8B0000; font-size: 1.1rem;">
+                                        ${load.teaching_load_day_of_week}
+                                    </td>
+                                `;
+                                tableBody.appendChild(dayHeaderRow);
+                            }
+                            
+                            // Add teaching load row
+                            const row = document.createElement('tr');
+                            row.style.borderBottom = '1px solid #eee';
+                            row.style.background = index % 2 === 0 ? '#fff' : '#f9f9f9';
+                            row.innerHTML = `
+                                <td style="padding: 8px; text-align: center;">${load.teaching_load_course_code}</td>
+                                <td style="padding: 8px; text-align: center;">${load.teaching_load_subject}</td>
+                                <td style="padding: 8px; text-align: center;">${load.teaching_load_class_section}</td>
+                                <td style="padding: 8px; text-align: center; font-weight: bold; color: #8B0000;">${load.teaching_load_day_of_week}</td>
+                                <td style="padding: 8px; text-align: center;">${formatTime(load.teaching_load_time_in)}</td>
+                                <td style="padding: 8px; text-align: center;">${formatTime(load.teaching_load_time_out)}</td>
+                                <td style="padding: 8px; text-align: center;">${load.room_name || load.room_no}</td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                        document.getElementById('teachingLoadsTable').style.display = 'block';
+                    } else {
+                        document.getElementById('noTeachingLoads').style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching teaching loads:', error);
+                    document.getElementById('noTeachingLoads').style.display = 'block';
+                    document.getElementById('noTeachingLoads').textContent = 'Error loading teaching loads.';
+                });
+            
+            openModal('viewTeachingLoadsModal');
+        }
+
+        // Helper function to format time
+        function formatTime(timeString) {
+            if (!timeString) return '';
+            try {
+                const time = new Date('2000-01-01 ' + timeString);
+                return time.toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    minute: '2-digit', 
+                    hour12: true 
+                });
+            } catch (e) {
+                return timeString;
+            }
+        }
+        // Add event listeners for faculty row clicks
+        document.addEventListener('DOMContentLoaded', function() {
+            const facultyRows = document.querySelectorAll('.faculty-row');
+            facultyRows.forEach(row => {
+                row.addEventListener('click', function(e) {
+                    // Don't trigger if clicking on buttons
+                    if (e.target.closest('.action-btns') || e.target.closest('.view-btn')) {
+                        return;
+                    }
+                    
+                    const facultyId = this.dataset.facultyId;
+                    const facultyName = this.cells[1].textContent + ' ' + this.cells[2].textContent;
+                    const facultyDepartment = this.cells[3].textContent;
+                    
+                    openTeachingLoadsModal(facultyId, facultyName, facultyDepartment);
+                });
+            });
+        });
+
         // Close + reset when clicking outside (overlay)
         document.addEventListener('click', function(e) {
             if (e.target.classList && e.target.classList.contains('modal-overlay')) {

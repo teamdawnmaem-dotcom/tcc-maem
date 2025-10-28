@@ -21,6 +21,8 @@ use App\Http\Controllers\RecognitionLogController;
 |
 */
 
+Route::post('/logs', [RecognitionLogController::class, 'push']);
+
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
@@ -29,6 +31,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::get('/cameras', [CameraController::class, 'apiIndex']);
 Route::get('/rooms', [CameraController::class, 'apiRooms']);
 Route::get('/faculty', [FacultyController::class, 'apiFaculty']);
+Route::get('/faculty/{facultyId}', [FacultyController::class, 'apiFacultyById']);
+Route::get('/faculty/{facultyId}/teaching-loads', [FacultyController::class, 'apiFacultyTeachingLoads']);
 Route::get('/teaching-loads', [TeachingLoadController::class, 'apiTeachingLoads']);
 Route::get('/schedule', [TeachingLoadController::class, 'apiTodaySchedule']);
 Route::post('/teaching-load-details', [TeachingLoadController::class, 'apiTeachingLoadDetails']);
