@@ -471,8 +471,8 @@
     console.log('Faculties data loaded:', faculties);
     console.log('First faculty sample:', faculties.length > 0 ? faculties[0] : 'No faculties');
 
-    //const WEBSOCKET_HOST = `http://${window.location.hostname}:5000`;
-    const WEBSOCKET_HOST = `https://workspacevps.cloud/camera/api`;
+    const WEBSOCKET_HOST = `http://${window.location.hostname}:5000`;
+    //const WEBSOCKET_HOST = `https://workspacevps.cloud/camera/api`;
     const pcs = {}; // RTCPeerConnections per camera
     const reconnectInterval = 1000; // 1 second before retry
     const scheduleRefreshMs = 30000; // refresh schedule every 30s
