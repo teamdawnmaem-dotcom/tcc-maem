@@ -418,7 +418,7 @@
             <div class="content-box animate-scale">
                 <div class="login-section animate-slide-left">
                     <div class="login-title animate-on-scroll">
-                        <h2>LOGIN latest version - 8</h2>
+                        <h2>LOGIN latest version - 08</h2>
                         <p>Welcome User</p>
                     </div>
 
