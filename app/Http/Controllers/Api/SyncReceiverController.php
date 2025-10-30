@@ -142,7 +142,6 @@ class SyncReceiverController extends Controller
                 'faculty_department' => 'nullable|string|max:50',
                 'faculty_face_embedding' => 'nullable|string',
                 'faculty_images' => 'nullable|string',
-                'cloud_image_urls' => 'nullable|string',
                 'created_at' => 'nullable|date',
                 'updated_at' => 'nullable|date',
             ]);
@@ -251,16 +250,14 @@ class SyncReceiverController extends Controller
             $validated = $request->validate([
                 'record_id' => 'required|integer',
                 'faculty_id' => 'required|integer',
-                'teaching_load_id' => 'nullable|integer',
-                'camera_id' => 'nullable|integer',
-                'record_date' => 'required|date',
+                'teaching_load_id' => 'required|integer',
+                'camera_id' => 'required|integer',
+                'record_date' => 'required',
                 'record_time_in' => 'nullable',
                 'record_time_out' => 'nullable',
-                'record_status' => 'nullable|string|max:50',
-                'record_remarks' => 'nullable|string',
-                'time_duration_seconds' => 'nullable|integer',
-                'created_at' => 'nullable|date',
-                'updated_at' => 'nullable|date',
+                'record_status' => 'required|string|max:50',
+                'record_remarks' => 'required|string|max:50',
+                'time_duration_seconds' => 'required|integer',
             ]);
             
             DB::table('tbl_attendance_record')->updateOrInsert(
@@ -393,12 +390,11 @@ class SyncReceiverController extends Controller
         try {
             $validated = $request->validate([
                 'log_id' => 'required|integer',
-                'camera_id' => 'required|integer',
+                'camera_id' => 'nullable|integer',
                 'faculty_id' => 'nullable|integer',
                 'recognition_time' => 'required',
-                'status' => 'nullable|string|max:50',
+                'status' => 'required|string|max:50',
                 'distance' => 'nullable|numeric',
-                'created_at' => 'nullable|date',
             ]);
             
             DB::table('tbl_recognition_logs')->updateOrInsert(
