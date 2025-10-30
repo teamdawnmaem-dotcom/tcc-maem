@@ -24,7 +24,7 @@ class SyncReceiverController extends Controller
     public function getRooms()
     {
         try {
-            $rooms = DB::table('tbl_room')->select('room_id')->get();
+            $rooms = DB::table('tbl_room')->select('room_no')->get();
             return response()->json($rooms);
         } catch (\Exception $e) {
             Log::error('Error getting rooms: ' . $e->getMessage());
@@ -39,19 +39,17 @@ class SyncReceiverController extends Controller
     {
         try {
             $validated = $request->validate([
-                'room_id' => 'required|integer',
-                'room_no' => 'required|string|max:50',
-                'room_name' => 'required|string|max:255',
-                'room_building_no' => 'nullable|string|max:50',
-                'room_floor_no' => 'nullable|string|max:50',
+                'room_no' => 'required|integer',
+                'room_name' => 'required|string|max:50',
+                'room_building_no' => 'required|string|max:50',
             ]);
             
             DB::table('tbl_room')->updateOrInsert(
-                ['room_id' => $validated['room_id']],
+                ['room_no' => $validated['room_no']],
                 $validated
             );
             
-            Log::info("Synced room {$validated['room_id']} from local server");
+            Log::info("Synced room {$validated['room_no']} from local server");
             
             return response()->json([
                 'success' => true,
@@ -88,11 +86,12 @@ class SyncReceiverController extends Controller
         try {
             $validated = $request->validate([
                 'camera_id' => 'required|integer',
-                'room_no' => 'required|string|max:50',
-                'room_name' => 'nullable|string|max:255',
-                'room_building_no' => 'nullable|string|max:50',
-                'camera_name' => 'nullable|string|max:255',
-                'camera_live_feed' => 'nullable|string|max:500',
+                'camera_name' => 'required|string|max:50',
+                'camera_ip_address' => 'required|string|max:50',
+                'camera_username' => 'required|string|max:50',
+                'camera_password' => 'required|string|max:50',
+                'camera_live_feed' => 'required|string|max:255',
+                'room_no' => 'required|integer',
             ]);
             
             DB::table('tbl_camera')->updateOrInsert(
@@ -189,15 +188,15 @@ class SyncReceiverController extends Controller
             $validated = $request->validate([
                 'teaching_load_id' => 'required|integer',
                 'faculty_id' => 'required|integer',
-                'room_no' => 'required|string|max:50',
-                'teaching_load_course_code' => 'nullable|string|max:50',
-                'teaching_load_subject' => 'nullable|string|max:255',
-                'teaching_load_class_section' => 'nullable|string|max:50',
-                'teaching_load_day_of_week' => 'nullable|string|max:20',
-                'teaching_load_time_in' => 'nullable',
-                'teaching_load_time_out' => 'nullable',
-                'teaching_load_semester' => 'nullable|string|max:50',
-                'teaching_load_school_year' => 'nullable|string|max:50',
+                'teaching_load_course_code' => 'required|string|max:50',
+                'teaching_load_subject' => 'required|string|max:50',
+                'teaching_load_day_of_week' => 'required|string|max:50',
+                'teaching_load_class_section' => 'required|string|max:50',
+                'teaching_load_time_in' => 'required',
+                'teaching_load_time_out' => 'required',
+                'room_no' => 'required|integer',
+                'created_at' => 'nullable|date',
+                'updated_at' => 'nullable|date',
             ]);
             
             DB::table('tbl_teaching_load')->updateOrInsert(
@@ -313,7 +312,6 @@ class SyncReceiverController extends Controller
                 'leave_start_date' => 'nullable|date',
                 'leave_end_date' => 'nullable|date',
                 'lp_image' => 'nullable|string|max:255',
-                'lp_image_cloud_url' => 'nullable|string',
                 'created_at' => 'nullable|date',
                 'updated_at' => 'nullable|date',
             ]);

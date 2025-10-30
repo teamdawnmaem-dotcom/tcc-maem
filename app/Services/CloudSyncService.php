@@ -91,23 +91,21 @@ class CloudSyncService
             
             // Get cloud rooms to check what's already there
             $cloudRooms = $this->getCloudData('rooms');
-            $cloudRoomIds = collect($cloudRooms)->pluck('room_id')->toArray();
+            $cloudRoomNos = collect($cloudRooms)->pluck('room_no')->toArray();
             
             foreach ($localRooms as $room) {
-                // Check if room exists in cloud
-                if (!in_array($room->room_id, $cloudRoomIds)) {
+                // Check if room exists in cloud (using room_no as primary key)
+                if (!in_array($room->room_no, $cloudRoomNos)) {
                     // Push to cloud
                     $response = $this->pushToCloud('rooms', [
-                        'room_id' => $room->room_id,
                         'room_no' => $room->room_no,
                         'room_name' => $room->room_name,
                         'room_building_no' => $room->room_building_no,
-                        'room_floor_no' => $room->room_floor_no,
                     ]);
                     
                     if ($response['success']) {
-                        $synced[] = $room->room_id;
-                        Log::info("Synced room {$room->room_id} to cloud");
+                        $synced[] = $room->room_no;
+                        Log::info("Synced room {$room->room_no} to cloud");
                     }
                 }
             }
@@ -134,11 +132,12 @@ class CloudSyncService
                 if (!in_array($camera->camera_id, $cloudCameraIds)) {
                     $response = $this->pushToCloud('cameras', [
                         'camera_id' => $camera->camera_id,
-                        'room_no' => $camera->room_no,
-                        'room_name' => $camera->room_name,
-                        'room_building_no' => $camera->room_building_no,
                         'camera_name' => $camera->camera_name,
+                        'camera_ip_address' => $camera->camera_ip_address,
+                        'camera_username' => $camera->camera_username,
+                        'camera_password' => $camera->camera_password,
                         'camera_live_feed' => $camera->camera_live_feed,
+                        'room_no' => $camera->room_no,
                     ]);
                     
                     if ($response['success']) {
@@ -235,15 +234,15 @@ class CloudSyncService
                     $response = $this->pushToCloud('teaching-loads', [
                         'teaching_load_id' => $load->teaching_load_id,
                         'faculty_id' => $load->faculty_id,
-                        'room_no' => $load->room_no,
                         'teaching_load_course_code' => $load->teaching_load_course_code,
                         'teaching_load_subject' => $load->teaching_load_subject,
-                        'teaching_load_class_section' => $load->teaching_load_class_section,
                         'teaching_load_day_of_week' => $load->teaching_load_day_of_week,
+                        'teaching_load_class_section' => $load->teaching_load_class_section,
                         'teaching_load_time_in' => $load->teaching_load_time_in,
                         'teaching_load_time_out' => $load->teaching_load_time_out,
-                        'teaching_load_semester' => $load->teaching_load_semester,
-                        'teaching_load_school_year' => $load->teaching_load_school_year,
+                        'room_no' => $load->room_no,
+                        'created_at' => $load->created_at,
+                        'updated_at' => $load->updated_at,
                     ]);
                     
                     if ($response['success']) {
@@ -329,7 +328,10 @@ class CloudSyncService
                         'updated_at' => $leave->updated_at,
                     ];
                     
-                    // Upload leave slip if exists
+                    // Note: Skipping leave slip upload to save bandwidth
+                    // Leave slip images are stored locally, cloud can access via filepath
+                    // Uncomment below if you want to upload to cloud storage
+                    /*
                     if ($leave->lp_image) {
                         $fullPath = storage_path('app/public/' . $leave->lp_image);
                         if (file_exists($fullPath)) {
@@ -337,6 +339,7 @@ class CloudSyncService
                             $data['lp_image_cloud_url'] = $cloudUrl;
                         }
                     }
+                    */
                     
                     $response = $this->pushToCloud('leaves', $data);
                     
@@ -382,7 +385,10 @@ class CloudSyncService
                         'updated_at' => $pass->updated_at,
                     ];
                     
-                    // Upload pass slip if exists
+                    // Note: Skipping pass slip upload to save bandwidth
+                    // Pass slip images are stored locally, cloud can access via filepath
+                    // Uncomment below if you want to upload to cloud storage
+                    /*
                     if ($pass->lp_image) {
                         $fullPath = storage_path('app/public/' . $pass->lp_image);
                         if (file_exists($fullPath)) {
@@ -390,6 +396,7 @@ class CloudSyncService
                             $data['lp_image_cloud_url'] = $cloudUrl;
                         }
                     }
+                    */
                     
                     $response = $this->pushToCloud('passes', $data);
                     
