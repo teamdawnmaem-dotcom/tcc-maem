@@ -605,18 +605,38 @@ class SyncReceiverController extends Controller
 
             // Use DB::table()->upsert for bulk idempotent insert/update
             // Temporarily disable FK checks to prevent ordering issues on first seed
-            DB::beginTransaction();
-            DB::statement('SET FOREIGN_KEY_CHECKS=0');
             $updateCols = array_values(array_diff($cfg['columns'], $cfg['unique']));
             $total = 0;
-            foreach (array_chunk($rows, 500) as $chunk) {
-                DB::table($cfg['table'])->upsert($chunk, $cfg['unique'], $updateCols);
-                $total += count($chunk);
+            $errors = [];
+            DB::beginTransaction();
+            DB::statement('SET FOREIGN_KEY_CHECKS=0');
+            try {
+                foreach (array_chunk($rows, 500) as $chunk) {
+                    DB::table($cfg['table'])->upsert($chunk, $cfg['unique'], $updateCols);
+                    $total += count($chunk);
+                }
+                DB::commit();
+            } catch (\Throwable $e) {
+                // Fallback to per-row upsert to skip bad rows and continue
+                DB::rollBack();
+                DB::beginTransaction();
+                foreach ($rows as $row) {
+                    try {
+                        DB::table($cfg['table'])->upsert([$row], $cfg['unique'], $updateCols);
+                        $total += 1;
+                    } catch (\Throwable $ie) {
+                        // collect minimal error info
+                        if (count($errors) < 20) {
+                            $errors[] = $ie->getMessage();
+                        }
+                    }
+                }
+                DB::commit();
+            } finally {
+                DB::statement('SET FOREIGN_KEY_CHECKS=1');
             }
-            DB::statement('SET FOREIGN_KEY_CHECKS=1');
-            DB::commit();
-
-            return response()->json(['success' => true, 'upserted' => $total]);
+            
+            return response()->json(['success' => true, 'upserted' => $total, 'skipped' => max(0, count($rows) - $total), 'errors' => $errors]);
         } catch (\Exception $e) {
             Log::error('Bulk upsert error: ' . $e->getMessage());
             return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
