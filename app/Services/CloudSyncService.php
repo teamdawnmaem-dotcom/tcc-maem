@@ -292,6 +292,7 @@ class CloudSyncService
     
     /**
      * Sync leaves
+     * Note: Leaves and passes share the same table (tbl_leave_pass)
      */
     protected function syncLeaves()
     {
@@ -300,34 +301,35 @@ class CloudSyncService
         try {
             $localLeaves = Leave::where('created_at', '>=', now()->subDays(90))->get();
             $cloudLeaves = $this->getCloudData('leaves', ['days' => 90]);
-            $cloudLeaveIds = collect($cloudLeaves)->pluck('leave_id')->toArray();
+            $cloudLeaveIds = collect($cloudLeaves)->pluck('lp_id')->toArray();
             
             foreach ($localLeaves as $leave) {
-                if (!in_array($leave->leave_id, $cloudLeaveIds)) {
+                if (!in_array($leave->lp_id, $cloudLeaveIds)) {
                     $data = [
-                        'leave_id' => $leave->leave_id,
+                        'lp_id' => $leave->lp_id,
                         'faculty_id' => $leave->faculty_id,
-                        'leave_reason' => $leave->leave_reason,
+                        'lp_type' => $leave->lp_type,
+                        'lp_purpose' => $leave->lp_purpose,
                         'leave_start_date' => $leave->leave_start_date,
                         'leave_end_date' => $leave->leave_end_date,
-                        'leave_type' => $leave->leave_type,
-                        'leave_status' => $leave->leave_status,
+                        'lp_image' => $leave->lp_image,
                         'created_at' => $leave->created_at,
+                        'updated_at' => $leave->updated_at,
                     ];
                     
                     // Upload leave slip if exists
-                    if ($leave->leave_slip_image) {
-                        $fullPath = storage_path('app/public/' . $leave->leave_slip_image);
+                    if ($leave->lp_image) {
+                        $fullPath = storage_path('app/public/' . $leave->lp_image);
                         if (file_exists($fullPath)) {
                             $cloudUrl = $this->uploadFileToCloud($fullPath, 'leave_slips');
-                            $data['leave_slip_cloud_url'] = $cloudUrl;
+                            $data['lp_image_cloud_url'] = $cloudUrl;
                         }
                     }
                     
                     $response = $this->pushToCloud('leaves', $data);
                     
                     if ($response['success']) {
-                        $synced[] = $leave->leave_id;
+                        $synced[] = $leave->lp_id;
                     }
                 }
             }
@@ -340,6 +342,7 @@ class CloudSyncService
     
     /**
      * Sync passes
+     * Note: Leaves and passes share the same table (tbl_leave_pass)
      */
     protected function syncPasses()
     {
@@ -348,34 +351,37 @@ class CloudSyncService
         try {
             $localPasses = Pass::where('created_at', '>=', now()->subDays(90))->get();
             $cloudPasses = $this->getCloudData('passes', ['days' => 90]);
-            $cloudPassIds = collect($cloudPasses)->pluck('pass_id')->toArray();
+            $cloudPassIds = collect($cloudPasses)->pluck('lp_id')->toArray();
             
             foreach ($localPasses as $pass) {
-                if (!in_array($pass->pass_id, $cloudPassIds)) {
+                if (!in_array($pass->lp_id, $cloudPassIds)) {
                     $data = [
-                        'pass_id' => $pass->pass_id,
+                        'lp_id' => $pass->lp_id,
                         'faculty_id' => $pass->faculty_id,
-                        'pass_reason' => $pass->pass_reason,
-                        'pass_date' => $pass->pass_date,
-                        'pass_time_out' => $pass->pass_time_out,
-                        'pass_time_in' => $pass->pass_time_in,
-                        'pass_status' => $pass->pass_status,
+                        'lp_type' => $pass->lp_type,
+                        'lp_purpose' => $pass->lp_purpose,
+                        'pass_slip_itinerary' => $pass->pass_slip_itinerary,
+                        'pass_slip_date' => $pass->pass_slip_date,
+                        'pass_slip_departure_time' => $pass->pass_slip_departure_time,
+                        'pass_slip_arrival_time' => $pass->pass_slip_arrival_time,
+                        'lp_image' => $pass->lp_image,
                         'created_at' => $pass->created_at,
+                        'updated_at' => $pass->updated_at,
                     ];
                     
                     // Upload pass slip if exists
-                    if ($pass->pass_slip_image) {
-                        $fullPath = storage_path('app/public/' . $pass->pass_slip_image);
+                    if ($pass->lp_image) {
+                        $fullPath = storage_path('app/public/' . $pass->lp_image);
                         if (file_exists($fullPath)) {
                             $cloudUrl = $this->uploadFileToCloud($fullPath, 'passes');
-                            $data['pass_slip_cloud_url'] = $cloudUrl;
+                            $data['lp_image_cloud_url'] = $cloudUrl;
                         }
                     }
                     
                     $response = $this->pushToCloud('passes', $data);
                     
                     if ($response['success']) {
-                        $synced[] = $pass->pass_id;
+                        $synced[] = $pass->lp_id;
                     }
                 }
             }
