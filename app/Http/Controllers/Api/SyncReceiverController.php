@@ -226,11 +226,8 @@ class SyncReceiverController extends Controller
     public function getAttendanceRecords(Request $request)
     {
         try {
-            $days = $request->get('days', 30);
-            $cutoffDate = now()->subDays($days);
-            
+            // Return ALL attendance record IDs
             $records = DB::table('tbl_attendance_record')
-                ->where('created_at', '>=', $cutoffDate)
                 ->select('record_id')
                 ->get();
             
@@ -285,12 +282,8 @@ class SyncReceiverController extends Controller
     public function getLeaves(Request $request)
     {
         try {
-            $days = $request->get('days', 90);
-            $cutoffDate = now()->subDays($days);
-            
-            // Returns lp_id for leaves (where lp_type is 'leave' or similar)
+            // Return ALL leave IDs
             $leaves = DB::table('tbl_leave_pass')
-                ->where('created_at', '>=', $cutoffDate)
                 ->select('lp_id')
                 ->get();
             
@@ -367,11 +360,8 @@ class SyncReceiverController extends Controller
     public function getRecognitionLogs(Request $request)
     {
         try {
-            $days = $request->get('days', 7);
-            $cutoffDate = now()->subDays($days);
-            
+            // Return ALL recognition log IDs
             $logs = DB::table('tbl_recognition_logs')
-                ->where('created_at', '>=', $cutoffDate)
                 ->select('log_id')
                 ->get();
             
@@ -421,11 +411,8 @@ class SyncReceiverController extends Controller
     public function getStreamRecordings(Request $request)
     {
         try {
-            $days = $request->get('days', 7);
-            $cutoffDate = now()->subDays($days);
-            
+            // Return ALL stream recording IDs
             $recordings = DB::table('tbl_stream_recordings')
-                ->where('created_at', '>=', $cutoffDate)
                 ->select('recording_id')
                 ->get();
             
@@ -625,11 +612,8 @@ class SyncReceiverController extends Controller
     public function getActivityLogs(Request $request)
     {
         try {
-            $days = $request->get('days', 30);
-            $cutoffDate = now()->subDays($days);
-            
+            // Return ALL activity log IDs
             $logs = DB::table('tbl_activity_logs')
-                ->where('logs_timestamp', '>=', $cutoffDate)
                 ->select('logs_id')
                 ->get();
             
