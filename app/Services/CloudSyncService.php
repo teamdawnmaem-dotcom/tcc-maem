@@ -162,10 +162,11 @@ class CloudSyncService
                         'faculty_id' => $faculty->faculty_id,
                         'faculty_fname' => $faculty->faculty_fname,
                         'faculty_lname' => $faculty->faculty_lname,
-                        'faculty_mname' => $faculty->faculty_mname,
                         'faculty_department' => $faculty->faculty_department,
                         'faculty_face_embedding' => $faculty->faculty_face_embedding,
                         'faculty_images' => $faculty->faculty_images,
+                        'created_at' => $faculty->created_at,
+                        'updated_at' => $faculty->updated_at,
                     ];
                     
                     // Upload faculty images to cloud storage
@@ -448,20 +449,25 @@ class CloudSyncService
                         'recording_id' => $recording->recording_id,
                         'camera_id' => $recording->camera_id,
                         'filename' => $recording->filename,
+                        'filepath' => $recording->filepath,
                         'start_time' => $recording->start_time,
                         'duration' => $recording->duration,
                         'frames' => $recording->frames,
                         'file_size' => $recording->file_size,
                         'created_at' => $recording->created_at,
+                        'updated_at' => $recording->updated_at,
                     ];
                     
-                    // Optionally upload video file to cloud storage
-                    // This can be expensive, so you might want to do this selectively
+                    // Note: Skipping video file upload to save bandwidth
+                    // Video files can be very large (20-30MB each)
+                    // Uncomment below if you want to upload videos to cloud storage
+                    /*
                     $fullPath = storage_path('app/public/' . $recording->filepath);
                     if (file_exists($fullPath)) {
                         $cloudUrl = $this->uploadFileToCloud($fullPath, 'stream_recordings');
                         $data['video_cloud_url'] = $cloudUrl;
                     }
+                    */
                     
                     $response = $this->pushToCloud('stream-recordings', $data);
                     

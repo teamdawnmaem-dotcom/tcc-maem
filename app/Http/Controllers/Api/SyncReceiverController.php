@@ -137,13 +137,14 @@ class SyncReceiverController extends Controller
         try {
             $validated = $request->validate([
                 'faculty_id' => 'required|integer',
-                'faculty_fname' => 'required|string|max:100',
-                'faculty_lname' => 'required|string|max:100',
-                'faculty_mname' => 'nullable|string|max:100',
-                'faculty_department' => 'nullable|string|max:100',
+                'faculty_fname' => 'required|string|max:50',
+                'faculty_lname' => 'required|string|max:50',
+                'faculty_department' => 'nullable|string|max:50',
                 'faculty_face_embedding' => 'nullable|string',
                 'faculty_images' => 'nullable|string',
                 'cloud_image_urls' => 'nullable|string',
+                'created_at' => 'nullable|date',
+                'updated_at' => 'nullable|date',
             ]);
             
             DB::table('tbl_faculty')->updateOrInsert(
@@ -449,13 +450,13 @@ class SyncReceiverController extends Controller
                 'recording_id' => 'required|integer',
                 'camera_id' => 'required|integer',
                 'filename' => 'required|string|max:255',
-                'filepath' => 'nullable|string|max:500',
+                'filepath' => 'required|string|max:500',
                 'start_time' => 'required',
-                'duration' => 'nullable|integer',
-                'frames' => 'nullable|integer',
-                'file_size' => 'nullable|integer',
-                'video_cloud_url' => 'nullable|string',
+                'duration' => 'required|integer',
+                'frames' => 'required|integer',
+                'file_size' => 'required|integer',
                 'created_at' => 'nullable|date',
+                'updated_at' => 'nullable|date',
             ]);
             
             DB::table('tbl_stream_recordings')->updateOrInsert(
