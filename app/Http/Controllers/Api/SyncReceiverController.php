@@ -604,14 +604,17 @@ class SyncReceiverController extends Controller
             }
 
             // Use DB::table()->upsert for bulk idempotent insert/update
-            // Update all non-unique columns on conflict
+            // Temporarily disable FK checks to prevent ordering issues on first seed
+            DB::beginTransaction();
+            DB::statement('SET FOREIGN_KEY_CHECKS=0');
             $updateCols = array_values(array_diff($cfg['columns'], $cfg['unique']));
-            // Chunk to avoid packet size limits
             $total = 0;
             foreach (array_chunk($rows, 500) as $chunk) {
                 DB::table($cfg['table'])->upsert($chunk, $cfg['unique'], $updateCols);
                 $total += count($chunk);
             }
+            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            DB::commit();
 
             return response()->json(['success' => true, 'upserted' => $total]);
         } catch (\Exception $e) {
