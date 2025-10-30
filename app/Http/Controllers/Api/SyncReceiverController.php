@@ -519,14 +519,20 @@ class SyncReceiverController extends Controller
     public function getSyncStatus()
     {
         try {
+            // Note: leaves and passes share tbl_leave_pass table
+            $leavePassCount = DB::table('tbl_leave_pass')->count();
+            $leavesCount = DB::table('tbl_leave_pass')->where('lp_type', 'Leave')->count();
+            $passesCount = DB::table('tbl_leave_pass')->where('lp_type', 'Pass')->count();
+            
             $counts = [
                 'rooms' => DB::table('tbl_room')->count(),
                 'cameras' => DB::table('tbl_camera')->count(),
                 'faculties' => DB::table('tbl_faculty')->count(),
                 'teaching_loads' => DB::table('tbl_teaching_load')->count(),
                 'attendance_records' => DB::table('tbl_attendance_record')->count(),
-                'leaves' => DB::table('tbl_leave_pass')->count(),
-                'passes' => DB::table('tbl_pass')->count(),
+                'leaves' => $leavesCount,
+                'passes' => $passesCount,
+                'leave_pass_total' => $leavePassCount,
                 'recognition_logs' => DB::table('tbl_recognition_logs')->count(),
                 'stream_recordings' => DB::table('tbl_stream_recordings')->count(),
             ];
