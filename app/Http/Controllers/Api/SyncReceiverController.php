@@ -281,7 +281,8 @@ class SyncReceiverController extends Controller
     }
     
     /**
-     * Get existing leave IDs (filtered by days)
+     * Get existing leave/pass IDs (filtered by days)
+     * Note: Leaves and passes are in the same table (tbl_leave_pass)
      */
     public function getLeaves(Request $request)
     {
@@ -289,9 +290,10 @@ class SyncReceiverController extends Controller
             $days = $request->get('days', 90);
             $cutoffDate = now()->subDays($days);
             
+            // Returns lp_id for leaves (where lp_type is 'leave' or similar)
             $leaves = DB::table('tbl_leave_pass')
                 ->where('created_at', '>=', $cutoffDate)
-                ->select('leave_id')
+                ->select('lp_id')
                 ->get();
             
             return response()->json($leaves);
@@ -302,35 +304,40 @@ class SyncReceiverController extends Controller
     }
     
     /**
-     * Receive and store leave data
+     * Receive and store leave/pass data
+     * Note: Both leaves and passes use the same table (tbl_leave_pass)
      */
     public function receiveLeave(Request $request)
     {
         try {
             $validated = $request->validate([
-                'leave_id' => 'required|integer',
+                'lp_id' => 'required|integer',
                 'faculty_id' => 'required|integer',
-                'leave_reason' => 'nullable|string',
-                'leave_start_date' => 'required|date',
-                'leave_end_date' => 'required|date',
-                'leave_type' => 'nullable|string|max:50',
-                'leave_status' => 'nullable|string|max:50',
-                'leave_slip_image' => 'nullable|string',
-                'leave_slip_cloud_url' => 'nullable|string',
+                'lp_type' => 'required|string|max:50',
+                'lp_purpose' => 'nullable|string|max:255',
+                'pass_slip_itinerary' => 'nullable|string|max:50',
+                'pass_slip_date' => 'nullable|date',
+                'pass_slip_departure_time' => 'nullable',
+                'pass_slip_arrival_time' => 'nullable',
+                'leave_start_date' => 'nullable|date',
+                'leave_end_date' => 'nullable|date',
+                'lp_image' => 'nullable|string|max:255',
+                'lp_image_cloud_url' => 'nullable|string',
                 'created_at' => 'nullable|date',
+                'updated_at' => 'nullable|date',
             ]);
             
             DB::table('tbl_leave_pass')->updateOrInsert(
-                ['leave_id' => $validated['leave_id']],
+                ['lp_id' => $validated['lp_id']],
                 $validated
             );
             
             return response()->json([
                 'success' => true,
-                'message' => 'Leave synced successfully'
+                'message' => 'Leave/Pass synced successfully'
             ]);
         } catch (\Exception $e) {
-            Log::error('Error receiving leave: ' . $e->getMessage());
+            Log::error('Error receiving leave/pass: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage()
@@ -339,61 +346,21 @@ class SyncReceiverController extends Controller
     }
     
     /**
-     * Get existing pass IDs (filtered by days)
+     * Get existing pass IDs (same as getLeaves since they share table)
      */
     public function getPasses(Request $request)
     {
-        try {
-            $days = $request->get('days', 90);
-            $cutoffDate = now()->subDays($days);
-            
-            $passes = DB::table('tbl_pass')
-                ->where('created_at', '>=', $cutoffDate)
-                ->select('pass_id')
-                ->get();
-            
-            return response()->json($passes);
-        } catch (\Exception $e) {
-            Log::error('Error getting passes: ' . $e->getMessage());
-            return response()->json([], 500);
-        }
+        // Passes and leaves are in the same table
+        return $this->getLeaves($request);
     }
     
     /**
-     * Receive and store pass data
+     * Receive and store pass data (same as receiveLeave since they share table)
      */
     public function receivePass(Request $request)
     {
-        try {
-            $validated = $request->validate([
-                'pass_id' => 'required|integer',
-                'faculty_id' => 'required|integer',
-                'pass_reason' => 'nullable|string',
-                'pass_date' => 'required|date',
-                'pass_time_out' => 'nullable',
-                'pass_time_in' => 'nullable',
-                'pass_status' => 'nullable|string|max:50',
-                'pass_slip_image' => 'nullable|string',
-                'pass_slip_cloud_url' => 'nullable|string',
-                'created_at' => 'nullable|date',
-            ]);
-            
-            DB::table('tbl_pass')->updateOrInsert(
-                ['pass_id' => $validated['pass_id']],
-                $validated
-            );
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Pass synced successfully'
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error receiving pass: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        // Passes and leaves are in the same table
+        return $this->receiveLeave($request);
     }
     
     /**
