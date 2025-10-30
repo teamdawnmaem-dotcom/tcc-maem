@@ -139,4 +139,7 @@ Route::middleware('api.key')->group(function () {
     
     // File Uploads
     Route::post('/upload/{directory}', [SyncReceiverController::class, 'receiveFileUpload']);
+
+    // Bulk upsert endpoint (generic)
+    Route::post('/bulk/{resource}', [SyncReceiverController::class, 'receiveBulk']);
 });

@@ -499,6 +499,126 @@ class SyncReceiverController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Bulk receive/upsert for any supported resource.
+     * Path param {resource} must be one of the supported keys below.
+     * Body: { records: [ { ...row }, ... ] }
+     */
+    public function receiveBulk(Request $request, string $resource)
+    {
+        $map = [
+            'subjects' => [
+                'table' => 'tbl_subject',
+                'unique' => ['subject_id'],
+                'columns' => ['subject_id','subject_code','subject_description','department','created_at','updated_at'],
+            ],
+            'users' => [
+                'table' => 'tbl_user',
+                'unique' => ['user_id'],
+                'columns' => ['user_id','user_role','user_department','user_fname','user_lname','username','user_password','created_at','updated_at'],
+            ],
+            'rooms' => [
+                'table' => 'tbl_room',
+                'unique' => ['room_no'],
+                'columns' => ['room_no','room_name','room_building_no'],
+            ],
+            'cameras' => [
+                'table' => 'tbl_camera',
+                'unique' => ['camera_id'],
+                'columns' => ['camera_id','camera_name','camera_ip_address','camera_username','camera_password','camera_live_feed','room_no'],
+            ],
+            'faculties' => [
+                'table' => 'tbl_faculty',
+                'unique' => ['faculty_id'],
+                'columns' => ['faculty_id','faculty_fname','faculty_lname','faculty_department','faculty_images','faculty_face_embedding','created_at','updated_at'],
+            ],
+            'teaching-loads' => [
+                'table' => 'tbl_teaching_load',
+                'unique' => ['teaching_load_id'],
+                'columns' => ['teaching_load_id','faculty_id','teaching_load_course_code','teaching_load_subject','teaching_load_day_of_week','teaching_load_class_section','teaching_load_time_in','teaching_load_time_out','room_no','created_at','updated_at'],
+            ],
+            'attendance-records' => [
+                'table' => 'tbl_attendance_record',
+                'unique' => ['record_id'],
+                'columns' => ['record_id','faculty_id','teaching_load_id','camera_id','record_date','record_time_in','record_time_out','record_status','record_remarks','time_duration_seconds'],
+            ],
+            'leaves' => [
+                'table' => 'tbl_leave_pass',
+                'unique' => ['lp_id'],
+                'columns' => ['lp_id','faculty_id','lp_type','lp_purpose','pass_slip_itinerary','pass_slip_date','pass_slip_departure_time','pass_slip_arrival_time','leave_start_date','leave_end_date','lp_image','created_at','updated_at'],
+            ],
+            'passes' => [
+                'table' => 'tbl_leave_pass',
+                'unique' => ['lp_id'],
+                'columns' => ['lp_id','faculty_id','lp_type','lp_purpose','pass_slip_itinerary','pass_slip_date','pass_slip_departure_time','pass_slip_arrival_time','leave_start_date','leave_end_date','lp_image','created_at','updated_at'],
+            ],
+            'recognition-logs' => [
+                'table' => 'tbl_recognition_logs',
+                'unique' => ['log_id'],
+                'columns' => ['log_id','recognition_time','camera_name','room_name','building_no','faculty_name','status','distance','faculty_id','camera_id','teaching_load_id'],
+            ],
+            'stream-recordings' => [
+                'table' => 'tbl_stream_recordings',
+                'unique' => ['recording_id'],
+                'columns' => ['recording_id','camera_id','filename','filepath','start_time','duration','frames','file_size','created_at','updated_at'],
+            ],
+            'activity-logs' => [
+                'table' => 'tbl_activity_logs',
+                'unique' => ['logs_id'],
+                'columns' => ['logs_id','user_id','logs_action','logs_description','logs_timestamp','logs_module'],
+            ],
+            'teaching-load-archives' => [
+                'table' => 'tbl_teaching_load_archive',
+                'unique' => ['archive_id'],
+                'columns' => ['archive_id','original_teaching_load_id','faculty_id','teaching_load_course_code','teaching_load_subject','teaching_load_class_section','teaching_load_day_of_week','teaching_load_time_in','teaching_load_time_out','room_no','school_year','semester','archived_at','archived_by','archive_notes'],
+            ],
+            'attendance-record-archives' => [
+                'table' => 'tbl_attendance_record_archive',
+                'unique' => ['archive_id'],
+                'columns' => ['archive_id','original_record_id','faculty_id','teaching_load_id','camera_id','record_date','record_time_in','record_time_out','time_duration_seconds','record_status','record_remarks','school_year','semester','archived_at','archived_by','archive_notes','created_at','updated_at'],
+            ],
+        ];
+
+        if (!isset($map[$resource])) {
+            return response()->json(['success' => false, 'error' => 'Unknown resource'], 400);
+        }
+
+        try {
+            $payload = $request->input('records', []);
+            if (!is_array($payload)) {
+                return response()->json(['success' => false, 'error' => 'Invalid payload'], 422);
+            }
+
+            $cfg = $map[$resource];
+            // Filter columns to allowed list to prevent mass assignment of unknown fields
+            $rows = [];
+            foreach ($payload as $row) {
+                if (!is_array($row)) { continue; }
+                $filtered = array_intersect_key($row, array_flip($cfg['columns']));
+                if (!empty($filtered)) { $rows[] = $filtered; }
+            }
+
+            if (empty($rows)) {
+                return response()->json(['success' => true, 'message' => 'No records to upsert', 'upserted' => 0]);
+            }
+
+            // Use DB::table()->upsert for bulk idempotent insert/update
+            // Update all non-unique columns on conflict
+            $updateCols = array_values(array_diff($cfg['columns'], $cfg['unique']));
+            // Chunk to avoid packet size limits
+            $total = 0;
+            foreach (array_chunk($rows, 500) as $chunk) {
+                DB::table($cfg['table'])->upsert($chunk, $cfg['unique'], $updateCols);
+                $total += count($chunk);
+            }
+
+            return response()->json(['success' => true, 'upserted' => $total]);
+        } catch (\Exception $e) {
+            Log::error('Bulk upsert error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
     
     // ============================================================================
     // SUBJECTS ENDPOINTS
