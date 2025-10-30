@@ -27,8 +27,8 @@ class CloudSyncService
     
     public function __construct()
     {
-        $this->cloudApiUrl = env('CLOUD_API_URL', 'https://your-cloud-server.com/api');
-        $this->cloudApiKey = env('CLOUD_API_KEY', '');
+        $this->cloudApiUrl = env('CLOUD_API_URL', 'https://tcc-maem.com/api');
+        $this->cloudApiKey = env('CLOUD_API_KEY', 'e5a4466194f624d9e8611bd264a958e54473692ada6280840c118066f18e6815');
     }
     
     /**
@@ -172,8 +172,8 @@ class CloudSyncService
                         'faculty_fname' => $faculty->faculty_fname,
                         'faculty_lname' => $faculty->faculty_lname,
                         'faculty_department' => $faculty->faculty_department,
-                        'faculty_face_embedding' => $faculty->faculty_face_embedding,
                         'faculty_images' => $faculty->faculty_images,
+                        'faculty_face_embedding' => $faculty->faculty_face_embedding,
                         'created_at' => $faculty->created_at,
                         'updated_at' => $faculty->updated_at,
                     ];
@@ -275,15 +275,15 @@ class CloudSyncService
                 if (!in_array($record->record_id, $cloudRecordIds)) {
                     $response = $this->pushToCloud('attendance-records', [
                         'record_id' => $record->record_id,
+                        'record_date' => $record->record_date,
                         'faculty_id' => $record->faculty_id,
                         'teaching_load_id' => $record->teaching_load_id,
-                        'camera_id' => $record->camera_id,
-                        'record_date' => $record->record_date,
                         'record_time_in' => $record->record_time_in,
                         'record_time_out' => $record->record_time_out,
+                        'time_duration_seconds' => $record->time_duration_seconds,
                         'record_status' => $record->record_status,
                         'record_remarks' => $record->record_remarks,
-                        'time_duration_seconds' => $record->time_duration_seconds,
+                        'camera_id' => $record->camera_id,
                     ]);
                     
                     if ($response['success']) {
@@ -429,11 +429,16 @@ class CloudSyncService
                 if (!in_array($log->log_id, $cloudLogIds)) {
                     $response = $this->pushToCloud('recognition-logs', [
                         'log_id' => $log->log_id,
-                        'camera_id' => $log->camera_id,
-                        'faculty_id' => $log->faculty_id,
                         'recognition_time' => $log->recognition_time,
+                        'camera_name' => $log->camera_name,
+                        'room_name' => $log->room_name,
+                        'building_no' => $log->building_no,
+                        'faculty_name' => $log->faculty_name,
                         'status' => $log->status,
                         'distance' => $log->distance,
+                        'faculty_id' => $log->faculty_id,
+                        'camera_id' => $log->camera_id,
+                        'teaching_load_id' => $log->teaching_load_id,
                     ]);
                     
                     if ($response['success']) {
