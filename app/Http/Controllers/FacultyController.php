@@ -163,7 +163,7 @@ class FacultyController extends Controller
             }
             
             // Call the recognition service to update embeddings
-            $response = Http::timeout(30)->post('http://127.0.0.1:5000/update-embeddings', [
+            $response = Http::timeout(30)->post('http://127.0.0.1:5001/update-embeddings', [
                 'faculty_id' => $faculty_id
             ]);
             
@@ -196,7 +196,7 @@ class FacultyController extends Controller
     {
         try {
             // Call the recognition service to regenerate all embeddings
-            $response = Http::timeout(60)->post('http://127.0.0.1:5000/regenerate-all-embeddings');
+            $response = Http::timeout(60)->post('http://127.0.0.1:5001/regenerate-all-embeddings');
             
             if ($response->successful()) {
                 $result = $response->json();

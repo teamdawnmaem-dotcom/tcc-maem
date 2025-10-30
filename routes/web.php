@@ -17,6 +17,7 @@ use App\Http\Controllers\PassController;
 
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\AttendanceRecordArchiveController;
+use App\Http\Controllers\CloudSyncController;
 
 // --------------------
 // Login routes
@@ -60,6 +61,11 @@ Route::prefix('admin')->middleware('role:admin')->group(function () {
     Route::get('/attendance-records/archived', [AttendanceRecordArchiveController::class, 'index1'])->name('admin.attendance.records.archived');
     Route::post('/attendance-records/archived/restore/{archiveId}', [AttendanceRecordArchiveController::class, 'restore'])->name('admin.attendance.records.restore');
     Route::delete('/attendance-records/archived/delete/{archiveId}', [AttendanceRecordArchiveController::class, 'permanentlyDelete'])->name('admin.attendance.records.permanently-delete');
+    
+    // Cloud Sync Routes
+    Route::get('/cloud-sync', [CloudSyncController::class, 'index'])->name('admin.cloud-sync');
+    Route::post('/cloud-sync/sync-now', [CloudSyncController::class, 'syncNow'])->name('admin.cloud-sync.sync-now');
+    Route::get('/cloud-sync/status', [CloudSyncController::class, 'status'])->name('admin.cloud-sync.status');
 });
 
 
