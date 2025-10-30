@@ -138,9 +138,9 @@ class SyncReceiverController extends Controller
                 'faculty_id' => 'required|integer',
                 'faculty_fname' => 'required|string|max:50',
                 'faculty_lname' => 'required|string|max:50',
-                'faculty_department' => 'nullable|string|max:50',
+                'faculty_department' => 'required|string|max:50',
                 'faculty_face_embedding' => 'nullable|string',
-                'faculty_images' => 'nullable|string',
+                'faculty_images' => 'required|string',
                 'created_at' => 'nullable|date',
                 'updated_at' => 'nullable|date',
             ]);
@@ -304,14 +304,14 @@ class SyncReceiverController extends Controller
                 'lp_id' => 'required|integer',
                 'faculty_id' => 'required|integer',
                 'lp_type' => 'required|string|max:50',
-                'lp_purpose' => 'nullable|string|max:255',
+                'lp_purpose' => 'required|string|max:255',
                 'pass_slip_itinerary' => 'nullable|string|max:50',
                 'pass_slip_date' => 'nullable|date',
                 'pass_slip_departure_time' => 'nullable',
                 'pass_slip_arrival_time' => 'nullable',
                 'leave_start_date' => 'nullable|date',
                 'leave_end_date' => 'nullable|date',
-                'lp_image' => 'nullable|string|max:255',
+                'lp_image' => 'required|string|max:255',
                 'created_at' => 'nullable|date',
                 'updated_at' => 'nullable|date',
             ]);
@@ -378,11 +378,16 @@ class SyncReceiverController extends Controller
         try {
             $validated = $request->validate([
                 'log_id' => 'required|integer',
-                'camera_id' => 'nullable|integer',
-                'faculty_id' => 'nullable|integer',
                 'recognition_time' => 'required',
+                'camera_name' => 'required|string|max:100',
+                'room_name' => 'required|string|max:100',
+                'building_no' => 'required|string|max:50',
+                'faculty_name' => 'required|string|max:200',
                 'status' => 'required|string|max:50',
                 'distance' => 'nullable|numeric',
+                'faculty_id' => 'nullable|integer',
+                'camera_id' => 'nullable|integer',
+                'teaching_load_id' => 'nullable|integer',
             ]);
             
             DB::table('tbl_recognition_logs')->updateOrInsert(
