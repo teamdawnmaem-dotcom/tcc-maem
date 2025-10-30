@@ -9,6 +9,9 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\PassController;
 use App\Http\Controllers\RecognitionLogController;
+use App\Http\Controllers\StreamRecordingController;
+use App\Http\Controllers\CloudSyncController;
+use App\Http\Controllers\Api\SyncReceiverController;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,6 +24,8 @@ use App\Http\Controllers\RecognitionLogController;
 |
 */
 
+Route::post('/logs', [RecognitionLogController::class, 'push']);
+
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
@@ -29,6 +34,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::get('/cameras', [CameraController::class, 'apiIndex']);
 Route::get('/rooms', [CameraController::class, 'apiRooms']);
 Route::get('/faculty', [FacultyController::class, 'apiFaculty']);
+Route::get('/faculty/{facultyId}', [FacultyController::class, 'apiFacultyById']);
+Route::get('/faculty/{facultyId}/teaching-loads', [FacultyController::class, 'apiFacultyTeachingLoads']);
 Route::get('/teaching-loads', [TeachingLoadController::class, 'apiTeachingLoads']);
 Route::get('/schedule', [TeachingLoadController::class, 'apiTodaySchedule']);
 Route::post('/teaching-load-details', [TeachingLoadController::class, 'apiTeachingLoadDetails']);
@@ -49,3 +56,67 @@ Route::post('/faculty-pass-status', [PassController::class, 'checkFacultyPassSta
 Route::get('/recognition-logs', [RecognitionLogController::class, 'index']);
 Route::post('/recognition-logs', [RecognitionLogController::class, 'store']);
 Route::get('/recognition-logs/statistics', [RecognitionLogController::class, 'statistics']);
+
+// Stream recordings API
+Route::post('/stream-recordings', [StreamRecordingController::class, 'store']);
+Route::get('/stream-recordings', [StreamRecordingController::class, 'index']);
+Route::get('/stream-recordings/statistics', [StreamRecordingController::class, 'statistics']);
+Route::get('/stream-recordings/camera/{camera_id}', [StreamRecordingController::class, 'getByCamera']);
+Route::get('/stream-recordings/{id}', [StreamRecordingController::class, 'show']);
+Route::delete('/stream-recordings/{id}', [StreamRecordingController::class, 'destroy']);
+
+// Cloud sync API (for local development server)
+Route::post('/cloud-sync/sync-now', [CloudSyncController::class, 'syncNow']);
+Route::get('/cloud-sync/status', [CloudSyncController::class, 'status']);
+
+// ============================================================================
+// SYNC RECEIVER ENDPOINTS (For Hostinger Cloud Server)
+// ============================================================================
+// These endpoints receive data FROM local development server TO cloud server
+// Protected by API key authentication (see app/Http/Middleware/ApiKeyAuth.php)
+// The API_KEY in .env must match the CLOUD_API_KEY from local server
+// ============================================================================
+
+Route::middleware('api.key')->group(function () {
+    // Sync status endpoint (public - for testing connection)
+    Route::get('/sync-status', [SyncReceiverController::class, 'getSyncStatus']);
+    
+    // Rooms
+    Route::get('/rooms', [SyncReceiverController::class, 'getRooms']);
+    Route::post('/rooms', [SyncReceiverController::class, 'receiveRoom']);
+    
+    // Cameras
+    Route::get('/cameras', [SyncReceiverController::class, 'getCameras']);
+    Route::post('/cameras', [SyncReceiverController::class, 'receiveCamera']);
+    
+    // Faculties
+    Route::get('/faculties', [SyncReceiverController::class, 'getFaculties']);
+    Route::post('/faculties', [SyncReceiverController::class, 'receiveFaculty']);
+    
+    // Teaching Loads
+    Route::get('/teaching-loads', [SyncReceiverController::class, 'getTeachingLoads']);
+    Route::post('/teaching-loads', [SyncReceiverController::class, 'receiveTeachingLoad']);
+    
+    // Attendance Records
+    Route::get('/attendance-records', [SyncReceiverController::class, 'getAttendanceRecords']);
+    Route::post('/attendance-records', [SyncReceiverController::class, 'receiveAttendanceRecord']);
+    
+    // Leaves
+    Route::get('/leaves', [SyncReceiverController::class, 'getLeaves']);
+    Route::post('/leaves', [SyncReceiverController::class, 'receiveLeave']);
+    
+    // Passes
+    Route::get('/passes', [SyncReceiverController::class, 'getPasses']);
+    Route::post('/passes', [SyncReceiverController::class, 'receivePass']);
+    
+    // Recognition Logs
+    Route::get('/recognition-logs', [SyncReceiverController::class, 'getRecognitionLogs']);
+    Route::post('/recognition-logs', [SyncReceiverController::class, 'receiveRecognitionLog']);
+    
+    // Stream Recordings
+    Route::get('/stream-recordings', [SyncReceiverController::class, 'getStreamRecordings']);
+    Route::post('/stream-recordings', [SyncReceiverController::class, 'receiveStreamRecording']);
+    
+    // File Uploads
+    Route::post('/upload/{directory}', [SyncReceiverController::class, 'receiveFileUpload']);
+});

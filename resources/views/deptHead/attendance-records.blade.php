@@ -312,7 +312,9 @@
 
         .filter-btn,
         .clear-btn,
-        .print-btn {
+        .print-btn,
+        .old-report-btn,
+        .archive-btn {
             padding: 15px 24px;
             border: none;
             border-radius: 8px;
@@ -364,6 +366,34 @@
             background: linear-gradient(135deg, #27ae60, #229954);
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4);
+        }
+
+        .old-report-btn {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+        }
+
+        .old-report-btn:hover {
+            background: linear-gradient(135deg, #e67e22, #d35400);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(243, 156, 18, 0.4);
+        }
+
+        .archive-btn {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .archive-btn:hover {
+            background: linear-gradient(135deg, #8e44ad, #7d3c98);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(155, 89, 182, 0.4);
+            text-decoration: none;
+            color: #fff;
         }
 
         .search-section {
@@ -559,6 +589,22 @@
                     <input type="hidden" name="search" id="printSearch">
                     <button type="submit" class="print-btn">Print Report</button>
                 </form>
+                <form id="oldReportForm" method="GET" action="{{ route('deptHead.attendance.sheet.print') }}" target="_blank">
+                    <input type="hidden" name="startDate" id="sheetStartDate">
+                    <input type="hidden" name="endDate" id="sheetEndDate">
+                    <input type="hidden" name="department" id="sheetDepartment">
+                    <input type="hidden" name="instructor" id="sheetInstructor">
+                    <input type="hidden" name="course_code" id="sheetCourseCode">
+                    <input type="hidden" name="subject" id="sheetSubject">
+                    <input type="hidden" name="day" id="sheetDay">
+                    <input type="hidden" name="room" id="sheetRoom">
+                    <input type="hidden" name="building" id="sheetBuilding">
+                    <input type="hidden" name="status" id="sheetStatus">
+                    <input type="hidden" name="remarks" id="sheetRemarks">
+                    <input type="hidden" name="search" id="sheetSearch">
+                    <button type="submit" class="old-report-btn">OLD report Format</button>
+                </form>
+                <a href="{{ route('deptHead.attendance.records.archived') }}" class="archive-btn">View Archive</a>
             </div>
         </div>
     </div>
@@ -1013,5 +1059,23 @@
         });
 
         document.getElementById('printForm').addEventListener('submit', syncPrintInputs);
+
+        function syncSheetInputs() {
+            const urlParams = new URLSearchParams(window.location.search);
+            document.getElementById('sheetStartDate').value = urlParams.get('startDate') || '';
+            document.getElementById('sheetEndDate').value = urlParams.get('endDate') || '';
+            document.getElementById('sheetDepartment').value = urlParams.get('department') || '';
+            document.getElementById('sheetInstructor').value = urlParams.get('instructor') || '';
+            document.getElementById('sheetCourseCode').value = urlParams.get('course_code') || '';
+            document.getElementById('sheetSubject').value = urlParams.get('subject') || '';
+            document.getElementById('sheetDay').value = urlParams.get('day') || '';
+            document.getElementById('sheetRoom').value = urlParams.get('room') || '';
+            document.getElementById('sheetBuilding').value = urlParams.get('building') || '';
+            document.getElementById('sheetStatus').value = urlParams.get('status') || '';
+            document.getElementById('sheetRemarks').value = urlParams.get('remarks') || '';
+            document.getElementById('sheetSearch').value = urlParams.get('search') || '';
+        }
+
+        document.getElementById('oldReportForm').addEventListener('submit', syncSheetInputs);
     </script>
 @endsection

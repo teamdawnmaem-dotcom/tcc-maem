@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Faculty;
+use App\Models\TeachingLoad;
 use App\Models\ActivityLog;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
@@ -23,6 +24,57 @@ class FacultyController extends Controller
     {
         $faculties = Faculty::select('faculty_id', 'faculty_fname', 'faculty_lname')->get();
         return response()->json($faculties);
+    }
+
+    // API endpoint for individual faculty data
+    public function apiFacultyById($facultyId)
+    {
+        $faculty = Faculty::select('faculty_id', 'faculty_fname', 'faculty_lname', 'faculty_department', 'faculty_images')
+            ->findOrFail($facultyId);
+        return response()->json($faculty);
+    }
+
+    // API endpoint to get teaching loads for a specific faculty
+    public function apiFacultyTeachingLoads($facultyId)
+    {
+        $faculty = Faculty::findOrFail($facultyId);
+        
+        $teachingLoads = TeachingLoad::with('room')
+            ->where('faculty_id', $facultyId)
+            ->get()
+            ->map(function ($load) {
+                return [
+                    'teaching_load_id' => $load->teaching_load_id,
+                    'teaching_load_course_code' => $load->teaching_load_course_code,
+                    'teaching_load_subject' => $load->teaching_load_subject,
+                    'teaching_load_class_section' => $load->teaching_load_class_section,
+                    'teaching_load_day_of_week' => $load->teaching_load_day_of_week,
+                    'teaching_load_time_in' => $load->teaching_load_time_in,
+                    'teaching_load_time_out' => $load->teaching_load_time_out,
+                    'room_no' => $load->room_no,
+                    'room_name' => $load->room->room_name ?? $load->room_no,
+                ];
+            })
+            ->sortBy(function ($load) {
+                // Define day order: Monday = 1, Tuesday = 2, ..., Sunday = 7
+                $dayOrder = [
+                    'Monday' => 1,
+                    'Tuesday' => 2,
+                    'Wednesday' => 3,
+                    'Thursday' => 4,
+                    'Friday' => 5,
+                    'Saturday' => 6,
+                    'Sunday' => 7
+                ];
+                
+                $dayValue = $dayOrder[$load['teaching_load_day_of_week']] ?? 8; // Unknown days go last
+                $timeValue = $load['teaching_load_time_in'];
+                
+                return [$dayValue, $timeValue];
+            })
+            ->values(); // Reset array keys
+
+        return response()->json($teachingLoads);
     }
 
     // API endpoint for faculty embeddings
@@ -111,7 +163,7 @@ class FacultyController extends Controller
             }
             
             // Call the recognition service to update embeddings
-            $response = Http::timeout(30)->post('http://127.0.0.1:5000/update-embeddings', [
+            $response = Http::timeout(30)->post('http://127.0.0.1:5001/update-embeddings', [
                 'faculty_id' => $faculty_id
             ]);
             
@@ -144,7 +196,7 @@ class FacultyController extends Controller
     {
         try {
             // Call the recognition service to regenerate all embeddings
-            $response = Http::timeout(60)->post('http://127.0.0.1:5000/regenerate-all-embeddings');
+            $response = Http::timeout(60)->post('http://127.0.0.1:5001/regenerate-all-embeddings');
             
             if ($response->successful()) {
                 $result = $response->json();

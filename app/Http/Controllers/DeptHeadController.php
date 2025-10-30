@@ -140,7 +140,7 @@ public function attendanceRecords(Request $request)
         });
     }
 
-    $records = $query->orderBy('record_date', 'desc')->get();
+    $records = $query->orderBy('record_date', 'asc')->orderBy('record_time_in', 'asc')->get();
 
     // Return JSON for AJAX requests
     if ($request->ajax() || $request->wantsJson()) {
@@ -167,8 +167,9 @@ public function attendanceRecordsPrint(Request $request)
     }
     
     // If no date filters are provided and no other filters, default to current date (real-time attendance)
+    $courseCodeParam = $request->courseCode ?? $request->course_code;
     if (!$request->startDate && !$request->endDate && !$request->department && !$request->instructor && 
-        !$request->courseCode && !$request->subject && !$request->day && !$request->room && 
+        !$courseCodeParam && !$request->subject && !$request->day && !$request->room && 
         !$request->building && !$request->status && !$request->remarks && !$request->search) {
         $query->whereDate('record_date', now()->toDateString());
     }
@@ -185,10 +186,10 @@ public function attendanceRecordsPrint(Request $request)
         $query->where('faculty_id', $request->instructor);
     }
     
-    // Course code filter
-    if ($request->courseCode) {
-        $query->whereHas('teachingLoad', function($q) use ($request) {
-            $q->where('teaching_load_course_code', $request->courseCode);
+    // Course code filter (accept both courseCode and course_code)
+    if ($courseCodeParam) {
+        $query->whereHas('teachingLoad', function($q) use ($courseCodeParam) {
+            $q->where('teaching_load_course_code', $courseCodeParam);
         });
     }
     
@@ -258,7 +259,7 @@ public function attendanceRecordsPrint(Request $request)
         });
     }
 
-    $records = $query->orderBy('record_date', 'desc')->get();
+    $records = $query->orderBy('record_date', 'asc')->orderBy('record_time_in', 'asc')->get();
 
     $pdf = \PDF::loadView('deptHead.attendance-records-pdf', [
         'records' => $records,
@@ -272,7 +273,7 @@ public function attendanceRecordsPrint(Request $request)
         'faculty' => $request->instructor ? \App\Models\Faculty::find($request->instructor)?->faculty_fname . ' ' . \App\Models\Faculty::find($request->instructor)?->faculty_lname : null,
         'status' => $request->status ?? null,
         'room' => $request->room ?? null,
-        'courseCode' => $request->courseCode ?? null,
+        'courseCode' => $courseCodeParam ?? null,
         'day' => $request->day ?? null,
         'building' => $request->building ?? null,
         'remarks' => $request->remarks ?? null,
@@ -280,6 +281,135 @@ public function attendanceRecordsPrint(Request $request)
     ])->setPaper('a4', 'landscape');
 
     return $pdf->download('attendance-records-report-' . now()->format('Y-m-d') . '.pdf');
+}
+
+public function attendanceSheetPrint(Request $request)
+{
+    $query = AttendanceRecord::with(['faculty', 'teachingLoad', 'camera']);
+
+    // Date filters
+    if ($request->startDate) {
+        $query->whereDate('record_date', '>=', $request->startDate);
+    }
+    if ($request->endDate) {
+        $query->whereDate('record_date', '<=', $request->endDate);
+    }
+    
+    // If no date filters are provided and no other filters, default to current date (real-time attendance)
+    $courseCodeParam = $request->courseCode ?? $request->course_code;
+    if (!$request->startDate && !$request->endDate && !$request->department && !$request->instructor && 
+        !$courseCodeParam && !$request->subject && !$request->day && !$request->room && 
+        !$request->building && !$request->status && !$request->remarks && !$request->search) {
+        $query->whereDate('record_date', now()->toDateString());
+    }
+    
+    // Department filter
+    if ($request->department) {
+        $query->whereHas('faculty', function($q) use ($request) {
+            $q->where('faculty_department', $request->department);
+        });
+    }
+    
+    // Instructor filter
+    if ($request->instructor) {
+        $query->where('faculty_id', $request->instructor);
+    }
+    
+    // Course code filter (accept both courseCode and course_code)
+    if ($courseCodeParam) {
+        $query->whereHas('teachingLoad', function($q) use ($courseCodeParam) {
+            $q->where('teaching_load_course_code', $courseCodeParam);
+        });
+    }
+    
+    // Subject filter
+    if ($request->subject) {
+        $query->whereHas('teachingLoad', function($q) use ($request) {
+            $q->where('teaching_load_subject', $request->subject);
+        });
+    }
+    
+    // Day of week filter
+    if ($request->day) {
+        $query->whereHas('teachingLoad', function($q) use ($request) {
+            $q->where('teaching_load_day_of_week', $request->day);
+        });
+    }
+    
+    // Room filter
+    if ($request->room) {
+        $query->whereHas('camera.room', function($q) use ($request) {
+            $q->where('room_name', $request->room);
+        });
+    }
+    
+    // Building filter
+    if ($request->building) {
+        $query->whereHas('camera.room', function($q) use ($request) {
+            $q->where('room_building_no', $request->building);
+        });
+    }
+    
+    // Status filter
+    if ($request->status) {
+        $query->where('record_status', $request->status);
+    }
+    
+    // Remarks filter
+    if ($request->remarks) {
+        $query->where('record_remarks', $request->remarks);
+    }
+    
+    // Search filter
+    if ($request->search) {
+        $searchTerm = $request->search;
+        $query->where(function($q) use ($searchTerm) {
+            // Search in faculty name and department
+            $q->whereHas('faculty', function($facultyQuery) use ($searchTerm) {
+                $facultyQuery->where('faculty_fname', 'like', "%{$searchTerm}%")
+                           ->orWhere('faculty_lname', 'like', "%{$searchTerm}%")
+                           ->orWhere('faculty_department', 'like', "%{$searchTerm}%");
+            })
+            // Search in teaching load (course code and subject)
+            ->orWhereHas('teachingLoad', function($teachingQuery) use ($searchTerm) {
+                $teachingQuery->where('teaching_load_course_code', 'like', "%{$searchTerm}%")
+                             ->orWhere('teaching_load_subject', 'like', "%{$searchTerm}%");
+            })
+            // Search in camera/room information
+            ->orWhereHas('camera.room', function($roomQuery) use ($searchTerm) {
+                $roomQuery->where('room_name', 'like', "%{$searchTerm}%")
+                         ->orWhere('room_building_no', 'like', "%{$searchTerm}%");
+            })
+            // Search in attendance record fields
+            ->orWhere('record_status', 'like', "%{$searchTerm}%")
+            ->orWhere('record_remarks', 'like', "%{$searchTerm}%")
+            ->orWhere('record_date', 'like', "%{$searchTerm}%")
+            ->orWhere('record_id', 'like', "%{$searchTerm}%");
+        });
+    }
+
+    $records = $query->orderBy('record_date', 'asc')->orderBy('record_time_in', 'asc')->get();
+
+    $pdf = \PDF::loadView('deptHead.attendance-sheet-pdf', [
+        'records' => $records,
+        'generatedAt' => now('Asia/Manila'),
+        'generatedBy' => auth()->user()->name ?? 'Department Head',
+        'curriculumYear' => $request->curriculumYear ?? now()->format('Y'),
+        'dateFrom' => $request->startDate ?? null,
+        'dateTo' => $request->endDate ?? null,
+        'department' => $request->department ?? null,
+        'subject' => $request->subject ?? null,
+        'faculty' => $request->instructor ? \App\Models\Faculty::find($request->instructor)?->faculty_fname . ' ' . \App\Models\Faculty::find($request->instructor)?->faculty_lname : null,
+        'status' => $request->status ?? null,
+        'room' => $request->room ?? null,
+        'courseCode' => $courseCodeParam ?? null,
+        'day' => $request->day ?? null,
+        'building' => $request->building ?? null,
+        'remarks' => $request->remarks ?? null,
+        'search' => $request->search ?? null,
+    ])->setPaper('a4', 'landscape');
+
+    return $pdf->download('attendance-sheet-' . now()->format('Y-m-d') . '.pdf');
 }
 
 public function recognitionLogs(Request $request)

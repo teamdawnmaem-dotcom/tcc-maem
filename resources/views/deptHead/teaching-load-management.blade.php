@@ -48,6 +48,22 @@
         }
 
 
+        .csv-btn {
+            padding: 8px 24px;
+            font-size: 14px;
+            border: none;
+            border-radius: 4px;
+            background-color: #3498db;
+            color: #fff;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        .csv-btn:hover {
+            background-color: #2980b9;
+        }
+
         .add-btn {
             padding: 8px 24px;
             font-size: 14px;
@@ -559,7 +575,10 @@
         </div>
         <div class="faculty-actions-row">
             <input type="text" class="search-input" placeholder="Search...">
+            <button class="csv-btn" onclick="openModal('csvUploadModal')">CSV Upload</button>
             <button class="add-btn" onclick="openModal('addTeachingLoadModal')">Add</button>
+            <button class="archive-btn" onclick="openModal('archiveAllModal')" style="background-color: #ff6b35; color: white; padding: 8px 24px; font-size: 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Archive All</button>
+            <a href="{{ route('deptHead.teaching-load.archived') }}" class="view-archive-btn" style="background-color: #6c757d; color: white; padding: 8px 24px; font-size: 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block;">View Archive</a>
         </div>
     </div>
 
@@ -576,7 +595,7 @@
                         <th>Day</th>
                         <th>Time In</th>
                         <th>Time Out</th>
-                        <th>Room No.</th>
+                        <th>Room Name</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -590,11 +609,27 @@
                             $section = '';
                             
                             if ($classSection) {
-                                $match = preg_match('/^([A-Z]+)\s+(\d+)([A-Z]+)$/', $classSection, $matches);
+                                // More flexible regex to handle various department codes like BSCrim, BSEd, BSIT, etc.
+                                $match = preg_match('/^([A-Za-z]+)\s+(\d+)([A-Za-z]+)$/', $classSection, $matches);
                                 if ($match) {
                                     $department = $matches[1];
                                     $year = $matches[2];
                                     $section = $matches[3];
+                                } else {
+                                    // Fallback: try to extract department from the beginning
+                                    $parts = explode(' ', $classSection);
+                                    if (count($parts) >= 3) {
+                                        $department = $parts[0];
+                                        $yearSection = $parts[1];
+                                        // Try to separate year and section
+                                        if (preg_match('/^(\d+)([A-Za-z]+)$/', $yearSection, $yearMatches)) {
+                                            $year = $yearMatches[1];
+                                            $section = $yearMatches[2];
+                                        } else {
+                                            $year = $yearSection;
+                                            $section = $parts[2] ?? '';
+                                        }
+                                    }
                                 }
                             }
                         @endphp
@@ -612,7 +647,7 @@
                             <td class="day">{{ $load->teaching_load_day_of_week }}</td>
                             <td class="time-in">{{ \Carbon\Carbon::createFromFormat('H:i:s', $load->teaching_load_time_in)->format('g:i a') }}</td>
                             <td class="time-out">{{ \Carbon\Carbon::createFromFormat('H:i:s', $load->teaching_load_time_out)->format('g:i a') }}</td>
-                            <td class="room">{{ $load->room_no }}</td>
+                            <td class="room" data-room-no="{{ $load->room_no }}">{{ $load->room->room_name ?? $load->room_no }}</td>
                             <td>
                                 <div class="action-btns">
                                     <button class="edit-btn"
@@ -846,7 +881,7 @@
                             <select name="room_no">
                                 <option value="">Select Room</option>
                                 @foreach ($rooms as $room)
-                                    <option value="{{ $room->room_no }}">{{ $room->room_no }}</option>
+                                    <option value="{{ $room->room_no }}">{{ $room->room_name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -1077,7 +1112,7 @@
                             <select name="room_no">
                                 <option value="">Select Room</option>
                                 @foreach ($rooms as $room)
-                                    <option value="{{ $room->room_no }}">{{ $room->room_no }}</option>
+                                    <option value="{{ $room->room_no }}">{{ $room->room_name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -1119,6 +1154,67 @@
         </form>
     </div>
 
+    <!-- CSV Upload Modal -->
+    <div id="csvUploadModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px; max-width: 500px;">
+            <form id="csvUploadForm" action="{{ route('deptHead.teaching-load.csv-upload') }}" method="POST" enctype="multipart/form-data" style="padding: 0;">
+                @csrf
+                <div class="modal-header"
+                    style="background-color: #8B0000; color: white; padding: 18px 24px; font-size: 24px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.5px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                    CSV UPLOAD
+                </div>
+                <div style="padding: 24px;">
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 1rem; color: #222; margin-bottom: 10px; font-weight: bold;">Upload CSV File:</label>
+                        <input type="file" name="csv_file" id="csvFileInput" accept=".csv" required
+                            style="width: 100%; padding: 10px; border: 2px solid #3498db; border-radius: 5px; font-size: 1rem;">
+                        <div id="csvFileName" style="margin-top: 8px; font-size: 0.9rem; color: #3498db; font-weight: 500; display: none;"></div>
+                        <div style="margin-top: 8px;">
+                            <a href="{{ route('deptHead.teaching-load.csv-template') }}" 
+                               style="color: #3498db; text-decoration: none; font-size: 0.9rem; font-weight: 500;">
+                                📥 Download Sample CSV Template
+                            </a>
+                        </div>
+                    </div>
+
+                    <div style="background-color: #f0f8ff; border-left: 4px solid #3498db; padding: 15px; margin-bottom: 20px;">
+                        <div style="font-size: 0.95rem; color: #333; margin-bottom: 10px; font-weight: bold;">CSV Format Instructions:</div>
+                        <div style="font-size: 0.85rem; color: #666; line-height: 1.6;">
+                            <div>• Column 1: Instructor (Full Name - must exist in system)</div>
+                            <div>• Column 2: Course Code (must exist in subjects table)</div>
+                            <div>• Column 3: Subject Description (must exist in subjects table)</div>
+                            <div>• Column 4: Class Section (e.g., BSIT 1A)</div>
+                            <div>• Column 5: Day (Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday)</div>
+                            <div>• Column 6: Time In (HH:MM, HH:MM:SS, or H:MM AM/PM)</div>
+                            <div>• Column 7: Time Out (HH:MM, HH:MM:SS, or H:MM AM/PM)</div>
+                            <div>• Column 8: Room Name (must exist in system)</div>
+                        </div>
+                    </div>
+
+                    <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px;">
+                        <div style="font-size: 0.9rem; color: #856404;">
+                            <strong>Important Notes:</strong>
+                            <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+                                <li>The CSV file should include headers in the first row</li>
+                                <li>All 8 columns are required and cannot be empty</li>
+                                <li>Instructor, Subject, and Room Name must already exist in the system</li>
+                                <li>Class section format: Department Year Section (e.g., "BSIT 1A")</li>
+                                <li>Time conflicts with existing schedules will be rejected</li>
+                                <li>Duplicate entries within the same CSV file will be rejected</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="modal-buttons">
+                        <button type="submit" class="modal-btn add" style="width: 50%;">Upload</button>
+                        <button type="button" class="modal-btn cancel" style="width: 50%;"
+                            onclick="closeModal('csvUploadModal')">Cancel</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
 
 @endsection
 
@@ -1132,6 +1228,13 @@
                 updateAddButtonState(false); // Start with disabled state
             } else if (id === 'updateTeachingLoadModal') {
                 updateUpdateButtonState(false); // Start with disabled state
+            } else if (id === 'csvUploadModal') {
+                // Initialize CSV upload modal
+                const uploadBtn = document.getElementById('uploadBtn');
+                if (uploadBtn) {
+                    uploadBtn.disabled = true;
+                    uploadBtn.textContent = '📤 Upload CSV';
+                }
             }
         }
 
@@ -1173,6 +1276,18 @@
             if (modal) modal.style.display = 'none';
             if (id === 'addTeachingLoadModal' || id === 'updateTeachingLoadModal') {
                 resetModalForm(id);
+            } else if (id === 'csvUploadModal') {
+                // Reset CSV upload form
+                const form = document.getElementById('csvUploadForm');
+                if (form) {
+                    form.reset();
+                }
+                // Reset file name display
+                const fileNameDiv = document.getElementById('csvFileName');
+                if (fileNameDiv) {
+                    fileNameDiv.style.display = 'none';
+                    fileNameDiv.textContent = '';
+                }
             }
         }
 
@@ -1199,6 +1314,10 @@
             const year = row.dataset.year || '';
             const section = row.dataset.section || '';
             
+            // Debug logging
+            console.log('Parsed values:', { department, year, section });
+            console.log('Class section from row:', row.querySelector('.class-section').innerText);
+            
             // Set the form fields with the individual values
             form.querySelector('[name="tl_department_short"]').value = department;
             form.querySelector('[name="tl_year_level"]').value = year;
@@ -1215,7 +1334,7 @@
             
             form.querySelector('[name="teaching_load_time_in"]').value = timeIn24h;
             form.querySelector('[name="teaching_load_time_out"]').value = timeOut24h;
-            form.querySelector('[name="room_no"]').value = row.querySelector('.room').innerText;
+            form.querySelector('[name="room_no"]').value = row.querySelector('.room').dataset.roomNo;
             form.querySelector('[name="faculty_id"]').value = row.querySelector('.faculty').dataset.id;
             openModal('updateTeachingLoadModal');
             
@@ -1308,6 +1427,17 @@
                 e.target.style.display = 'none';
                 if (overlayId === 'addTeachingLoadModal' || overlayId === 'updateTeachingLoadModal') {
                     resetModalForm(overlayId);
+                } else if (overlayId === 'csvUploadModal') {
+                    const form = document.getElementById('csvUploadForm');
+                    if (form) {
+                        form.reset();
+                    }
+                    // Reset file name display
+                    const fileNameDiv = document.getElementById('csvFileName');
+                    if (fileNameDiv) {
+                        fileNameDiv.style.display = 'none';
+                        fileNameDiv.textContent = '';
+                    }
                 }
             }
         });
@@ -1333,8 +1463,8 @@
         }
 
         // Real-time overlap checking with existing teaching loads
-        function checkRealTimeOverlap(dayOfWeek, timeIn, timeOut, roomNo, excludeId = null) {
-            if (!dayOfWeek || !timeIn || !timeOut || !roomNo) {
+        function checkRealTimeOverlap(dayOfWeek, timeIn, timeOut, roomName, excludeId = null) {
+            if (!dayOfWeek || !timeIn || !timeOut || !roomName) {
                 return { hasOverlap: false, message: '' };
             }
             
@@ -1355,7 +1485,7 @@
                 const rowCourse = row.querySelector('.course')?.textContent?.trim();
                 
                 // Check if same day and room
-                if (rowDay === dayOfWeek && rowRoom === roomNo) {
+                if (rowDay === dayOfWeek && rowRoom === roomName) {
                     // Convert times to comparable format
                     const newStart = convertTimeToMinutes(timeIn);
                     const newEnd = convertTimeToMinutes(timeOut);
@@ -1503,7 +1633,7 @@
                 const deptShort = document.querySelector("#addTeachingLoadModal [name='tl_department_short']");
                 const yearLevel = document.querySelector("#addTeachingLoadModal [name='tl_year_level']");
                 const section = document.querySelector("#addTeachingLoadModal [name='tl_section']");
-                const vCombo = isNotEmpty(combo && combo.value);
+                const vCombo = combo && !combo.disabled && isNotEmpty(combo.value);
                 const vCourse = isNotEmpty(course && course.value) && minLen(course && course.value, 2);
                 const vSubject = isNotEmpty(subject && subject.value) && minLen(subject && subject.value, 2);
                 const vDay = isNotEmpty(day && day.value);
@@ -1535,7 +1665,10 @@
                 // Check for potential time overlap (basic client-side check)
                 let overlapOk = true;
                 if (vDay && vTin && vTout && vRoom && timeLogicOk) {
-                    const overlapCheck = checkRealTimeOverlap(day.value, tin.value, tout.value, room.value);
+                    // Get room name from selected option
+                    const selectedRoomOption = room.options[room.selectedIndex];
+                    const roomName = selectedRoomOption ? selectedRoomOption.text : '';
+                    const overlapCheck = checkRealTimeOverlap(day.value, tin.value, tout.value, roomName);
                     if (overlapCheck.hasOverlap) {
                         overlapOk = false;
                         if (timeLogicBox) {
@@ -1546,7 +1679,7 @@
                 }
                 
                 setValidity(combo, vCombo);
-                setMessage(combo, vCombo ? '' : 'Course & Subject is required');
+                setMessage(combo, vCombo ? '' : (combo && combo.disabled ? 'Please select a department first' : 'Course & Subject is required'));
                 setValidity(day, vDay);
                 setMessage(day, vDay ? '' : 'Day is required');
                 setValidity(tin, vTin);
@@ -1618,7 +1751,10 @@
                     // Get the current teaching load ID being edited
                     const form = document.getElementById('updateForm');
                     const currentId = form ? form.action.split('/').pop() : null;
-                    const overlapCheck = checkRealTimeOverlap(day.value, tin.value, tout.value, room.value, currentId);
+                    // Get room name from selected option
+                    const selectedRoomOption = room.options[room.selectedIndex];
+                    const roomName = selectedRoomOption ? selectedRoomOption.text : '';
+                    const overlapCheck = checkRealTimeOverlap(day.value, tin.value, tout.value, roomName, currentId);
                     if (overlapCheck.hasOverlap) {
                         overlapOk = false;
                         if (timeLogicBox) {
@@ -1629,7 +1765,7 @@
                 }
                 
                 setValidity(combo, vCombo);
-                setMessage(combo, vCombo ? '' : 'Course & Subject is required');
+                setMessage(combo, vCombo ? '' : (combo && combo.disabled ? 'Please select a department first' : 'Course & Subject is required'));
                 setValidity(day, vDay);
                 setMessage(day, vDay ? '' : 'Day is required');
                 setValidity(tin, vTin);
@@ -1801,5 +1937,197 @@
             // initialize
             filterSubjects();
         })();
+
+        // CSV Upload Form Handler
+        (function() {
+            const csvUploadForm = document.getElementById('csvUploadForm');
+            const csvFileInput = document.getElementById('csvFileInput');
+            
+            if (csvUploadForm) {
+                csvUploadForm.addEventListener('submit', function(e) {
+                    const fileInput = csvFileInput;
+                    const submitButton = csvUploadForm.querySelector('button[type="submit"]');
+                    
+                    if (!fileInput.files || fileInput.files.length === 0) {
+                        e.preventDefault();
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'No File Selected',
+                            text: 'Please select a CSV file to upload.',
+                            confirmButtonColor: '#8B0000'
+                        });
+                        return false;
+                    }
+                    
+                    // Show loading SweetAlert
+                    Swal.fire({
+                        title: 'Uploading CSV...',
+                        text: 'Please wait while we process your file.',
+                        icon: 'info',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    // Show loading state
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                        submitButton.textContent = 'Uploading...';
+                        submitButton.style.opacity = '0.6';
+                        submitButton.style.cursor = 'not-allowed';
+                    }
+                    
+                    // Allow form to submit normally to reload page with new data
+                    return true;
+                });
+            }
+
+            // Show file name when selected
+            if (csvFileInput) {
+                csvFileInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    const fileNameDiv = document.getElementById('csvFileName');
+                    
+                    if (file) {
+                        if (fileNameDiv) {
+                            fileNameDiv.textContent = 'Selected: ' + file.name;
+                            fileNameDiv.style.display = 'block';
+                        }
+                        console.log('File selected:', file.name);
+                    } else {
+                        if (fileNameDiv) {
+                            fileNameDiv.style.display = 'none';
+                        }
+                    }
+                });
+            }
+            
+            // Reset file name display when modal is closed
+            const csvModal = document.getElementById('csvUploadModal');
+            if (csvModal) {
+                const observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                            const isHidden = csvModal.style.display === 'none';
+                            if (isHidden) {
+                                const fileNameDiv = document.getElementById('csvFileName');
+                                if (fileNameDiv) {
+                                    fileNameDiv.style.display = 'none';
+                                    fileNameDiv.textContent = '';
+                                }
+                            }
+                        }
+                    });
+                });
+                observer.observe(csvModal, { attributes: true });
+            }
+        })();
     </script>
+    
+    <script>
+        // Handle CSV upload success/error messages
+        @if(session('success'))
+            @if(str_contains(session('success'), 'CSV upload completed'))
+                @php
+                    $successMessage = session('success');
+                    // Convert \n to <br> for proper line breaks in SweetAlert
+                    $successMessage = str_replace("\n", "<br>", $successMessage);
+                @endphp
+                Swal.fire({
+                    icon: 'success',
+                    title: 'CSV Upload Completed!',
+                    html: `
+                        <div style="text-align: left; max-height: 400px; overflow-y: auto; padding: 10px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9;">
+                            {!! $successMessage !!}
+                        </div>
+                    `,
+                    confirmButtonColor: '#8B0000',
+                    confirmButtonText: 'OK',
+                    allowOutsideClick: false,
+                    allowEscapeKey: true,
+                    showCloseButton: true,
+                    width: '700px'
+                });
+            @else
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: '{{ session('success') }}',
+                    confirmButtonColor: '#8B0000'
+                });
+            @endif
+        @endif
+
+        @if($errors->has('csv_file'))
+            Swal.fire({
+                icon: 'error',
+                title: 'CSV Upload Failed',
+                text: '{{ $errors->first('csv_file') }}',
+                confirmButtonColor: '#8B0000',
+                confirmButtonText: 'Try Again'
+            });
+        @endif
+    </script>
+
+    <!-- Archive All Modal -->
+    <div id="archiveAllModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box" style="width: 500px; max-width: 95vw; padding: 0; overflow: hidden; border-radius: 8px;">
+            <div class="modal-header-custom" style="background-color: #8B0000; color: white; padding: 18px 24px; font-size: 24px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.5px; border-top-left-radius: 8px; border-top-right-radius: 8px;">ARCHIVE ALL TEACHING LOADS</div>
+            <form method="POST" action="{{ route('deptHead.teaching-load.archive-all') }}">
+                @csrf
+                <div style="padding: 20px;">
+                    <div style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px;">
+                        <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                            <center>
+                            <span style="font-size: 1.5rem; margin-right: 10px;">⚠️</span>
+                            <strong style="color: #856404;">Warning: This action will archive ALL current teaching loads!</strong>
+                            </center>
+                        </div>
+                        <p style="margin: 0; color: #856404; font-size: 0.9rem;">
+                             All teaching loads will be moved to the archive and removed from the current schedule. 
+                            You can restore them later if needed.
+                        </p>
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="school_year">School Year:</label>
+                        <select id="school_year" name="school_year" required>
+                            <option value="">Select School Year</option>
+                            <option value="2023-2024">2023-2024</option>
+                            <option value="2024-2025">2024-2025</option>
+                            <option value="2025-2026">2025-2026</option>
+                            <option value="2026-2027">2026-2027</option>
+                            <option value="2023-2024">2027-2028</option>
+                            <option value="2024-2025">2028-2029</option>
+                            <option value="2025-2026">2029-2030</option>
+                            <option value="2026-2027">2030-2031</option>
+                        </select>
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="semester">Semester:</label>
+                        <select id="semester" name="semester" required>
+                            <option value="">Select Semester</option>
+                            <option value="1st Semester">1st Semester</option>
+                            <option value="2nd Semester">2nd Semester</option>
+                            <option value="Summer">Summer</option>
+                        </select>
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="archive_notes">Notes <br> (Optional):</label>
+                        <textarea id="archive_notes" name="archive_notes" rows="3" placeholder="Add any notes about this archive..."></textarea>
+                    </div>
+
+                    <div style="margin-top: 20px; text-align: center; display: flex; justify-content: center; gap: 10px;">
+                        <button type="submit" class="modal-btn" style="background-color: #ff6b35; color: white;">Archive All</button>
+                        <button type="button" class="modal-btn cancel" onclick="closeModal('archiveAllModal')">Cancel</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 @endsection

@@ -7,6 +7,7 @@ aiohttp + aiortc service for:
  - run face recognition periodically with visual feedback
  - post attendance to Laravel API (deduplicated)
  - expose /status and /health
+ - extract faculty embeddings from stored images (disk paths) on-demand
  - handle leave/pass slip integration for attendance remarks
 """
 from aiohttp import web
@@ -34,8 +35,8 @@ SCHEDULE_ENDPOINT = f"{API_BASE}/schedule"
 FACULTY_EMBEDDINGS_ENDPOINT = f"{API_BASE}/faculty-embeddings"
 ATTENDANCE_ENDPOINT = f"{API_BASE}/attendance"
 ATTENDANCE_CHECK_ENDPOINT = f"{API_BASE}/attendance/check"
-STREAM_RECORDING_ENDPOINT = f"{API_BASE}/stream-recordings"
 
+STORAGE_PATH = os.getenv("LARAVEL_STORAGE_PATH", "../storage/app/public")
 
 MATCH_THRESHOLD = float(os.getenv("MATCH_THRESHOLD", "0.6"))
 
@@ -75,18 +76,12 @@ _shared_frames = {}  # Latest frames per camera for sharing
 _frame_lock = threading.Lock()  # Lock for frame sharing
 _face_tracking_history = {}  # Track face positions for smoothing
 _persistent_bounding_boxes = {}  # Track persistent bounding boxes per camera
-_stream_recorders = {}  # Track video recorders per camera
-_recording_threads = {}  # Track recording threads per camera
 
 # Face recognition settings
 RECOGNITION_INTERVAL = 1  # seconds between recognition attempts (WebRTC)
 BACKGROUND_RECOGNITION_INTERVAL = 1  # seconds for background processing
 PRESENCE_THRESHOLD = 1800  # 30 minutes in seconds
 LATE_THRESHOLD = 1800  # 30 minutes in seconds for late marking
-
-# Stream recording settings
-RECORDING_INTERVAL = 180  # 3 minutes in seconds
-RECORDING_STORAGE_PATH = os.getenv("RECORDING_STORAGE_PATH", "../storage/app/public/stream_recordings")
 
 # Performance optimization settings
 FRAME_SCALE_FACTOR = 0.6  # Scale factor for faster processing
@@ -546,7 +541,9 @@ def fetch_faculty_embeddings():
                 
                 # Check if embeddings are compatible with current InsightFace format (512-dim)
                 if emb_arrays and len(emb_arrays[0]) != 512:
-                    print(f"⚠️  Faculty {fid} has incompatible embeddings ({len(emb_arrays[0])} dim). Skipping...")
+                    print(f"⚠️  Faculty {fid} has incompatible embeddings ({len(emb_arrays[0])} dim). Regenerating...")
+                    # Trigger embedding regeneration for this faculty
+                    threading.Thread(target=update_faculty_embeddings_from_images, args=(fid,), daemon=True).start()
                     continue
                 
                 _faculty_embeddings[fid] = emb_arrays
@@ -617,6 +614,129 @@ def get_faculty_name(faculty_id):
     except Exception as e:
         print(f"Error getting faculty name for ID {faculty_id}: {e}")
         return f"Faculty {faculty_id}" if faculty_id else "Unknown"
+
+# -------------------
+# Generate embeddings from faculty image paths
+# -------------------
+def update_faculty_embeddings_from_images(faculty_id=None):
+    """
+    Compute embeddings from stored faculty images using InsightFace's built-in RetinaFace.
+    If faculty_id is provided, only update that faculty.
+    """
+    try:
+        if face_app is None:
+            print("InsightFace model not initialized")
+            return
+            
+        r = requests.get(FACULTY_EMBEDDINGS_ENDPOINT, timeout=15)
+        r.raise_for_status()
+        faculty_data = r.json()
+
+        for f in faculty_data:
+            fid = f.get("faculty_id")
+            if faculty_id and fid != faculty_id:
+                continue
+
+            # Get faculty images - handle both string and already parsed JSON
+            faculty_images = f.get("faculty_images", "[]")
+            if isinstance(faculty_images, str):
+                try:
+                    image_paths = json.loads(faculty_images)
+                except json.JSONDecodeError:
+                    print(f"Invalid JSON for faculty_images for faculty_id {fid}: {faculty_images}")
+                    continue
+            else:
+                image_paths = faculty_images
+
+            if not image_paths or not isinstance(image_paths, list):
+                print(f"No valid image paths for faculty_id {fid}")
+                continue
+
+            embeddings_list = []
+            print(f"Processing {len(image_paths)} images for faculty_id {fid}")
+
+            for img_path in image_paths:
+                try:
+                    # Handle both relative and absolute paths
+                    if os.path.isabs(img_path):
+                        full_path = img_path
+                    else:
+                        full_path = os.path.join(STORAGE_PATH, img_path)
+                    
+                    print(f"Processing image: {full_path}")
+                    
+                    if not os.path.exists(full_path):
+                        print(f"File not found: {full_path}")
+                        continue
+                    
+                    # Load image using OpenCV
+                    img = cv2.imread(full_path)
+                    if img is None:
+                        print(f"Could not load image: {full_path}")
+                        continue
+                    
+                    # Convert BGR to RGB for InsightFace
+                    rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                    print(f"Image loaded successfully: {rgb_img.shape}")
+                    
+                    # Use InsightFace's built-in RetinaFace for detection and recognition
+                    faces = face_app.get(rgb_img)
+                    
+                    if faces:
+                        print(f"Found {len(faces)} face(s) in {img_path}")
+                        
+                        # Process each detected face
+                        for face in faces:
+                            # Get the embedding directly from InsightFace
+                            embedding = face.embedding
+                            embeddings_list.append(embedding)
+                            print(f"Extracted embedding for face in {img_path}")
+                    else:
+                        print(f"No faces detected in {img_path}")
+                        
+                except Exception as e:
+                    print(f"Error processing image {img_path} for faculty_id {fid}: {e}")
+
+            if embeddings_list:
+                emb_list_json = [emb.tolist() for emb in embeddings_list]
+                payload = {"faculty_id": fid, "faculty_face_embedding": json.dumps(emb_list_json)}
+                try:
+                    # Use PUT method to update embeddings
+                    print(f"Updating embeddings for faculty_id {fid} with {len(embeddings_list)} face(s)")
+                    r_post = requests.put(FACULTY_EMBEDDINGS_ENDPOINT, json=payload, timeout=30)
+                    print(f"Response status: {r_post.status_code}")
+                    print(f"Response text: {r_post.text}")
+                    
+                    if r_post.status_code in (200, 201):
+                        print(f"Successfully updated embeddings for faculty_id {fid} with {len(embeddings_list)} face(s)")
+                        _faculty_embeddings[fid] = embeddings_list
+                    else:
+                        print(f"Failed to update embeddings for faculty_id {fid}: {r_post.status_code} - {r_post.text}")
+                        # Try to parse error response
+                        try:
+                            error_data = r_post.json()
+                            print(f"Error details: {error_data}")
+                        except:
+                            print(f"Raw error response: {r_post.text}")
+                except Exception as e:
+                    print(f"Error posting embeddings for faculty_id {fid}: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print(f"No valid faces found for faculty_id {fid}")
+                # Still try to update with empty embeddings to clear old ones
+                try:
+                    payload = {"faculty_id": fid, "faculty_face_embedding": json.dumps([])}
+                    r_post = requests.put(FACULTY_EMBEDDINGS_ENDPOINT, json=payload, timeout=30)
+                    if r_post.status_code in (200, 201):
+                        print(f"Cleared embeddings for faculty_id {fid} (no faces detected)")
+                    else:
+                        print(f"Failed to clear embeddings for faculty_id {fid}: {r_post.status_code} - {r_post.text}")
+                except Exception as e:
+                    print(f"Error clearing embeddings for faculty_id {fid}: {e}")
+
+    except Exception as e:
+        print("update_faculty_embeddings_from_images error:", e)
 
 # -------------------
 # Face tracking history cleanup
@@ -1659,7 +1779,6 @@ class RTSPVideoTrack(VideoStreamTrack):
         self.room_no = str(room_no) if room_no else None
         self.connection_id = connection_id or f"{camera_id}_{int(time.time())}"
         self._last_recognition_time = 0
-        self._cap = None  # Initialize video capture attribute
 
         # Initialize recognition results only once per camera
         if self.camera_id not in _recognition_results:
@@ -1848,17 +1967,15 @@ def _process_camera_feed_background(camera_id: int, camera_feed: str, room_no: s
     last_recognition_time = 0.0
     consecutive_failures = 0
     max_failures = 5
-    frame_count = 0
 
     try:
-        print(f"🎬 Starting background thread for camera {camera_id} - Feed: {camera_feed}")
         # Use shared capture system
         cap = get_or_create_shared_capture(camera_id, camera_feed)
         if not cap or not cap.isOpened():
             print(f"❌ Could not open shared capture for camera {camera_id}: {camera_feed}")
             return
 
-        print(f"✅ Background processing started for camera {camera_id} (Room {room_no})")
+        print(f"🎥 Background processing started for camera {camera_id} (Room {room_no})")
 
         while True:
             ret, frame = cap.read()
@@ -1878,11 +1995,6 @@ def _process_camera_feed_background(camera_id: int, camera_feed: str, room_no: s
 
             # Success path
             consecutive_failures = 0
-            frame_count += 1
-            
-            # Log every 100 frames to show it's working
-            if frame_count % 100 == 0:
-                print(f"📹 Camera {camera_id}: {frame_count} frames captured")
 
             # Update shared frame for all connections
             update_shared_frame(camera_id, frame)
@@ -1962,185 +2074,6 @@ def get_shared_frame(camera_id):
     """Get the latest shared frame for a camera."""
     with _frame_lock:
         return _shared_frames.get(camera_id)
-
-# -------------------
-# Stream Recording Functions
-# -------------------
-def record_stream_segment(camera_id, camera_feed, duration=180):
-    """Record a stream segment for the specified duration (default 3 minutes)."""
-    import pytz
-    from datetime import datetime as dt
-    
-    try:
-        # Create recordings directory if it doesn't exist
-        os.makedirs(RECORDING_STORAGE_PATH, exist_ok=True)
-        
-        # Generate filename with timestamp
-        tz = pytz.timezone("Asia/Manila")
-        now = dt.now(tz)
-        timestamp = now.strftime("%Y%m%d_%H%M%S")
-        filename = f"camera_{camera_id}_{timestamp}.mp4"
-        filepath = os.path.join(RECORDING_STORAGE_PATH, filename)
-        
-        # Wait for shared frame to be available
-        max_wait = 30  # 30 seconds timeout
-        wait_count = 0
-        while wait_count < max_wait:
-            frame = get_shared_frame(camera_id)
-            if frame is not None:
-                break
-            time.sleep(1)
-            wait_count += 1
-        
-        if frame is None:
-            print(f"Failed to get shared frame for camera {camera_id} after {max_wait} seconds")
-            return None
-        
-        # Get video properties from the first frame
-        height, width = frame.shape[:2]
-        fps = 15  # Standard FPS for recordings
-        
-        # Create video writer
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(filepath, fourcc, fps, (width, height))
-        
-        start_time = time.time()
-        frames_recorded = 0
-        last_frame = frame
-        
-        print(f"🎥 Starting recording for camera {camera_id}: {filename}")
-        
-        while (time.time() - start_time) < duration:
-            # Get frame from shared frame buffer (non-blocking)
-            frame = get_shared_frame(camera_id)
-            if frame is None:
-                # Use last valid frame if shared frame is temporarily unavailable
-                frame = last_frame
-            else:
-                last_frame = frame
-            
-            out.write(frame)
-            frames_recorded += 1
-            
-            # Sleep to achieve target FPS
-            time.sleep(1.0 / fps)
-        
-        # Release video writer
-        out.release()
-        
-        # Get file size
-        file_size = os.path.getsize(filepath) if os.path.exists(filepath) else 0
-        
-        print(f"✅ Recording completed for camera {camera_id}: {frames_recorded} frames, {file_size} bytes")
-        
-        # Return recording info
-        return {
-            "camera_id": camera_id,
-            "filename": filename,
-            "filepath": filepath,
-            "relative_path": f"stream_recordings/{filename}",
-            "start_time": now.strftime("%Y-%m-%d %H:%M:%S"),
-            "duration": int(time.time() - start_time),
-            "frames": frames_recorded,
-            "file_size": file_size
-        }
-        
-    except Exception as e:
-        print(f"Error recording stream for camera {camera_id}: {e}")
-        return None
-
-def save_recording_to_database(recording_info):
-    """Save recording information to database."""
-    try:
-        if not recording_info:
-            return False
-        
-        payload = {
-            "camera_id": recording_info["camera_id"],
-            "filename": recording_info["filename"],
-            "filepath": recording_info["relative_path"],
-            "start_time": recording_info["start_time"],
-            "duration": recording_info["duration"],
-            "frames": recording_info["frames"],
-            "file_size": recording_info["file_size"]
-        }
-        
-        response = requests.post(STREAM_RECORDING_ENDPOINT, json=payload, timeout=5)
-        
-        if response.status_code in [200, 201]:
-            print(f"✅ Recording saved to database: {recording_info['filename']}")
-            return True
-        else:
-            print(f"❌ Failed to save recording to database: {response.status_code} - {response.text}")
-            return False
-            
-    except Exception as e:
-        print(f"Error saving recording to database: {e}")
-        return False
-
-def continuous_stream_recording(camera_id, camera_feed):
-    """Continuously record stream in 3-minute segments."""
-    print(f"🎬 Starting continuous recording for camera {camera_id}")
-    
-    while True:
-        try:
-            # Check if camera is still active
-            if camera_id not in _cameras_cache:
-                print(f"Camera {camera_id} no longer in cache, stopping recording")
-                break
-            
-            # Record segment
-            recording_info = record_stream_segment(camera_id, camera_feed, RECORDING_INTERVAL)
-            
-            # Save to database
-            if recording_info:
-                save_recording_to_database(recording_info)
-            
-            # Small delay before next recording
-            time.sleep(1)
-            
-        except Exception as e:
-            print(f"Error in continuous recording for camera {camera_id}: {e}")
-            time.sleep(5)  # Wait before retrying
-
-def start_recording_for_camera(camera_id):
-    """Start recording for a specific camera."""
-    try:
-        cam = _cameras_cache.get(int(camera_id))
-        if not cam:
-            print(f"Camera {camera_id} not found in cache")
-            return False
-        
-        camera_feed = cam.get("camera_live_feed")
-        if not camera_feed:
-            print(f"No camera feed URL for camera {camera_id}")
-            return False
-        
-        # Check if already recording
-        if camera_id in _recording_threads and _recording_threads[camera_id].is_alive():
-            print(f"Camera {camera_id} is already being recorded")
-            return False
-        
-        # Start recording thread
-        recording_thread = threading.Thread(
-            target=continuous_stream_recording,
-            args=(camera_id, camera_feed),
-            daemon=True
-        )
-        recording_thread.start()
-        _recording_threads[camera_id] = recording_thread
-        
-        print(f"✅ Started recording thread for camera {camera_id}")
-        return True
-        
-    except Exception as e:
-        print(f"Error starting recording for camera {camera_id}: {e}")
-        return False
-
-def start_all_camera_recordings():
-    """Start recording for all cameras."""
-    for camera_id in _cameras_cache.keys():
-        start_recording_for_camera(camera_id)
 
 # -------------------
 # Get RTSP track
@@ -2244,6 +2177,53 @@ async def current_schedule(request):
     sched = get_current_schedule_for_room(room_no)
     return web.json_response({"room_no": room_no, "schedule": sched})
 
+async def update_embeddings(request):
+    body = await request.json()
+    faculty_id = body.get("faculty_id")
+    
+    if faculty_id:
+        print(f"Triggering embedding update for specific faculty_id: {faculty_id}")
+        threading.Thread(target=update_faculty_embeddings_from_images, args=(faculty_id,), daemon=True).start()
+        return web.json_response({"status": "ok", "message": f"Embedding update triggered for faculty_id {faculty_id}"})
+    else:
+        print("Triggering embedding update for all faculty")
+        threading.Thread(target=update_faculty_embeddings_from_images, args=(None,), daemon=True).start()
+        return web.json_response({"status": "ok", "message": "Embedding update triggered for all faculty"})
+
+async def regenerate_all_embeddings(request):
+    """Regenerate all faculty embeddings with new InsightFace format."""
+    try:
+        print("🔄 Regenerating all faculty embeddings with InsightFace format...")
+        threading.Thread(target=update_faculty_embeddings_from_images, args=(None,), daemon=True).start()
+        return web.json_response({
+            "status": "ok", 
+            "message": "All faculty embeddings regeneration triggered. This may take a few minutes."
+        })
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+
+async def test_faculty_embedding(request):
+    """Test endpoint to debug faculty embedding issues."""
+    try:
+        body = await request.json()
+        faculty_id = body.get("faculty_id", 8)  # Default to faculty_id 8 for testing
+        
+        print(f"🧪 Testing embedding update for faculty_id {faculty_id}")
+        
+        # Test the embedding update function directly
+        update_faculty_embeddings_from_images(faculty_id)
+        
+        return web.json_response({
+            "status": "ok",
+            "message": f"Test embedding update completed for faculty_id {faculty_id}",
+            "faculty_id": faculty_id
+        })
+    except Exception as e:
+        print(f"Test embedding error: {e}")
+        import traceback
+        traceback.print_exc()
+        return web.json_response({"error": str(e)}, status=500)
+
 async def connection_stats(request):
     """Return statistics about active connections."""
     try:
@@ -2339,9 +2319,6 @@ async def background_tasks():
             # Ensure background recognition threads are running
             _start_background_recognition()
             
-            # Ensure recording threads are running for all cameras
-            start_all_camera_recordings()
-            
         except Exception as e:
             print(f"Background task error: {e}")
         
@@ -2355,30 +2332,17 @@ async def init_background_tasks(app):
     asyncio.create_task(background_tasks())
 
 def main():
-    print("🚀 Starting TCC-MAEM Recognition Service...")
-    
-    # Fetch initial data
-    print("📡 Fetching cameras...")
     fetch_cameras()
-    print(f"✅ Loaded {len(_cameras_cache)} cameras")
-    
-    print("📅 Fetching today's schedule...")
     fetch_today_schedule()
-    print(f"✅ Loaded schedules for {len(_schedules_cache)} rooms")
-    
-    print("👤 Fetching faculty embeddings...")
     fetch_faculty_embeddings()
-    print(f"✅ Loaded embeddings for {len(_faculty_embeddings)} faculty members")
-    
-    # Start background recognition threads IMMEDIATELY (before web app starts)
-    print("🎬 Starting background recognition threads...")
-    _start_background_recognition()
-    print(f"✅ Started {len(_background_threads)} background threads")
 
     app = web.Application()
     app.router.add_post("/offer/{camera_id}", offer)
     app.router.add_get("/status", status)
     app.router.add_get("/health", health)
+    app.router.add_post("/update-embeddings", update_embeddings)
+    app.router.add_post("/regenerate-all-embeddings", regenerate_all_embeddings)
+    app.router.add_post("/test-faculty-embedding", test_faculty_embedding)
     app.router.add_get("/current-schedule", current_schedule)
     app.router.add_get("/connection-stats", connection_stats)
     app.router.add_post("/cleanup-connection", cleanup_connection)
@@ -2393,7 +2357,6 @@ def main():
 
     # Default port for WebRTC service
     port = int(os.getenv("RECOGNITION_PORT", "5000"))
-    print(f"🌐 Starting web server on port {port}...")
     web.run_app(app, host="0.0.0.0", port=port)
 
 if __name__ == "__main__":

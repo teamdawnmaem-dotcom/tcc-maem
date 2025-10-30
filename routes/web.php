@@ -15,9 +15,19 @@ use App\Http\Controllers\LiveCameraController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\PassController;
 
+use App\Http\Controllers\MonitoringController;
+use App\Http\Controllers\AttendanceRecordArchiveController;
+use App\Http\Controllers\CloudSyncController;
+
 // --------------------
 // Login routes
 // --------------------
+
+
+Route::get('/monitoring', [MonitoringController::class, 'index'])->name('monitoring.index');
+Route::post('/monitoring/poll-push', [MonitoringController::class, 'pollAndPush'])->name('monitoring.pollpush');
+
+
 Route::get('/', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
@@ -44,7 +54,18 @@ Route::prefix('admin')->middleware('role:admin')->group(function () {
     // Reports
     Route::get('/attendance-records', [AdminController::class, 'attendanceRecords'])->name('admin.attendance.records');
     Route::get('/attendance-records/print', [AdminController::class, 'attendanceRecordsPrint'])->name('admin.attendance.records.print');
+    Route::get('/attendance-sheet/print', [AdminController::class, 'attendanceSheetPrint'])->name('admin.attendance.sheet.print');
     Route::get('/recognition-logs', [AdminController::class, 'recognitionLogs'])->name('admin.recognition.logs');
+
+    // Attendance Records Archive Routes
+    Route::get('/attendance-records/archived', [AttendanceRecordArchiveController::class, 'index1'])->name('admin.attendance.records.archived');
+    Route::post('/attendance-records/archived/restore/{archiveId}', [AttendanceRecordArchiveController::class, 'restore'])->name('admin.attendance.records.restore');
+    Route::delete('/attendance-records/archived/delete/{archiveId}', [AttendanceRecordArchiveController::class, 'permanentlyDelete'])->name('admin.attendance.records.permanently-delete');
+    
+    // Cloud Sync Routes
+    Route::get('/cloud-sync', [CloudSyncController::class, 'index'])->name('admin.cloud-sync');
+    Route::post('/cloud-sync/sync-now', [CloudSyncController::class, 'syncNow'])->name('admin.cloud-sync.sync-now');
+    Route::get('/cloud-sync/status', [CloudSyncController::class, 'status'])->name('admin.cloud-sync.status');
 });
 
 
@@ -81,6 +102,19 @@ Route::prefix('deptHead')->middleware('role:department head')->group(function ()
     Route::post('/teaching-load', [TeachingLoadController::class, 'store'])->name('deptHead.teaching-load.store');
     Route::put('/teaching-load/{id}', [TeachingLoadController::class, 'update'])->name('deptHead.teaching-load.update');
     Route::delete('/teaching-load/{id}', [TeachingLoadController::class, 'destroy'])->name('deptHead.teaching-load.destroy');
+    Route::post('/teaching-load/csv-upload', [TeachingLoadController::class, 'csvUpload'])->name('deptHead.teaching-load.csv-upload');
+    Route::get('/teaching-load/csv-template', [TeachingLoadController::class, 'csvTemplate'])->name('deptHead.teaching-load.csv-template');
+    
+    // Teaching Load Archive Routes
+    Route::post('/teaching-load/archive-all', [TeachingLoadController::class, 'archiveAllTeachingLoads'])->name('deptHead.teaching-load.archive-all');
+    Route::get('/teaching-load/archived', [TeachingLoadController::class, 'viewArchivedTeachingLoads'])->name('deptHead.teaching-load.archived');
+    Route::post('/teaching-load/restore/{archiveId}', [TeachingLoadController::class, 'restoreTeachingLoad'])->name('deptHead.teaching-load.restore');
+    Route::delete('/teaching-load/archived/{archiveId}', [TeachingLoadController::class, 'permanentlyDeleteArchived'])->name('deptHead.teaching-load.permanently-delete-archived');
+
+    // Attendance Records Archive Routes
+    Route::get('/attendance-records/archived', [AttendanceRecordArchiveController::class, 'index'])->name('deptHead.attendance.records.archived');
+    Route::post('/attendance-records/archived/restore/{archiveId}', [AttendanceRecordArchiveController::class, 'restore'])->name('deptHead.attendance.records.restore');
+    Route::delete('/attendance-records/archived/delete/{archiveId}', [AttendanceRecordArchiveController::class, 'permanentlyDelete'])->name('deptHead.attendance.records.permanently-delete');
 
     // Subject Management
     Route::get('/subjects', [\App\Http\Controllers\SubjectController::class, 'index'])->name('deptHead.subject.management');
@@ -95,6 +129,7 @@ Route::prefix('deptHead')->middleware('role:department head')->group(function ()
     // Reports
     Route::get('/attendance-records', [DeptHeadController::class, 'attendanceRecords'])->name('deptHead.attendance.records');
     Route::get('/attendance-records/print', [DeptHeadController::class, 'attendanceRecordsPrint'])->name('deptHead.attendance.records.print');
+    Route::get('/attendance-sheet/print', [DeptHeadController::class, 'attendanceSheetPrint'])->name('deptHead.attendance.sheet.print');
     Route::get('/recognition-logs', [DeptHeadController::class, 'recognitionLogs'])->name('deptHead.recognition.logs');
     
     
@@ -131,7 +166,13 @@ Route::prefix('deptHead')->middleware('role:department head')->group(function ()
     // Reports
     Route::get('/attendance-records', [CheckerController::class, 'attendanceRecords'])->name('checker.attendance.records');
     Route::get('/attendance-records/print', [CheckerController::class, 'attendanceRecordsPrint'])->name('checker.attendance.records.print');
+    Route::get('/attendance-sheet/print', [CheckerController::class, 'attendanceSheetPrint'])->name('checker.attendance.sheet.print');
     Route::get('/recognition-logs', [CheckerController::class, 'recognitionLogs'])->name('checker.recognition.logs');
+
+    // Attendance Records Archive Routes
+    Route::get('/attendance-records/archived', [AttendanceRecordArchiveController::class, 'index2'])->name('checker.attendance.records.archived');
+    Route::post('/attendance-records/archived/restore/{archiveId}', [AttendanceRecordArchiveController::class, 'restore'])->name('checker.attendance.records.restore');
+    Route::delete('/attendance-records/archived/delete/{archiveId}', [AttendanceRecordArchiveController::class, 'permanentlyDelete'])->name('checker.attendance.records.permanently-delete');
     
     // Leave overlap checking
     Route::post('/leaves/check-leave-overlap', [LeaveController::class, 'checkLeaveOverlap'])->name('checker.leaves.check-leave-overlap');
