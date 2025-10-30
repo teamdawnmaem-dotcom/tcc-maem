@@ -81,6 +81,14 @@ Route::middleware('api.key')->group(function () {
     // Sync status endpoint (public - for testing connection)
     Route::get('/sync-status', [SyncReceiverController::class, 'getSyncStatus']);
     
+    // Subjects
+    Route::get('/subjects', [SyncReceiverController::class, 'getSubjects']);
+    Route::post('/subjects', [SyncReceiverController::class, 'receiveSubject']);
+    
+    // Users
+    Route::get('/users', [SyncReceiverController::class, 'getUsers']);
+    Route::post('/users', [SyncReceiverController::class, 'receiveUser']);
+    
     // Rooms
     Route::get('/rooms', [SyncReceiverController::class, 'getRooms']);
     Route::post('/rooms', [SyncReceiverController::class, 'receiveRoom']);
@@ -116,6 +124,18 @@ Route::middleware('api.key')->group(function () {
     // Stream Recordings
     Route::get('/stream-recordings', [SyncReceiverController::class, 'getStreamRecordings']);
     Route::post('/stream-recordings', [SyncReceiverController::class, 'receiveStreamRecording']);
+    
+    // Activity Logs
+    Route::get('/activity-logs', [SyncReceiverController::class, 'getActivityLogs']);
+    Route::post('/activity-logs', [SyncReceiverController::class, 'receiveActivityLog']);
+    
+    // Teaching Load Archives
+    Route::get('/teaching-load-archives', [SyncReceiverController::class, 'getTeachingLoadArchives']);
+    Route::post('/teaching-load-archives', [SyncReceiverController::class, 'receiveTeachingLoadArchive']);
+    
+    // Attendance Record Archives
+    Route::get('/attendance-record-archives', [SyncReceiverController::class, 'getAttendanceRecordArchives']);
+    Route::post('/attendance-record-archives', [SyncReceiverController::class, 'receiveAttendanceRecordArchive']);
     
     // File Uploads
     Route::post('/upload/{directory}', [SyncReceiverController::class, 'receiveFileUpload']);
