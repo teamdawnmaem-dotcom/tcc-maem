@@ -267,9 +267,9 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Only sync recent records (last 30 days based on record_date)
-            $localRecords = AttendanceRecord::where('record_date', '>=', now()->subDays(30))->get();
-            $cloudRecords = $this->getCloudData('attendance-records', ['days' => 30]);
+            // Sync ALL attendance records
+            $localRecords = AttendanceRecord::all();
+            $cloudRecords = $this->getCloudData('attendance-records');
             $cloudRecordIds = collect($cloudRecords)->pluck('record_id')->toArray();
             
             foreach ($localRecords as $record) {
@@ -310,8 +310,9 @@ class CloudSyncService
         $synced = [];
         
         try {
-            $localLeaves = Leave::where('created_at', '>=', now()->subDays(90))->get();
-            $cloudLeaves = $this->getCloudData('leaves', ['days' => 90]);
+            // Sync ALL leaves
+            $localLeaves = Leave::all();
+            $cloudLeaves = $this->getCloudData('leaves');
             $cloudLeaveIds = collect($cloudLeaves)->pluck('lp_id')->toArray();
             
             foreach ($localLeaves as $leave) {
@@ -360,8 +361,9 @@ class CloudSyncService
         $synced = [];
         
         try {
-            $localPasses = Pass::where('created_at', '>=', now()->subDays(90))->get();
-            $cloudPasses = $this->getCloudData('passes', ['days' => 90]);
+            // Sync ALL passes
+            $localPasses = Pass::all();
+            $cloudPasses = $this->getCloudData('passes');
             $cloudPassIds = collect($cloudPasses)->pluck('lp_id')->toArray();
             
             foreach ($localPasses as $pass) {
@@ -411,9 +413,9 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Only sync recent logs (last 7 days based on recognition_time)
-            $localLogs = RecognitionLog::where('recognition_time', '>=', now()->subDays(7))->get();
-            $cloudLogs = $this->getCloudData('recognition-logs', ['days' => 7]);
+            // Sync ALL recognition logs
+            $localLogs = RecognitionLog::all();
+            $cloudLogs = $this->getCloudData('recognition-logs');
             $cloudLogIds = collect($cloudLogs)->pluck('log_id')->toArray();
             
             foreach ($localLogs as $log) {
@@ -447,9 +449,9 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Only sync recent recordings (last 7 days)
-            $localRecordings = StreamRecording::where('created_at', '>=', now()->subDays(7))->get();
-            $cloudRecordings = $this->getCloudData('stream-recordings', ['days' => 7]);
+            // Sync ALL stream recordings
+            $localRecordings = StreamRecording::all();
+            $cloudRecordings = $this->getCloudData('stream-recordings');
             $cloudRecordingIds = collect($cloudRecordings)->pluck('recording_id')->toArray();
             
             foreach ($localRecordings as $recording) {
@@ -625,9 +627,9 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Only sync recent logs (last 30 days based on logs_timestamp)
-            $localLogs = ActivityLog::where('logs_timestamp', '>=', now()->subDays(30))->get();
-            $cloudLogs = $this->getCloudData('activity-logs', ['days' => 30]);
+            // Sync ALL activity logs
+            $localLogs = ActivityLog::all();
+            $cloudLogs = $this->getCloudData('activity-logs');
             $cloudLogIds = collect($cloudLogs)->pluck('logs_id')->toArray();
             
             foreach ($localLogs as $log) {
