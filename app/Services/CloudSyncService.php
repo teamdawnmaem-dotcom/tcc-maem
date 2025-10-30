@@ -169,7 +169,10 @@ class CloudSyncService
                         'updated_at' => $faculty->updated_at,
                     ];
                     
-                    // Upload faculty images to cloud storage
+                    // Note: Skipping image upload to save bandwidth
+                    // Images are already stored locally, cloud can access via filepath
+                    // Uncomment below if you want to upload images to cloud storage
+                    /*
                     if ($faculty->faculty_images) {
                         $imagesJson = (string) $faculty->faculty_images;
                         $images = json_decode($imagesJson, true);
@@ -186,10 +189,9 @@ class CloudSyncService
                                     }
                                 }
                             }
-                            
-                            $data['cloud_image_urls'] = json_encode($uploadedImages);
                         }
                     }
+                    */
                     
                     $response = $this->pushToCloud('faculties', $data);
                     
@@ -255,8 +257,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Only sync recent records (last 30 days)
-            $localRecords = AttendanceRecord::where('created_at', '>=', now()->subDays(30))->get();
+            // Only sync recent records (last 30 days based on record_date)
+            $localRecords = AttendanceRecord::where('record_date', '>=', now()->subDays(30))->get();
             $cloudRecords = $this->getCloudData('attendance-records', ['days' => 30]);
             $cloudRecordIds = collect($cloudRecords)->pluck('record_id')->toArray();
             
@@ -273,8 +275,6 @@ class CloudSyncService
                         'record_status' => $record->record_status,
                         'record_remarks' => $record->record_remarks,
                         'time_duration_seconds' => $record->time_duration_seconds,
-                        'created_at' => $record->created_at,
-                        'updated_at' => $record->updated_at,
                     ]);
                     
                     if ($response['success']) {
@@ -401,8 +401,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Only sync recent logs (last 7 days)
-            $localLogs = RecognitionLog::where('created_at', '>=', now()->subDays(7))->get();
+            // Only sync recent logs (last 7 days based on recognition_time)
+            $localLogs = RecognitionLog::where('recognition_time', '>=', now()->subDays(7))->get();
             $cloudLogs = $this->getCloudData('recognition-logs', ['days' => 7]);
             $cloudLogIds = collect($cloudLogs)->pluck('log_id')->toArray();
             
@@ -415,7 +415,6 @@ class CloudSyncService
                         'recognition_time' => $log->recognition_time,
                         'status' => $log->status,
                         'distance' => $log->distance,
-                        'created_at' => $log->created_at,
                     ]);
                     
                     if ($response['success']) {
@@ -450,12 +449,12 @@ class CloudSyncService
                         'camera_id' => $recording->camera_id,
                         'filename' => $recording->filename,
                         'filepath' => $recording->filepath,
-                        'start_time' => $recording->start_time,
+                        'start_time' => date('Y-m-d H:i:s', strtotime($recording->start_time)), // Convert to MySQL datetime
                         'duration' => $recording->duration,
                         'frames' => $recording->frames,
                         'file_size' => $recording->file_size,
-                        'created_at' => $recording->created_at,
-                        'updated_at' => $recording->updated_at,
+                        'created_at' => $recording->created_at ? date('Y-m-d H:i:s', strtotime($recording->created_at)) : null,
+                        'updated_at' => $recording->updated_at ? date('Y-m-d H:i:s', strtotime($recording->updated_at)) : null,
                     ];
                     
                     // Note: Skipping video file upload to save bandwidth
