@@ -14,6 +14,11 @@ use App\Models\RecognitionLog;
 use App\Models\StreamRecording;
 use App\Models\Leave;
 use App\Models\Pass;
+use App\Models\Subject;
+use App\Models\User;
+use App\Models\ActivityLog;
+use App\Models\TeachingLoadArchive;
+use App\Models\AttendanceRecordArchive;
 
 class CloudSyncService
 {
@@ -42,6 +47,8 @@ class CloudSyncService
             Log::info('Starting cloud sync...');
             
             // Sync in order of dependencies
+            $results['synced']['subjects'] = $this->syncSubjects();
+            $results['synced']['users'] = $this->syncUsers();
             $results['synced']['rooms'] = $this->syncRooms();
             $results['synced']['cameras'] = $this->syncCameras();
             $results['synced']['faculties'] = $this->syncFaculties();
@@ -51,6 +58,9 @@ class CloudSyncService
             $results['synced']['passes'] = $this->syncPasses();
             $results['synced']['recognition_logs'] = $this->syncRecognitionLogs();
             $results['synced']['stream_recordings'] = $this->syncStreamRecordings();
+            $results['synced']['activity_logs'] = $this->syncActivityLogs();
+            $results['synced']['teaching_load_archives'] = $this->syncTeachingLoadArchives();
+            $results['synced']['attendance_record_archives'] = $this->syncAttendanceRecordArchives();
             
             // Calculate summary
             foreach ($results['synced'] as $key => $value) {
@@ -530,6 +540,213 @@ class CloudSyncService
             Log::error("Error pushing to cloud {$endpoint}: " . $e->getMessage());
             return ['success' => false, 'error' => $e->getMessage()];
         }
+    }
+    
+    /**
+     * Sync subjects
+     */
+    protected function syncSubjects()
+    {
+        $synced = [];
+        
+        try {
+            $localSubjects = Subject::all();
+            $cloudSubjects = $this->getCloudData('subjects');
+            $cloudSubjectIds = collect($cloudSubjects)->pluck('subject_id')->toArray();
+            
+            foreach ($localSubjects as $subject) {
+                if (!in_array($subject->subject_id, $cloudSubjectIds)) {
+                    $response = $this->pushToCloud('subjects', [
+                        'subject_id' => $subject->subject_id,
+                        'subject_code' => $subject->subject_code,
+                        'subject_description' => $subject->subject_description,
+                        'department' => $subject->department,
+                        'created_at' => $subject->created_at,
+                        'updated_at' => $subject->updated_at,
+                    ]);
+                    
+                    if ($response['success']) {
+                        $synced[] = $subject->subject_id;
+                        Log::info("Synced subject {$subject->subject_id} to cloud");
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error("Error syncing subjects: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync users (admin accounts)
+     */
+    protected function syncUsers()
+    {
+        $synced = [];
+        
+        try {
+            $localUsers = User::all();
+            $cloudUsers = $this->getCloudData('users');
+            $cloudUserIds = collect($cloudUsers)->pluck('user_id')->toArray();
+            
+            foreach ($localUsers as $user) {
+                if (!in_array($user->user_id, $cloudUserIds)) {
+                    $response = $this->pushToCloud('users', [
+                        'user_id' => $user->user_id,
+                        'user_role' => $user->user_role,
+                        'user_department' => $user->user_department,
+                        'user_fname' => $user->user_fname,
+                        'user_lname' => $user->user_lname,
+                        'username' => $user->username,
+                        'user_password' => $user->user_password, // Already hashed
+                        'created_at' => $user->created_at,
+                        'updated_at' => $user->updated_at,
+                    ]);
+                    
+                    if ($response['success']) {
+                        $synced[] = $user->user_id;
+                        Log::info("Synced user {$user->user_id} to cloud");
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error("Error syncing users: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync activity logs
+     */
+    protected function syncActivityLogs()
+    {
+        $synced = [];
+        
+        try {
+            // Only sync recent logs (last 30 days based on logs_timestamp)
+            $localLogs = ActivityLog::where('logs_timestamp', '>=', now()->subDays(30))->get();
+            $cloudLogs = $this->getCloudData('activity-logs', ['days' => 30]);
+            $cloudLogIds = collect($cloudLogs)->pluck('logs_id')->toArray();
+            
+            foreach ($localLogs as $log) {
+                if (!in_array($log->logs_id, $cloudLogIds)) {
+                    $response = $this->pushToCloud('activity-logs', [
+                        'logs_id' => $log->logs_id,
+                        'user_id' => $log->user_id,
+                        'logs_action' => $log->logs_action,
+                        'logs_description' => $log->logs_description,
+                        'logs_timestamp' => $log->logs_timestamp,
+                        'logs_module' => $log->logs_module,
+                    ]);
+                    
+                    if ($response['success']) {
+                        $synced[] = $log->logs_id;
+                        Log::info("Synced activity log {$log->logs_id} to cloud");
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error("Error syncing activity logs: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync teaching load archives
+     */
+    protected function syncTeachingLoadArchives()
+    {
+        $synced = [];
+        
+        try {
+            // Sync all archived records (they're historical data)
+            $localArchives = TeachingLoadArchive::all();
+            $cloudArchives = $this->getCloudData('teaching-load-archives');
+            $cloudArchiveIds = collect($cloudArchives)->pluck('archive_id')->toArray();
+            
+            foreach ($localArchives as $archive) {
+                if (!in_array($archive->archive_id, $cloudArchiveIds)) {
+                    $response = $this->pushToCloud('teaching-load-archives', [
+                        'archive_id' => $archive->archive_id,
+                        'original_teaching_load_id' => $archive->original_teaching_load_id,
+                        'faculty_id' => $archive->faculty_id,
+                        'teaching_load_course_code' => $archive->teaching_load_course_code,
+                        'teaching_load_subject' => $archive->teaching_load_subject,
+                        'teaching_load_class_section' => $archive->teaching_load_class_section,
+                        'teaching_load_day_of_week' => $archive->teaching_load_day_of_week,
+                        'teaching_load_time_in' => $archive->teaching_load_time_in,
+                        'teaching_load_time_out' => $archive->teaching_load_time_out,
+                        'room_no' => $archive->room_no,
+                        'school_year' => $archive->school_year,
+                        'semester' => $archive->semester,
+                        'archived_at' => $archive->archived_at,
+                        'archived_by' => $archive->archived_by,
+                        'archive_notes' => $archive->archive_notes,
+                    ]);
+                    
+                    if ($response['success']) {
+                        $synced[] = $archive->archive_id;
+                        Log::info("Synced teaching load archive {$archive->archive_id} to cloud");
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error("Error syncing teaching load archives: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync attendance record archives
+     */
+    protected function syncAttendanceRecordArchives()
+    {
+        $synced = [];
+        
+        try {
+            // Sync all archived records (they're historical data)
+            $localArchives = AttendanceRecordArchive::all();
+            $cloudArchives = $this->getCloudData('attendance-record-archives');
+            $cloudArchiveIds = collect($cloudArchives)->pluck('archive_id')->toArray();
+            
+            foreach ($localArchives as $archive) {
+                if (!in_array($archive->archive_id, $cloudArchiveIds)) {
+                    $response = $this->pushToCloud('attendance-record-archives', [
+                        'archive_id' => $archive->archive_id,
+                        'original_record_id' => $archive->original_record_id,
+                        'faculty_id' => $archive->faculty_id,
+                        'teaching_load_id' => $archive->teaching_load_id,
+                        'camera_id' => $archive->camera_id,
+                        'record_date' => $archive->record_date,
+                        'record_time_in' => $archive->record_time_in,
+                        'record_time_out' => $archive->record_time_out,
+                        'time_duration_seconds' => $archive->time_duration_seconds,
+                        'record_status' => $archive->record_status,
+                        'record_remarks' => $archive->record_remarks,
+                        'school_year' => $archive->school_year,
+                        'semester' => $archive->semester,
+                        'archived_at' => $archive->archived_at,
+                        'archived_by' => $archive->archived_by,
+                        'archive_notes' => $archive->archive_notes,
+                        'created_at' => $archive->created_at,
+                        'updated_at' => $archive->updated_at,
+                    ]);
+                    
+                    if ($response['success']) {
+                        $synced[] = $archive->archive_id;
+                        Log::info("Synced attendance record archive {$archive->archive_id} to cloud");
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error("Error syncing attendance record archives: " . $e->getMessage());
+        }
+        
+        return $synced;
     }
     
     /**
