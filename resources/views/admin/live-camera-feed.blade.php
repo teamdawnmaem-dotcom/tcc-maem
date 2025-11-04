@@ -329,12 +329,27 @@
 		<div class="camera-feed" onclick="showCameraDetail('{{ $camera->camera_id }}')">
 			<div class="camera-label">{{ $camera->room_name }}</div>
 			
-			<!-- Grid feed (muted autoplay) -->
-			<video id="webrtc-player-{{ $camera->camera_id }}" autoplay playsinline muted style="width:100%; display:none;"></video>
-			
-			<div class="no-feed" id="no-feed-message-{{ $camera->camera_id }}">
-				<div class="no-feed-icon">&#10005;</div>
-				<div>No Live Feed</div>
+			<!-- Grid view recording player -->
+			<div id="video-container-{{ $camera->camera_id }}" style="flex: 1; min-height: 160px; background: #000; position: relative;">
+				<video 
+					id="recording-player-{{ $camera->camera_id }}" 
+					autoplay 
+					playsinline 
+					muted 
+					loop
+					style="width:100%; height:100%; object-fit: contain; display: none;"
+					onended="playNextRecording('{{ $camera->camera_id }}')"
+					onerror="handleRecordingError(this, '{{ $camera->camera_id }}')"
+				></video>
+				
+				<div class="no-feed" id="no-recording-message-{{ $camera->camera_id }}">
+					<div class="no-feed-icon">&#10005;</div>
+					<div>No Recording</div>
+				</div>
+				
+				<div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; z-index: 10; display: none;" id="recording-info-{{ $camera->camera_id }}">
+					<span id="recording-counter-{{ $camera->camera_id }}">0 / 0</span>
+				</div>
 			</div>
 		</div>
 	@empty
@@ -352,14 +367,33 @@
 
 	<div class="main-camera-feed">
 		<div class="camera-label" id="main-camera-label">Camera Feed</div>
-		<div class="no-feed" id="video-container">
+		<div id="video-container" style="flex: 1; min-height: 0; background: #000; position: relative;">
 			
-			<!-- Detail feed (audio ON) -->
-			<video id="webrtc-player-detail" autoplay playsinline controls style="width:100%; display:none;"></video>
+			<!-- Detail view recording player -->
+			<video 
+				id="recording-player-detail" 
+				autoplay 
+				playsinline 
+				controls 
+				style="width:100%; height:100%; object-fit: contain; display: none;"
+				onended="playNextRecordingDetail()"
+				onerror="handleRecordingErrorDetail(this)"
+			></video>
 			
-			<div class="no-feed" id="no-feed-message-detail">
+			<div class="no-feed" id="no-recording-message-detail">
 				<div class="no-feed-icon">&#10005;</div>
-				<div>No Live Feed</div>
+				<div>No Recording</div>
+			</div>
+			
+			<!-- Playlist controls overlay -->
+			<div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 10px; z-index: 10;">
+				<button onclick="playPreviousRecordingDetail()" style="background: rgba(139,0,0,0.8); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">⏮️ Previous</button>
+				<button onclick="playNextRecordingDetail()" style="background: rgba(139,0,0,0.8); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">Next ⏭️</button>
+				<button onclick="restartPlaylistDetail()" style="background: rgba(139,0,0,0.8); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">🔄 Restart</button>
+			</div>
+			
+			<div style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; z-index: 10; display: none;" id="recording-info-detail">
+				<span id="recording-counter-detail">0 / 0</span>
 			</div>
 		</div>
 	</div>
@@ -432,329 +466,278 @@
 	const cameras = @json($cameras);
 	const teachingLoads = @json($teachingLoads);
 	const faculties = @json($faculties);
+	const recordings = @json($recordings);
 	
 	console.log('Faculties data loaded:', faculties);
-	console.log('First faculty sample:', faculties.length > 0 ? faculties[0] : 'No faculties');
+	console.log('Recordings loaded:', recordings.length);
 
-	const WEBSOCKET_HOST = `http://${window.location.hostname}:5000`;
-	//const WEBSOCKET_HOST = `https://workspacevps.cloud/camera/api`;
-	const pcs = {}; // RTCPeerConnections per camera
-	const reconnectInterval = 1000; // 1 second before retry
 	const scheduleRefreshMs = 30000; // refresh schedule every 30s
 	let scheduleIntervalId = null;
-
-    async function startWebRTC(camera, detail = false) {
-        const videoId = detail ? "webrtc-player-detail" : `webrtc-player-${camera.camera_id}`;
-        const noFeedId = detail ? "no-feed-message-detail" : `no-feed-message-${camera.camera_id}`;
-
-        const video = document.getElementById(videoId);
-        const noFeed = document.getElementById(noFeedId);
-
-        if (!video || !noFeed) {
-            console.error("Video or noFeed element not found:", videoId, noFeedId);
-            return;
-        }
-
-        video.style.display = "none";
-        noFeed.style.display = "flex";
-
-        try {
-            // Check if we already have a working connection for this camera
-            if (pcs[camera.camera_id] && pcs[camera.camera_id].connectionState === 'connected') {
-                console.log(`Reusing existing connection for camera ${camera.camera_id}`);
-                // If we have a working connection, try to reuse the stream
-                if (pcs[camera.camera_id].getReceivers && pcs[camera.camera_id].getReceivers().length > 0) {
-                    const receivers = pcs[camera.camera_id].getReceivers();
-                    if (receivers.length > 0 && receivers[0].track) {
-                        const stream = new MediaStream([receivers[0].track]);
-                        video.srcObject = stream;
-                        video.style.display = "block";
-                        noFeed.style.display = "none";
-                        console.log("Reused existing stream for camera:", camera.camera_name);
-                        return;
-                    }
-                }
-            }
-
-            // Clean up previous PC if exists and not connected
-            if (pcs[camera.camera_id]) {
-                try { 
-                    if (pcs[camera.camera_id].connectionState !== 'connected') {
-                        pcs[camera.camera_id].close();
-                    }
-                } catch(e) {}
-                delete pcs[camera.camera_id];
-            }
-
-            // Configure RTCPeerConnection with proper settings
-            const pc = new RTCPeerConnection({
-                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-            });
-            pcs[camera.camera_id] = pc;
-            
-            // Add event listeners for debugging
-            pc.onicecandidate = function(event) {
-                if (event.candidate) {
-                    console.log("ICE candidate:", event.candidate.candidate);
-                } else {
-                    console.log("ICE gathering completed");
-                }
-            };
-            
-            pc.onicecandidateerror = function(event) {
-                console.error("ICE candidate error:", event);
-            };
-            
-            pc.oniceconnectionstatechange = function() {
-                console.log("ICE connection state:", pc.iceConnectionState);
-            };
-
-            pc.ontrack = function(event) {
-                console.log("WebRTC track received for camera:", camera.camera_name, "Detail mode:", detail);
-                video.srcObject = event.streams[0];
-                video.style.display = "block";
-                noFeed.style.display = "none";
-                
-                // Remove disabled class when feed is available
-                const cameraElement = document.querySelector(`[onclick="showCameraDetail('${camera.camera_id}')"]`);
-                if (cameraElement) {
-                    cameraElement.classList.remove('no-feed-available');
-                }
-                
-                // Ensure video is properly loaded
-                video.onloadedmetadata = function() {
-                    console.log("Video metadata loaded for camera:", camera.camera_name);
-                };
-                
-                video.oncanplay = function() {
-                    console.log("Video can play for camera:", camera.camera_name);
-                };
-            };
-
-            pc.onconnectionstatechange = () => {
-                console.log("WebRTC connection state:", pc.connectionState, "for camera:", camera.camera_name);
-                if (pc.connectionState === "connected") {
-                    console.log("WebRTC connection established for camera:", camera.camera_name);
-                } else if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
-                    console.warn("WebRTC connection failed, reconnecting camera:", camera.camera_name);
-                    // Show no feed message while reconnecting
-                    video.style.display = "none";
-                    noFeed.style.display = "flex";
-                    setTimeout(() => startWebRTC(camera, detail), reconnectInterval);
-                }
-            };
-
-			const offer = await pc.createOffer({ offerToReceiveVideo: true });
-			await pc.setLocalDescription(offer);
-
-		   const response = await fetch(`${WEBSOCKET_HOST}/offer/${camera.camera_id}?mode=${detail ? "detail" : "grid"}`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ sdp: offer.sdp, type: offer.type })
+	
+	// Group recordings by camera_id
+	const recordingsByCamera = {};
+	const recordingsById = {};
+	let currentDetailCameraId = null;
+	let currentDetailPlaylist = [];
+	let currentDetailIndex = 0;
+	
+	// Initialize recordings data
+	recordings.forEach(recording => {
+		if (!recordingsByCamera[recording.camera_id]) {
+			recordingsByCamera[recording.camera_id] = [];
+		}
+		recordingsByCamera[recording.camera_id].push(recording);
+		recordingsById[recording.recording_id] = recording;
+	});
+	
+	// Sort recordings by start_time (oldest first for sequential playback)
+	Object.keys(recordingsByCamera).forEach(cameraId => {
+		recordingsByCamera[cameraId].sort((a, b) => {
+			return new Date(a.start_time) - new Date(b.start_time);
+		});
+	});
+	
+	// Build video URL helper (from test-recordings.html)
+	function buildVideoUrl(recording) {
+		let url = '';
+		
+		if (recording.filepath) {
+			let normalizedPath = recording.filepath.trim();
+			if (normalizedPath.startsWith('/')) {
+				normalizedPath = normalizedPath.substring(1);
+			}
+			
+			if (normalizedPath.includes('stream_recordings')) {
+				if (!normalizedPath.startsWith('stream_recordings/')) {
+					const parts = normalizedPath.split('stream_recordings/');
+					if (parts.length > 1) {
+						normalizedPath = `stream_recordings/${parts[parts.length - 1]}`;
+					}
+				}
+				url = `${window.location.origin}/storage/${normalizedPath}`;
+			} else if (normalizedPath.startsWith('storage/')) {
+				url = `${window.location.origin}/${normalizedPath}`;
+			} else {
+				url = `${window.location.origin}/storage/stream_recordings/${normalizedPath}`;
+			}
+		}
+		
+		if (!url && recording.filename) {
+			url = `${window.location.origin}/storage/stream_recordings/${recording.filename}`;
+		}
+		
+		if (!url && recording.recording_id) {
+			url = `${window.location.origin}/api/stream-recordings/${recording.recording_id}/stream`;
+		}
+		
+		return url;
+	}
+	
+	// Load recordings for a camera (grid view)
+	function loadCameraRecordings(cameraId) {
+		const cameraRecordings = recordingsByCamera[cameraId] || [];
+		if (cameraRecordings.length === 0) {
+			const video = document.getElementById(`recording-player-${cameraId}`);
+			const noFeed = document.getElementById(`no-recording-message-${cameraId}`);
+			const info = document.getElementById(`recording-info-${cameraId}`);
+			if (video) video.style.display = 'none';
+			if (noFeed) noFeed.style.display = 'flex';
+			if (info) info.style.display = 'none';
+			return;
+		}
+		
+		const playlist = cameraRecordings.map(r => buildVideoUrl(r)).filter(url => url);
+		if (playlist.length === 0) return;
+		
+		const video = document.getElementById(`recording-player-${cameraId}`);
+		const noFeed = document.getElementById(`no-recording-message-${cameraId}`);
+		const info = document.getElementById(`recording-info-${cameraId}`);
+		const counter = document.getElementById(`recording-counter-${cameraId}`);
+		
+		if (!video) return;
+		
+		video.dataset.playlist = JSON.stringify(playlist);
+		video.dataset.currentIndex = '0';
+		video.src = playlist[0];
+		video.load();
+		
+		if (noFeed) noFeed.style.display = 'none';
+		video.style.display = 'block';
+		if (info) info.style.display = 'block';
+		if (counter) counter.textContent = `1 / ${playlist.length}`;
+		
+		video.muted = true;
+		const playPromise = video.play();
+		if (playPromise !== undefined) {
+			playPromise.catch(e => {
+				console.log(`Auto-play blocked for camera ${cameraId}:`, e.message);
 			});
-
-			if (!response.ok) throw new Error(`Server returned ${response.status}`);
-			const answer = await response.json();
-
-			await pc.setRemoteDescription({ sdp: answer.sdp, type: answer.type });
-			console.log("WebRTC stream started for camera:", camera.camera_name);
-
-        } catch (err) {
-            console.error("WebRTC error:", err);
-            video.style.display = "none";
-            noFeed.style.display = "flex";
-            
-            // Add disabled class when no feed is available
-            if (!detail) {
-                const cameraElement = document.querySelector(`[onclick="showCameraDetail('${camera.camera_id}')"]`);
-                if (cameraElement) {
-                    cameraElement.classList.add('no-feed-available');
-                }
-            }
-
-            // retry after interval
-            setTimeout(() => startWebRTC(camera, detail), reconnectInterval);
-        }
+		}
+	}
+	
+	// Play next recording in grid view
+	function playNextRecording(cameraId) {
+		const video = document.getElementById(`recording-player-${cameraId}`);
+		if (!video) return;
+		
+		const currentIndex = parseInt(video.dataset.currentIndex) || 0;
+		const playlist = JSON.parse(video.dataset.playlist || '[]');
+		
+		if (currentIndex < playlist.length - 1) {
+			const nextIndex = currentIndex + 1;
+			video.dataset.currentIndex = nextIndex;
+			video.src = playlist[nextIndex];
+			video.load();
+			
+			const counter = document.getElementById(`recording-counter-${cameraId}`);
+			if (counter) counter.textContent = `${nextIndex + 1} / ${playlist.length}`;
+			
+			video.muted = true;
+			video.play().catch(e => console.log('Play blocked:', e.message));
+		} else {
+			// Loop back to start
+			video.dataset.currentIndex = '0';
+			video.src = playlist[0];
+			video.load();
+			const counter = document.getElementById(`recording-counter-${cameraId}`);
+			if (counter) counter.textContent = `1 / ${playlist.length}`;
+			video.muted = true;
+			video.play().catch(e => console.log('Play blocked:', e.message));
+		}
+	}
+	
+	// Handle recording error
+	function handleRecordingError(videoElement, cameraId) {
+		console.error(`Error loading recording for camera ${cameraId}`);
+		const noFeed = document.getElementById(`no-recording-message-${cameraId}`);
+		if (noFeed) noFeed.style.display = 'flex';
+		if (videoElement) videoElement.style.display = 'none';
+		
+		// Try next recording
+		setTimeout(() => playNextRecording(cameraId), 2000);
+	}
+	
+	// Load recordings for detail view
+	function loadDetailRecordings(cameraId) {
+		const cameraRecordings = recordingsByCamera[cameraId] || [];
+		currentDetailCameraId = cameraId;
+		currentDetailPlaylist = cameraRecordings.map(r => buildVideoUrl(r)).filter(url => url);
+		currentDetailIndex = 0;
+		
+		const video = document.getElementById('recording-player-detail');
+		const noFeed = document.getElementById('no-recording-message-detail');
+		const info = document.getElementById('recording-info-detail');
+		const counter = document.getElementById('recording-counter-detail');
+		
+		if (currentDetailPlaylist.length === 0) {
+			if (video) video.style.display = 'none';
+			if (noFeed) noFeed.style.display = 'flex';
+			if (info) info.style.display = 'none';
+			return;
+		}
+		
+		if (!video) return;
+		
+		video.src = currentDetailPlaylist[0];
+		video.load();
+		
+		if (noFeed) noFeed.style.display = 'none';
+		video.style.display = 'block';
+		if (info) info.style.display = 'block';
+		if (counter) counter.textContent = `1 / ${currentDetailPlaylist.length}`;
+		
+		video.muted = false; // Audio ON for detail view
+		const playPromise = video.play();
+		if (playPromise !== undefined) {
+			playPromise.catch(e => {
+				console.log('Auto-play blocked for detail view:', e.message);
+			});
+		}
+	}
+	
+	// Play next recording in detail view
+	function playNextRecordingDetail() {
+		if (currentDetailPlaylist.length === 0) return;
+		
+		if (currentDetailIndex < currentDetailPlaylist.length - 1) {
+			currentDetailIndex++;
+		} else {
+			currentDetailIndex = 0; // Loop back
+		}
+		
+		const video = document.getElementById('recording-player-detail');
+		const counter = document.getElementById('recording-counter-detail');
+		
+		if (video) {
+			video.src = currentDetailPlaylist[currentDetailIndex];
+			video.load();
+			if (counter) counter.textContent = `${currentDetailIndex + 1} / ${currentDetailPlaylist.length}`;
+			video.play().catch(e => console.log('Play blocked:', e.message));
+		}
+	}
+	
+	// Play previous recording in detail view
+	function playPreviousRecordingDetail() {
+		if (currentDetailPlaylist.length === 0) return;
+		
+		if (currentDetailIndex > 0) {
+			currentDetailIndex--;
+		} else {
+			currentDetailIndex = currentDetailPlaylist.length - 1; // Loop to end
+		}
+		
+		const video = document.getElementById('recording-player-detail');
+		const counter = document.getElementById('recording-counter-detail');
+		
+		if (video) {
+			video.src = currentDetailPlaylist[currentDetailIndex];
+			video.load();
+			if (counter) counter.textContent = `${currentDetailIndex + 1} / ${currentDetailPlaylist.length}`;
+			video.play().catch(e => console.log('Play blocked:', e.message));
+		}
+	}
+	
+	// Restart playlist in detail view
+	function restartPlaylistDetail() {
+		if (currentDetailPlaylist.length === 0) return;
+		
+		currentDetailIndex = 0;
+		const video = document.getElementById('recording-player-detail');
+		const counter = document.getElementById('recording-counter-detail');
+		
+		if (video) {
+			video.src = currentDetailPlaylist[0];
+			video.load();
+			if (counter) counter.textContent = `1 / ${currentDetailPlaylist.length}`;
+			video.play().catch(e => console.log('Play blocked:', e.message));
+		}
+	}
+	
+	// Handle recording error in detail view
+	function handleRecordingErrorDetail(videoElement) {
+		console.error('Error loading recording in detail view');
+		const noFeed = document.getElementById('no-recording-message-detail');
+		if (noFeed) noFeed.style.display = 'flex';
+		if (videoElement) videoElement.style.display = 'none';
+		
+		// Try next recording
+		setTimeout(() => playNextRecordingDetail(), 2000);
 	}
 
-    // Check if recognition service is available
-    async function checkRecognitionServiceHealth() {
-        try {
-            const response = await fetch(`${WEBSOCKET_HOST}/health`);
-            if (response.ok) {
-                console.log('Recognition service is healthy');
-                return true;
-            } else {
-                console.warn('Recognition service health check failed:', response.status);
-                return false;
-            }
-        } catch (err) {
-            console.error('Recognition service is not available:', err);
-            return false;
-        }
-    }
-
-    window.addEventListener("DOMContentLoaded", async () => {
-        // Immediately disable all camera feeds on page load
+    window.addEventListener("DOMContentLoaded", () => {
+        // Load recordings for all cameras in grid view
         cameras.forEach(cam => {
-            const cameraElement = document.querySelector(`[onclick="showCameraDetail('${cam.camera_id}')"]`);
-            if (cameraElement) {
-                cameraElement.classList.add('no-feed-available');
-            }
+            loadCameraRecordings(cam.camera_id);
         });
         
-        // Check if recognition service is available first
-        const isHealthy = await checkRecognitionServiceHealth();
-        if (!isHealthy) {
-            console.warn('Recognition service is not available, some features may not work');
-        }
-        
-        // Start WebRTC for all cameras immediately
-        cameras.forEach(cam => startWebRTC(cam, false));
-        fetchRecognitionStatus();
-        
-        // Also start background recognition status fetching
-        setInterval(fetchRecognitionStatus, 2000);
+        // Update schedule panel periodically
+        if (scheduleIntervalId) clearInterval(scheduleIntervalId);
     });
 
     async function fetchRecognitionStatus() {
-        try {
-            console.log('Fetching recognition status from:', `${WEBSOCKET_HOST}/status`);
-            const response = await fetch(`${WEBSOCKET_HOST}/status`);
-            
-            console.log('Response status:', response.status, response.statusText);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            console.log('Recognition service response:', data);
-            
-            const tbody = document.getElementById("recognition-logs-body");
-            if (!tbody) {
-                console.error('recognition-logs-body element not found');
-                return;
-            }
-            
-            tbody.innerHTML = "";
-            
-            // Get recognition logs (multiple entries)
-            const recognitionLogs = data.recognition_logs || [];
-            console.log('Recognition logs:', recognitionLogs);
-            console.log('Number of logs:', recognitionLogs.length);
-            
-            if (recognitionLogs.length === 0) {
-                tbody.innerHTML = `<tr>
-                    <td colspan="4" style="text-align: center; padding: 40px; color: #999; font-style: italic;">
-                        No recognition data available. Make sure the recognition service is running.
-                    </td>
-                </tr>`;
-                return;
-            }
-            
-            // Process recognition logs
-            let hasResults = false;
-            console.log('Total recognition logs received:', recognitionLogs.length);
-            recognitionLogs.forEach((log) => {
-                console.log('Processing recognition log:', log);
-                console.log('Faculty name from backend:', log.faculty_name);
-                console.log('Faculty ID from backend:', log.faculty_id);
-                
-                const camera = cameras.find(cam => cam.camera_id == log.camera_id);
-                const cameraName = camera ? camera.camera_name : `Camera ${log.camera_id}`;
-                
-                // Format timestamp
-                const logTime = new Date(log.timestamp);
-                const timeStr = logTime.toLocaleString('en-US', {
-                    timeZone: 'Asia/Manila',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: true
-                });
-                
-                let facultyName = log.faculty_name || 'Unknown';
-                let status = log.status || 'Unknown';
-                let distance = log.distance ? log.distance.toFixed(2) : 'N/A';
-                let isScheduled = false;
-                
-                // Ensure we have a proper faculty name (not just ID or "Faculty X" format)
-                if ((facultyName === 'Unknown' || facultyName.startsWith('Faculty ')) && log.faculty_id && log.faculty_id !== null) {
-                    // Try to find faculty in the faculties array
-                    const faculty = faculties.find(f => f.faculty_id == log.faculty_id);
-                    if (faculty) {
-                        facultyName = `${faculty.faculty_fname} ${faculty.faculty_lname}`;
-                        console.log(`Resolved faculty name for ID ${log.faculty_id}: ${facultyName}`);
-                    } else {
-                        console.log(`Faculty ID ${log.faculty_id} not found in faculties array`);
-                        facultyName = `Faculty ${log.faculty_id}`;
-                    }
-                }
-                
-                // Check if this faculty is scheduled for this camera's room
-                if (log.faculty_id && log.faculty_id !== null && camera) {
-                    const currentLoad = getCurrentLoadForRoom(camera.room_no);
-                    if (currentLoad && currentLoad.faculty_id == log.faculty_id) {
-                        isScheduled = true;
-                    }
-                }
-                
-                // Add scheduling identifier
-                let facultyDisplay = facultyName;
-                if (log.faculty_id && log.faculty_id !== null) {
-                    if (isScheduled) {
-                        facultyDisplay = `<span class="scheduled-faculty">${facultyName} (Scheduled)</span>`;
-                    } else {
-                        facultyDisplay = `<span class="unscheduled-faculty">${facultyName} (Not Scheduled)</span>`;
-                    }
-                }
-                
-                const row = `<tr>
-                    <td>${timeStr}</td>
-                    <td>${cameraName}</td>
-                    <td>${facultyDisplay}</td>
-                    <td>${status}</td>
-                </tr>`;
-                tbody.innerHTML += row;
-                hasResults = true;
-            });
-            
-            // If no recognition results, show waiting message
-            if (!hasResults) {
-                tbody.innerHTML = `<tr>
-                    <td colspan="4" style="text-align: center; padding: 40px; color: #999; font-style: italic;">
-                        Waiting for data...
-                    </td>
-                </tr>`;
-            }
-			
-        } catch (err) {
-            console.error("Error fetching recognition status:", err);
-            console.error("Error details:", {
-                message: err.message,
-                stack: err.stack,
-                name: err.name
-            });
-            const tbody = document.getElementById("recognition-logs-body");
-            if (tbody) {
-                let errorMessage = "Error loading data...";
-                if (err.message.includes("Failed to fetch")) {
-                    errorMessage = "Cannot connect to recognition service. Please check if the service is running.";
-                } else if (err.message.includes("HTTP")) {
-                    errorMessage = `Server error: ${err.message}`;
-                }
-                tbody.innerHTML = `<tr>
-                    <td colspan="4" style="text-align: center; padding: 40px; color: #999; font-style: italic;">
-                        ${errorMessage}
-                    </td>
-                </tr>`;
-            }
-        }
-	}
+        // Recognition status fetching removed - not needed for recordings view
+        // This can be re-enabled if needed in the future
+    }
 	
 	// Note: Recognition status fetching is now handled in DOMContentLoaded
 
@@ -915,8 +898,8 @@
 		document.getElementById('recognition-status-section').style.display = 'block';
 
 		const camera = cameras.find(cam => cam.camera_id == cameraId);
-			document.getElementById('main-camera-label').textContent = camera.camera_name;
-			document.getElementById('main-camera-label').style.display = 'block';
+		document.getElementById('main-camera-label').textContent = camera.camera_name;
+		document.getElementById('main-camera-label').style.display = 'block';
 		document.getElementById('lab-building').textContent = `ROOM: ${camera.room_name} / BUILDING: ${camera.room_building_no}`;
 
 		// initial populate
@@ -925,13 +908,8 @@
 		if (scheduleIntervalId) clearInterval(scheduleIntervalId);
 		scheduleIntervalId = setInterval(() => updateSchedulePanel(camera), scheduleRefreshMs);
 
-        // Start WebRTC for detail view - check if we can reuse existing connection
-        setTimeout(() => {
-            startWebRTC(camera, true);
-        }, 50); // Reduced delay for faster response
-		
-		// Fetch recognition status immediately when entering detail view
-		fetchRecognitionStatus();
+		// Load recordings for detail view
+		loadDetailRecordings(cameraId);
 	}
 
 	function showCameraGrid() {

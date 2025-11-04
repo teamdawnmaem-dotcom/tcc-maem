@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Camera;
 use App\Models\TeachingLoad;
 use App\Models\Faculty;
+use App\Models\StreamRecording;
 use Illuminate\Support\Carbon;
 
 class LiveCameraController extends Controller
@@ -49,8 +50,11 @@ class LiveCameraController extends Controller
        
     $faculties = Faculty::all();
 
+    // Get all stream recordings grouped by camera_id
+    $recordings = StreamRecording::orderBy('start_time', 'desc')->get();
+
         // Pass data to the Blade view
-        return view('deptHead.live-camera-feed', compact('cameras', 'teachingLoads', 'faculties'));
+        return view('deptHead.live-camera-feed', compact('cameras', 'teachingLoads', 'faculties', 'recordings'));
     }
 
      /**
@@ -92,8 +96,11 @@ class LiveCameraController extends Controller
        
     $faculties = Faculty::all();
 
+    // Get all stream recordings grouped by camera_id
+    $recordings = StreamRecording::orderBy('start_time', 'desc')->get();
+
         // Pass data to the Blade view
-        return view('admin.live-camera-feed', compact('cameras', 'teachingLoads', 'faculties'));
+        return view('admin.live-camera-feed', compact('cameras', 'teachingLoads', 'faculties', 'recordings'));
     }
 
      /**
@@ -135,7 +142,10 @@ class LiveCameraController extends Controller
        
     $faculties = Faculty::all();
 
+    // Get all stream recordings grouped by camera_id
+    $recordings = StreamRecording::orderBy('start_time', 'desc')->get();
+
         // Pass data to the Blade view
-        return view('checker.live-camera-feed', compact('cameras', 'teachingLoads', 'faculties'));
+        return view('checker.live-camera-feed', compact('cameras', 'teachingLoads', 'faculties', 'recordings'));
     }
 }
