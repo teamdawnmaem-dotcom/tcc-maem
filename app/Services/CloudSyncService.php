@@ -1507,12 +1507,10 @@ class CloudSyncService
                             'lp_start_date' => $this->formatDateTime($cloudLeave['lp_start_date'] ?? null),
                             'lp_end_date' => $this->formatDateTime($cloudLeave['lp_end_date'] ?? null),
                             'lp_image' => $localImagePath,
-                            'lp_status' => $cloudLeave['lp_status'] ?? null,
-                            'lp_remarks' => $cloudLeave['lp_remarks'] ?? null,
                             'created_at' => $this->formatDateTime($cloudLeave['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudLeave['updated_at'] ?? null),
                         ]
-                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'lp_start_date', 'lp_end_date', 'lp_image', 'lp_status', 'lp_remarks', 'updated_at']);
+                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'lp_start_date', 'lp_end_date', 'lp_image', 'updated_at']);
                     
                     $synced[] = $cloudLeave['lp_id'];
                 } catch (\Exception $e) {
@@ -1560,12 +1558,10 @@ class CloudSyncService
                             'lp_start_date' => $this->formatDateTime($cloudPass['lp_start_date'] ?? null),
                             'lp_end_date' => $this->formatDateTime($cloudPass['lp_end_date'] ?? null),
                             'lp_image' => $localImagePath,
-                            'lp_status' => $cloudPass['lp_status'] ?? null,
-                            'lp_remarks' => $cloudPass['lp_remarks'] ?? null,
                             'created_at' => $this->formatDateTime($cloudPass['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudPass['updated_at'] ?? null),
                         ]
-                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'lp_start_date', 'lp_end_date', 'lp_image', 'lp_status', 'lp_remarks', 'updated_at']);
+                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'lp_start_date', 'lp_end_date', 'lp_image', 'updated_at']);
                     
                     $synced[] = $cloudPass['lp_id'];
                 } catch (\Exception $e) {
