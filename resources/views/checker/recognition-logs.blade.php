@@ -10,29 +10,29 @@
         display: flex;
         justify-content: space-between;
         align-items: flex-end;
-        margin-bottom: 40px;
+        margin-bottom: 32px;
     }
     .faculty-title-group {
         display: flex;
         flex-direction: column;
     }
     .faculty-title {
-        font-size: 2.3rem;
+        font-size: 1.84rem;
         font-weight: bold;
         color: #6d0000;
     }
     .faculty-subtitle {
-        font-size: 1rem;
+        font-size: 0.8rem;
         color: #666;
-        margin-bottom: 30px;
+        margin-bottom: 24px;
     }
 
     .recognition-logs-table-container {
         background: #fff;
-        border-radius: 10px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.22), 0 1.5px 8px rgba(0,0,0,0.12);
+        border-radius: 8px;
+        box-shadow: 0 6.4px 25.6px rgba(0,0,0,0.22), 0 1.2px 6.4px rgba(0,0,0,0.12);
         overflow: hidden;
-        max-height: 70vh;
+        max-height: 56vh;
         overflow-y: auto;
     }
     .recognition-logs-table {
@@ -42,27 +42,27 @@
     .recognition-logs-table th {
         background: #8B0000;
         color: #fff;
-        padding: 20px 15px;
+        padding: 16px 12px;
         text-align: left;
         font-weight: 600;
-        font-size: 0.95rem;
-        letter-spacing: 0.5px;
+        font-size: 0.76rem;
+        letter-spacing: 0.4px;
         text-transform: uppercase;
         position: sticky;
         top: 0;
         z-index: 10;
     }
     .recognition-logs-table td {
-        padding: 18px 15px;
+        padding: 14.4px 12px;
         border-bottom: 1px solid #f1f3f4;
-        font-size: 0.9rem;
+        font-size: 0.72rem;
         color: #495057;
         vertical-align: middle;
     }
     .recognition-logs-table tbody tr:hover {
         background: #f8f9fa;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        box-shadow: 0 3.2px 9.6px rgba(0,0,0,0.1);
     }
     .recognition-logs-table tbody tr:last-child td {
         border-bottom: none;
@@ -70,21 +70,21 @@
 
     .filter-section {
         background: #fff;
-        border-radius: 12px;
-        padding: 30px;
-        margin-bottom: 30px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        border-radius: 9.6px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 3.2px 16px rgba(0,0,0,0.08);
         border: 1px solid #e9ecef;
     }
 
     .filter-header {
-        margin-bottom: 25px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #f1f3f4;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 1.6px solid #f1f3f4;
     }
 
     .filter-title {
-        font-size: 1.4rem;
+        font-size: 1.12rem;
         font-weight: 600;
         color: #2c3e50;
         margin: 0;
@@ -92,9 +92,9 @@
 
     .filter-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 20px;
-        margin-bottom: 25px;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
     }
 
     .filter-group {
@@ -112,15 +112,15 @@
     .filter-label {
         font-weight: 600;
         color: #495057;
-        margin-bottom: 8px;
-        font-size: 0.9rem;
+        margin-bottom: 6.4px;
+        font-size: 0.72rem;
     }
 
     .filter-input, .filter-select {
-        padding: 12px 16px;
-        border: 2px solid #e9ecef;
-        border-radius: 8px;
-        font-size: 0.95rem;
+        padding: 9.6px 12.8px;
+        border: 1.6px solid #e9ecef;
+        border-radius: 6.4px;
+        font-size: 0.76rem;
         background: #ffffff;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         color: #495057;
@@ -130,44 +130,44 @@
     .filter-input:focus, .filter-select:focus {
         outline: none;
         border-color: #8B0000;
-        box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+        box-shadow: 0 0 0 2.4px rgba(139, 0, 0, 0.1);
         transform: translateY(-1px);
     }
 
     .filter-actions {
         display: flex;
-        gap: 15px;
+        gap: 12px;
         align-items: center;
         justify-content: center;
         flex-wrap: wrap;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
     }
 
     .filter-btn, .clear-btn {
-        padding: 15px 32px;
+        padding: 12px 25.6px;
         border: none;
-        border-radius: 8px;
+        border-radius: 6.4px;
         font-weight: 600;
-        font-size: 0.95rem;
+        font-size: 0.76rem;
         cursor: pointer;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.4px;
         white-space: nowrap;
-        min-width: 200px;
+        min-width: 160px;
         width: auto;
     }
 
     .filter-btn {
         background: linear-gradient(135deg, #8B0000, #A52A2A);
         color: #fff;
-        box-shadow: 0 4px 15px rgba(139, 0, 0, 0.3);
+        box-shadow: 0 3.2px 12px rgba(139, 0, 0, 0.3);
     }
 
     .filter-btn:hover {
         background: linear-gradient(135deg, #A52A2A, #8B0000);
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(139, 0, 0, 0.4);
+        box-shadow: 0 4.8px 16px rgba(139, 0, 0, 0.4);
     }
 
     .clear-btn {
@@ -184,11 +184,11 @@
 
     .search-section {
         display: flex;
-        gap: 20px;
+        gap: 16px;
         align-items: end;
-        margin-top: 20px;
-        padding-top: 20px;
-        border-top: 2px solid #f1f3f4;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1.6px solid #f1f3f4;
     }
 
     .search-group {
@@ -198,10 +198,10 @@
 
     .search-input {
         width: 100%;
-        padding: 12px 16px;
-        border: 2px solid #e9ecef;
-        border-radius: 8px;
-        font-size: 0.95rem;
+        padding: 9.6px 12.8px;
+        border: 1.6px solid #e9ecef;
+        border-radius: 6.4px;
+        font-size: 0.76rem;
         background: #ffffff;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         color: #495057;
@@ -211,7 +211,7 @@
     .search-input:focus {
         outline: none;
         border-color: #8B0000;
-        box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+        box-shadow: 0 0 0 2.4px rgba(139, 0, 0, 0.1);
         transform: translateY(-1px);
     }
 
@@ -222,47 +222,52 @@
         flex-shrink: 0;
     }
 
+    .search-actions .filter-btn {
+        width: 100%;
+        min-width: auto;
+    }
+
     /* Status badges */
     .status-recognized {
         background: #28a745;
         color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.8rem;
+        padding: 3.2px 6.4px;
+        border-radius: 3.2px;
+        font-size: 0.64rem;
         font-weight: bold;
     }
 
     .status-unknown_face {
         background: #dc3545;
         color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.8rem;
+        padding: 3.2px 6.4px;
+        border-radius: 3.2px;
+        font-size: 0.64rem;
         font-weight: bold;
     }
 
     .status-processing {
         background: #ffc107;
         color: #212529;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.8rem;
+        padding: 3.2px 6.4px;
+        border-radius: 3.2px;
+        font-size: 0.64rem;
         font-weight: bold;
     }
 
     .no-records {
         text-align: center;
-        padding: 40px;
+        padding: 32px;
         color: #6c757d;
-        font-size: 1.1rem;
+        font-size: 0.88rem;
         font-style: italic;
     }
 
     .loading {
         text-align: center;
-        padding: 40px;
+        padding: 32px;
         color: #8B0000;
-        font-size: 1.1rem;
+        font-size: 0.88rem;
     }
 
     @media (max-width: 768px) {
@@ -283,6 +288,7 @@
         
         .search-group {
             min-width: auto;
+            
         }
         
         .search-actions {
@@ -298,7 +304,7 @@
 <div class="faculty-header">
     <div class="faculty-title-group">
         <div class="faculty-title">Recognition Logs</div>
-        <div class="faculty-subtitle">Face Recognition Monitoring</div>
+        <br>
     </div>
 </div>
 

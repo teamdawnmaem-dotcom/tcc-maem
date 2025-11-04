@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Tagoloan Community College')</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Onest:wght@100..900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -14,14 +17,20 @@
             box-sizing: border-box;
         }
 
+        *,
+        *::before,
+        *::after {
+            font-family: 'Onest', system-ui, -apple-system, 'Segoe UI', 'Arial', sans-serif;
+        }
+
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Onest', system-ui, -apple-system, 'Segoe UI', 'Arial', sans-serif;
             background: #fff;
             min-height: 100vh;
         }
 
         .sidebar {
-            width: 280px;
+            width: 224px;
             background: linear-gradient(180deg, #8B0000 0%, #6d0000 100%);
             color: #fff;
             height: 100vh;
@@ -41,7 +50,7 @@
 
         .logo-container {
             width: 80%;
-            height: 23vh;
+            height: 18.4vh;
             background: linear-gradient(180deg, #6d0000 0%, #4a0000 100%);
             border-radius: 0 0 100px 100px;
             margin: 0 auto 20px auto;
@@ -72,7 +81,7 @@
         }
 
         .sidebar-logo {
-            width: 160px;
+            width: 128px;
             display: block;
             transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
@@ -89,18 +98,18 @@
 
         .nav-menu {
             width: 100%;
-            margin-top: 12px;
+            margin-top: 10px;
             flex: 1;
-            padding: 0 15px 12px 15px;
+            padding: 0 12px 10px 12px;
         }
 
         .nav-item,
         .sub-nav-item {
             display: flex;
             align-items: center;
-            gap: 16px;
-            padding: 14px 20px;
-            font-size: 1rem;
+            gap: 12.8px;
+            padding: 11px 16px;
+            font-size: 0.8rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -109,8 +118,8 @@
             color: inherit;
             width: 95%;
             text-align: left;
-            border-radius: 12px;
-            margin-bottom: 6px;
+            border-radius: 9.6px;
+            margin-bottom: 5px;
             position: relative;
             overflow: hidden;
         }
@@ -168,8 +177,8 @@
         }
 
         .nav-icon {
-            font-size: 1.2rem;
-            width: 24px;
+            font-size: 0.96rem;
+            width: 19px;
             text-align: center;
             transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             display: flex;
@@ -189,7 +198,7 @@
 
         .nav-item.has-dropdown::after {
             content: '▼';
-            font-size: 0.7rem;
+            font-size: 0.56rem;
             transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             opacity: 0.8;
         }
@@ -209,9 +218,9 @@
 
         .sub-nav {
             background: rgba(0, 0, 0, 0.10);
-            border-radius: 12px;
-            margin: 8px 8px;
-            padding: 6px 8px;
+            border-radius: 9.6px;
+            margin: 6px 6px;
+            padding: 5px 6px;
             display: none;
             flex-direction: column;
             overflow: hidden;
@@ -224,28 +233,28 @@
 
         .nav-item.open+.sub-nav {
             display: flex;
-            max-height: 300px;
+            max-height: 240px;
             opacity: 1;
             transform: translateY(0);
         }
 
         .sub-nav-item {
-            font-size: 0.95rem;
+            font-size: 0.76rem;
             font-weight: 500;
-            padding: 10px 16px 10px 36px;
-            margin: 4px 0;
-            border-radius: 10px;
+            padding: 8px 13px 8px 29px;
+            margin: 3px 0;
+            border-radius: 8px;
             position: relative;
         }
 
         .sub-nav-item::after {
             content: '';
             position: absolute;
-            left: 20px;
+            left: 16px;
             top: 50%;
             transform: translateY(-50%);
-            width: 4px;
-            height: 4px;
+            width: 3px;
+            height: 3px;
             background: currentColor;
             border-radius: 50%;
             opacity: 0.6;
@@ -267,10 +276,10 @@
 
         /* Header */
         .header {
-            margin-left: 280px;
+            margin-left: 224px;
             background: #fdf8ee;
-            padding: 0 40px;
-            height: 90px;
+            padding: 0 32px;
+            height: 72px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -278,9 +287,9 @@
         }
 
         .header-logo-img {
-            width: 70px;
-            height: 70px;
-            margin-right: 18px;
+            width: 56px;
+            height: 56px;
+            margin-right: 14px;
         }
 
         .header-title-block {
@@ -290,14 +299,14 @@
 
         .header-title {
             color: #8B0000;
-            font-size: 2.2rem;
+            font-size: 1.76rem;
             font-weight: bold;
-            letter-spacing: 1px;
+            letter-spacing: 0.8px;
         }
 
         .header-address {
             color: #a77b5a;
-            font-size: 1rem;
+            font-size: 0.8rem;
             margin-top: 2px;
         }
 
@@ -311,13 +320,13 @@
             background: #8B0000;
             color: #fff;
             border: none;
-            border-radius: 25px;
-            padding: 12px 20px;
+            border-radius: 20px;
+            padding: 10px 16px;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.76rem;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 2px 8px rgba(139, 0, 0, 0.2);
@@ -333,8 +342,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 36px;
-            height: 36px;
+            width: 29px;
+            height: 29px;
         }
 
         .profile-icon svg {
@@ -350,13 +359,13 @@
         }
 
         .profile-title {
-            font-size: 0.9rem;
+            font-size: 0.72rem;
             font-weight: 600;
         }
 
         .profile-chevron {
-            font-size: 0.8rem;
-            margin-left: 4px;
+            font-size: 0.64rem;
+            margin-left: 3px;
             transition: transform 0.3s ease;
         }
 
@@ -374,12 +383,12 @@
             right: 0;
             background: #fff;
             border: 1px solid #ddd;
-            border-radius: 8px;
+            border-radius: 6.4px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            min-width: 180px;
+            min-width: 144px;
             z-index: 1000;
             display: none;
-            margin-top: 5px;
+            margin-top: 4px;
         }
 
         .profile-dropdown.show {
@@ -387,7 +396,7 @@
         }
 
         .profile-dropdown-item {
-            padding: 12px 16px;
+            padding: 9.6px 12.8px;
             cursor: pointer;
             transition: background-color 0.2s;
             border-bottom: 1px solid #f0f0f0;
@@ -427,10 +436,10 @@
 
         .modal-box {
             background: #fff;
-            border-radius: 10px;
-            width: 500px;
+            border-radius: 8px;
+            width: 400px;
             max-width: 98vw;
-            padding: 40px 40px 30px 40px;
+            padding: 32px 32px 24px 32px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
             display: flex;
             flex-direction: column;
@@ -438,18 +447,18 @@
         }
 
         .modal-header {
-            font-size: 2rem;
+            font-size: 1.6rem;
             font-weight: bold;
             color: #8B0000;
             text-align: center;
-            margin-bottom: 28px;
+            margin-bottom: 22.4px;
         }
 
         .modal-form {
             width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 18px;
+            gap: 14.4px;
         }
 
         .modal-form-group {
@@ -459,8 +468,8 @@
         }
 
         .modal-form-group label {
-            margin-bottom: 6px;
-            font-size: 1rem;
+            margin-bottom: 4.8px;
+            font-size: 0.8rem;
             font-weight: bold;
             color: #333;
         }
@@ -468,20 +477,20 @@
         .modal-form-group input,
         .modal-form-group select {
             width: 100%;
-            padding: 10px 12px;
-            font-size: 1rem;
+            padding: 8px 9.6px;
+            font-size: 0.8rem;
             border: 1px solid #bbb;
-            border-radius: 5px;
+            border-radius: 4px;
         }
 
         .modal-btn {
             width: 100%;
-            padding: 14px 0;
-            font-size: 1.1rem;
+            padding: 11.2px 0;
+            font-size: 0.88rem;
             font-weight: bold;
             border: none;
-            border-radius: 6px;
-            margin-top: 14px;
+            border-radius: 4.8px;
+            margin-top: 11.2px;
             cursor: pointer;
         }
 
@@ -503,7 +512,7 @@
 
         .modal-row {
             display: flex;
-            gap: 18px;
+            gap: 14.4px;
             width: 100%;
         }
 
@@ -534,15 +543,15 @@
         .upload-text {
             text-align: center;
             color: #666;
-            font-size: 0.9rem;
+            font-size: 0.72rem;
         }
 
         /* Profile Update Modal Styles */
         .profile-modal .modal-box {
-            width: 520px;
+            width: 416px;
             max-width: 95vw;
-            padding: 35px 40px 30px 40px;
-            border-radius: 16px;
+            padding: 28px 32px 24px 32px;
+            border-radius: 12.8px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), 0 8px 25px rgba(0, 0, 0, 0.15);
             background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -550,10 +559,10 @@
 
         .profile-modal .modal-header {
             color: #8B0000;
-            margin-bottom: 30px;
-            font-size: 1.8rem;
+            margin-bottom: 24px;
+            font-size: 1.44rem;
             font-weight: 700;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
             text-align: center;
             text-shadow: 0 2px 4px rgba(139, 0, 0, 0.1);
             position: relative;
@@ -562,55 +571,55 @@
         .profile-modal .modal-header::after {
             content: '';
             position: absolute;
-            bottom: -8px;
+            bottom: -6.4px;
             left: 50%;
             transform: translateX(-50%);
-            width: 60px;
-            height: 3px;
+            width: 48px;
+            height: 2.4px;
             background: linear-gradient(90deg, #8B0000, #6d0000);
-            border-radius: 2px;
+            border-radius: 1.6px;
         }
 
         .profile-modal .modal-form {
             width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
         }
 
         .profile-modal .form-section {
             background: rgba(139, 0, 0, 0.02);
             border: 1px solid rgba(139, 0, 0, 0.08);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 5px;
+            border-radius: 9.6px;
+            padding: 16px;
+            margin-bottom: 4px;
         }
 
         .profile-modal .form-section-title {
             color: #8B0000;
-            font-size: 1.1rem;
+            font-size: 0.88rem;
             font-weight: 600;
-            margin-bottom: 15px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid rgba(139, 0, 0, 0.1);
+            margin-bottom: 12px;
+            padding-bottom: 6.4px;
+            border-bottom: 1.6px solid rgba(139, 0, 0, 0.1);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6.4px;
         }
 
         .profile-modal .form-section-title::before {
             content: '';
-            width: 4px;
-            height: 20px;
+            width: 3.2px;
+            height: 16px;
             background: linear-gradient(180deg, #8B0000, #6d0000);
-            border-radius: 2px;
+            border-radius: 1.6px;
         }
 
         .profile-modal .modal-form-group {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            margin-bottom: 15px;
+            gap: 6.4px;
+            margin-bottom: 12px;
         }
 
         .profile-modal .modal-form-group:last-child {
@@ -618,13 +627,13 @@
         }
 
         .profile-modal .modal-form-group label {
-            font-size: 0.95rem;
+            font-size: 0.76rem;
             font-weight: 600;
             color: #333;
             margin-bottom: 0;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 4.8px;
         }
 
         .profile-modal .modal-form-group label::after {
@@ -635,10 +644,10 @@
 
         .profile-modal .modal-form-group input {
             width: 100%;
-            padding: 12px 16px;
-            font-size: 1rem;
-            border: 2px solid #e1e5e9;
-            border-radius: 8px;
+            padding: 9.6px 12.8px;
+            font-size: 0.8rem;
+            border: 1.6px solid #e1e5e9;
+            border-radius: 6.4px;
             background: #fff;
             transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
@@ -685,23 +694,23 @@
 
         .profile-modal .modal-buttons {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             width: 100%;
-            margin-top: 25px;
+            margin-top: 20px;
             justify-content: center;
         }
 
         .profile-modal .modal-btn {
             flex: 1;
-            padding: 14px 24px;
-            font-size: 1rem;
+            padding: 11.2px 19.2px;
+            font-size: 0.8rem;
             font-weight: 600;
-            border-radius: 10px;
+            border-radius: 8px;
             border: none;
             cursor: pointer;
             transition: background-color 0.2s ease;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
         }
 
         .profile-modal .modal-btn.update {
@@ -780,10 +789,10 @@
 
         /* Logout Modal */
         .logout-modal .modal-box {
-            width: 420px;
+            width: 336px;
             text-align: center;
-            padding: 40px 35px 35px 35px;
-            border-radius: 16px;
+            padding: 32px 28px 28px 28px;
+            border-radius: 12.8px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 8px 25px rgba(0, 0, 0, 0.15);
             background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -791,44 +800,44 @@
 
         .logout-modal .modal-header {
             color: #dc3545;
-            margin-bottom: 25px;
-            font-size: 1.8rem;
+            margin-bottom: 20px;
+            font-size: 1.44rem;
             font-weight: 700;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
             text-shadow: 0 2px 4px rgba(220, 53, 69, 0.1);
         }
 
         .logout-modal .modal-content {
-            margin-bottom: 35px;
-            font-size: 1.1rem;
+            margin-bottom: 28px;
+            font-size: 0.88rem;
             color: #495057;
             line-height: 1.6;
             font-weight: 500;
-            padding: 0 10px;
+            padding: 0 8px;
         }
 
         .logout-modal .modal-buttons {
             display: flex;
-            gap: 16px;
+            gap: 12.8px;
             justify-content: center;
-            margin-top: 10px;
+            margin-top: 8px;
         }
 
         .logout-modal .modal-buttons .modal-btn {
             flex: 1;
             margin-top: 0;
-            padding: 16px 28px;
-            font-size: 1.1rem;
+            padding: 12.8px 22.4px;
+            font-size: 0.88rem;
             font-weight: 700;
-            border-radius: 12px;
+            border-radius: 9.6px;
             transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             border: none;
             cursor: pointer;
             position: relative;
             overflow: hidden;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            min-width: 120px;
+            letter-spacing: 0.4px;
+            min-width: 96px;
         }
 
         .logout-modal .modal-btn::before {
@@ -886,9 +895,9 @@
 
         /* Logout Modal Icon */
         .logout-modal .modal-icon {
-            width: 64px;
-            height: 64px;
-            margin: 0 auto 20px auto;
+            width: 51.2px;
+            height: 51.2px;
+            margin: 0 auto 16px auto;
             background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
             border-radius: 50%;
             display: flex;
@@ -898,14 +907,14 @@
         }
 
         .logout-modal .modal-icon svg {
-            width: 32px;
-            height: 32px;
+            width: 25.6px;
+            height: 25.6px;
             color: white;
         }
 
         .main-content {
-            margin-left: 280px;
-            padding: 40px 40px 0 40px;
+            margin-left: 224px;
+            padding: 32px 32px 0 32px;
         }
 
         @media (max-width: 900px) {
@@ -918,12 +927,12 @@
 
         @media (max-width: 700px) {
             .sidebar {
-                width: 60px;
+                width: 48px;
             }
 
             .main-content,
             .header {
-                margin-left: 60px;
+                margin-left: 48px;
             }
 
             .header-logo-img {
@@ -931,7 +940,195 @@
             }
 
             .header-title {
-                font-size: 1.1rem;
+                font-size: 0.88rem;
+            }
+        }
+
+        /* Mobile Menu Toggle Button */
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 1001;
+            background: #8B0000;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 14px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .mobile-menu-toggle:hover {
+            background: #6d0000;
+            transform: scale(1.05);
+        }
+
+        .mobile-menu-toggle svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Sidebar Overlay */
+        #sidebarOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        #sidebarOverlay.show {
+            display: block;
+        }
+
+        /* Mobile Responsive Design - 430px */
+        @media (max-width: 430px) {
+            .mobile-menu-toggle {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .sidebar {
+                width: 224px;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                z-index: 1000;
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .header {
+                margin-left: 0;
+                padding: 12px 16px;
+                height: auto;
+                min-height: 60px;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                padding-left: 60px;
+            }
+
+            .header-title-block {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .header-title {
+                font-size: 1rem;
+                letter-spacing: 0.4px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .header-address {
+                display: none;
+            }
+
+            .header-profile {
+                flex-shrink: 0;
+            }
+
+            .profile-btn {
+                padding: 8px 12px;
+                font-size: 0.7rem;
+            }
+
+            .profile-icon {
+                width: 24px;
+                height: 24px;
+            }
+
+            .profile-text {
+                display: none;
+            }
+
+            .profile-chevron {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 16px;
+                padding-top: 68px;
+            }
+
+            /* Modal Styles for Mobile */
+            .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+                padding: 20px 16px !important;
+                margin: 16px;
+            }
+
+            .profile-modal .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+                padding: 20px 16px !important;
+            }
+
+            .profile-modal .modal-header {
+                font-size: 1.2rem !important;
+                margin-bottom: 16px !important;
+            }
+
+            .profile-modal .form-section {
+                padding: 12px !important;
+            }
+
+            .profile-modal .form-row {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+
+            .profile-modal .modal-form-group {
+                margin-bottom: 12px !important;
+            }
+
+            .profile-modal .modal-buttons {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+
+            .profile-modal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 0.85rem !important;
+            }
+
+            .logout-modal .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+                padding: 24px 20px !important;
+            }
+
+            .logout-modal .modal-header {
+                font-size: 1.2rem !important;
+            }
+
+            .logout-modal .modal-content {
+                font-size: 0.85rem !important;
+                padding: 0 !important;
+            }
+
+            .logout-modal .modal-buttons {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+
+            .logout-modal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 0.85rem !important;
             }
         }
 
@@ -945,13 +1142,13 @@
             justify-content: center;
             z-index: 2000;
             flex-direction: column;
-            gap: 12px;
+            gap: 9.6px;
         }
 
         .loader-spinner {
-            width: 44px;
-            height: 44px;
-            border: 4px solid #eee;
+            width: 35.2px;
+            height: 35.2px;
+            border: 3.2px solid #eee;
             border-top-color: #8B0000;
             border-radius: 50%;
             animation: spin 0.9s linear infinite;
@@ -960,7 +1157,7 @@
         .loader-text {
             color: #8B0000;
             font-weight: bold;
-            font-size: 0.95rem;
+            font-size: 0.76rem;
         }
 
         @keyframes spin {
@@ -1049,6 +1246,12 @@
             </div>
         </div>
     </div>
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12h18M3 6h18M3 18h18"/>
+        </svg>
+    </button>
+    <div id="sidebarOverlay"></div>
     <div class="header">
         <div style="display: flex; align-items: center;">
             <div class="header-title-block">
@@ -1248,6 +1451,69 @@
                 subnav.style.display = subnav.style.display === 'flex' ? 'none' : 'flex';
             }
         }
+
+        // Mobile menu toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const sidebar = document.querySelector('.sidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            
+            // Show/hide mobile menu toggle based on screen width
+            function updateMobileMenuToggle() {
+                if (window.innerWidth <= 430) {
+                    mobileMenuToggle.style.display = 'flex';
+                } else {
+                    mobileMenuToggle.style.display = 'none';
+                    sidebar.classList.remove('mobile-open');
+                    sidebarOverlay.classList.remove('show');
+                }
+            }
+
+            // Initial check
+            updateMobileMenuToggle();
+
+            // Update on resize
+            window.addEventListener('resize', updateMobileMenuToggle);
+
+            // Toggle sidebar
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    sidebar.classList.toggle('mobile-open');
+                    sidebarOverlay.classList.toggle('show');
+                });
+            }
+
+            // Close sidebar when clicking overlay
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', function() {
+                    sidebar.classList.remove('mobile-open');
+                    sidebarOverlay.classList.remove('show');
+                });
+            }
+
+            // Close sidebar when clicking navigation links (not dropdowns)
+            const navItems = document.querySelectorAll('.nav-item:not(.has-dropdown), .sub-nav-item');
+            navItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    if (window.innerWidth <= 430) {
+                        setTimeout(function() {
+                            sidebar.classList.remove('mobile-open');
+                            sidebarOverlay.classList.remove('show');
+                        }, 300);
+                    }
+                });
+            });
+
+            // Don't close sidebar when clicking dropdown items
+            const dropdownItems = document.querySelectorAll('.nav-item.has-dropdown');
+            dropdownItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    // Prevent closing sidebar when toggling dropdowns
+                    e.stopPropagation();
+                });
+            });
+        });
 
         function openModal(modalId) {
             document.getElementById(modalId).style.display = 'flex';

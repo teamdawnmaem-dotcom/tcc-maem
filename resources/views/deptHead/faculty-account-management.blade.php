@@ -8,10 +8,7 @@
     <style>
         /* ====== Header & Actions ====== */
         .faculty-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-bottom: 40px;
+            margin-bottom: 0;
         }
 
         .faculty-title-group {
@@ -20,36 +17,38 @@
         }
 
         .faculty-title {
-            font-size: 2.3rem;
+            font-size: 1.84rem;
             font-weight: bold;
             color: #6d0000;
         }
 
         .faculty-subtitle {
-            font-size: 1rem;
+            font-size: 0.8rem;
             color: #666;
-            margin-bottom: 30px;
+            margin-bottom: 24px;
         }
 
         .faculty-actions-row {
             display: flex;
-            gap: 10px;
-            position: fixed;
-            top: 130px;
-            right: 40px;
-            z-index: 100;
+            gap: 8px;
+            margin-bottom: 16px;
+            width: 100%;
+            align-items: stretch;
         }
 
         .search-input {
-            padding: 8px;
+            padding: 10px 12px;
             font-size: 14px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            width: 400px;
+            width: 75%;
+            flex: 0 0 75%;
+            min-width: 0;
+            box-sizing: border-box;
         }
 
         .add-btn {
-            padding: 8px 24px;
+            padding: 10px 24px;
             font-size: 14px;
             border: none;
             border-radius: 4px;
@@ -57,12 +56,15 @@
             color: #fff;
             cursor: pointer;
             font-weight: bold;
+            width: 25%;
+            flex: 0 0 25%;
+            white-space: nowrap;
         }
 
         /* ====== Table Styles ====== */
         .faculty-table-container {
             background: #fff;
-            border-radius: 10px;
+            border-radius: 8px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
             overflow: hidden;
         }
@@ -75,8 +77,8 @@
         .faculty-table th {
             background: #8B0000;
             color: #fff;
-            padding: 16px 8px;
-            font-size: 1.1rem;
+            padding: 12px;
+            font-size: 0.9rem;
             font-weight: bold;
             border: none;
             text-align: center;
@@ -91,9 +93,9 @@
         }
 
         .faculty-table td {
-            padding: 12px 8px;
+            padding: 12px;
             text-align: center;
-            font-size: 1rem;
+            font-size: 0.85rem;
             border: none;
             vertical-align: middle;
         }
@@ -126,17 +128,25 @@
             transition: all 0.2s ease;
         }
 
+        /* Disable hover transform on touch devices */
+        @media (hover: none) {
+            .faculty-row:hover {
+                transform: none;
+            }
+        }
+
         /* Make only the table area scroll vertically */
         .faculty-table-scroll {
-            max-height: 670px;
+            max-height: 536px;
             overflow-y: auto;
             width: 100%;
+            -webkit-overflow-scrolling: touch;
         }
 
         /* ====== Action Buttons ====== */
         .action-btns {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             justify-content: center;
             align-items: center;
         }
@@ -144,13 +154,13 @@
         .view-btn,
         .edit-btn,
         .delete-btn {
-            width: 40px;
-            height: 32px;
-            border-radius: 6px;
+            width: 35px;
+            height: 28px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: bold;
             background: #fff;
             border: none;
@@ -194,10 +204,10 @@
 
         .modal-box {
             background: #fff;
-            border-radius: 10px;
-            width: 450px;
+            border-radius: 8px;
+            width: 360px;
             max-width: 95vw;
-            padding: 40px;
+            padding: 0px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
             display: flex;
             flex-direction: column;
@@ -209,29 +219,29 @@
             color: #fff;
             font-weight: bold;
             text-align: center;
-            border-top-left-radius: 12px;
-            border-top-right-radius: 12px;
-            padding: 15px 20px;
-            font-size: 1.5rem;
-            letter-spacing: 1px;
-            width: 100%;
-            margin-bottom: 20px;
+            border-top-left-radius: 9.6px;
+            border-top-right-radius: 9.6px;
+            padding: 12px 16px;
+            font-size: 1.2rem;
+            letter-spacing: 0.8px;
+            width: 105%;
+            margin-bottom: 16px;
         }
 
         .modal-form-group {
             display: flex;
             flex-direction: row;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
+            gap: 9.6px;
+            margin-bottom: 9.6px;
             position: relative;
-            padding-bottom: 18px;
+            padding-bottom: 14.4px;
         }
 
         .modal-form-group label {
-            min-width: 130px;
+            min-width: 104px;
             text-align: left;
-            font-size: 1rem;
+            font-size: 0.8rem;
             color: #222;
             margin-bottom: 0;
         }
@@ -240,10 +250,10 @@
         .modal-form-group select,
         .modal-form-group textarea {
             flex: 1;
-            padding: 10px 12px;
-            border-radius: 5px;
+            padding: 8px 9.6px;
+            border-radius: 4px;
             border: 1px solid #bbb;
-            font-size: 1rem;
+            font-size: 0.8rem;
         }
 
         .modal-form-group input.valid,
@@ -262,23 +272,23 @@
 
         .validation-message {
             position: absolute;
-            left: 130px;
-            right: 12px;
+            left: 104px;
+            right: 9.6px;
             bottom: 0;
-            font-size: 0.85rem;
+            font-size: 0.68rem;
             color: #ff3636;
             pointer-events: none;
-            padding-left: 12px;
+            padding-left: 9.6px;
         }
 
         .modal-btn {
             width: 100%;
-            padding: 12px 0;
-            font-size: 1rem;
+            padding: 9.6px 0;
+            font-size: 0.8rem;
             font-weight: bold;
-            border-radius: 10px;
+            border-radius: 8px;
             cursor: pointer;
-            margin-top: 10px;
+            margin-top: 8px;
         }
 
         .modal-btn.add {
@@ -400,22 +410,267 @@
             font-weight: bold;
         }
 
-        /* Responsive design for smaller screens */
+        /* ====== Mobile Responsive Styles ====== */
+        
+        /* Tablet and below (768px) */
         @media (max-width: 768px) {
+            /* Header adjustments */
+            .faculty-title {
+                font-size: 1.5rem;
+            }
+
+            .faculty-subtitle {
+                font-size: 0.75rem;
+                margin-bottom: 16px;
+            }
+
+            /* Actions row - stack on small screens */
+            .faculty-actions-row {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .search-input {
+                width: 100%;
+            }
+
+            .add-btn {
+                width: 100%;
+                padding: 12px;
+            }
+
+            /* Table adjustments */
+            .faculty-table-container {
+                border-radius: 8px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .faculty-table-scroll {
+                max-height: 500px;
+                overflow-x: auto;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .faculty-table {
+                min-width: 600px; /* Ensure table doesn't compress too much */
+                font-size: 0.8rem;
+            }
+
+            .faculty-table th,
+            .faculty-table td {
+                padding: 8px 6px;
+                font-size: 0.75rem;
+            }
+
+            /* Action buttons - smaller on mobile */
+            .view-btn,
+            .edit-btn,
+            .delete-btn {
+                width: 32px;
+                height: 26px;
+                font-size: 0.9rem;
+            }
+
+            .action-btns {
+                gap: 4px;
+            }
+
+            /* Modal adjustments */
+            .modal-box {
+                width: 90vw !important;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+
+            .modal-header {
+                font-size: 18px !important;
+                padding: 14px 16px !important;
+            }
+
+            /* Modal form groups - stack on mobile */
+            #addFacultyModal .modal-form-group,
+            #updateFacultyModal .modal-form-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+                margin-bottom: 16px;
+                padding-bottom: 20px;
+            }
+
+            #addFacultyModal .modal-form-group label,
+            #updateFacultyModal .modal-form-group label {
+                min-width: 100%;
+                font-size: 0.9rem;
+                margin-bottom: 4px;
+            }
+
+            #addFacultyModal .modal-form-group input,
+            #addFacultyModal .modal-form-group select,
+            #addFacultyModal .modal-form-group textarea,
+            #updateFacultyModal .modal-form-group input,
+            #updateFacultyModal .modal-form-group select,
+            #updateFacultyModal .modal-form-group textarea {
+                width: 100%;
+                font-size: 0.9rem;
+                padding: 10px;
+            }
+
+            #addFacultyModal .validation-message,
+            #updateFacultyModal .validation-message {
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding-left: 0;
+                position: absolute;
+            }
+
+            .modal-form {
+                padding: 16px !important;
+            }
+
+            .modal-buttons {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .modal-btn {
+                width: 100%;
+            }
+
+            /* Delete modal buttons on mobile */
+            #deleteFacultyModal .modal-buttons {
+                flex-direction: column;
+            }
+
+            #deleteFacultyModal .modal-btn {
+                width: 100%;
+                min-width: auto !important;
+            }
+
+            /* View images modal */
             .images-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
 
             .view-images-container {
-                max-height: 400px;
+                max-height: 300px;
+                padding: 8px;
             }
 
             .image-item {
                 height: 100px;
             }
+
+            /* View images modal padding */
+            #viewImagesModal > .modal-box > div {
+                padding: 16px !important;
+            }
+
+            /* Teaching loads modal */
+            #viewTeachingLoadsModal .modal-box {
+                width: 95vw !important;
+            }
+
+            #teachingLoadsContainer {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            #teachingLoadsTable table {
+                min-width: 700px;
+                font-size: 0.8rem;
+            }
+
+            #teachingLoadsTable th,
+            #teachingLoadsTable td {
+                padding: 8px 4px;
+                font-size: 0.75rem;
+            }
+
+            #facultyInfo {
+                padding: 12px !important;
+            }
+
+            #facultyName {
+                font-size: 1rem !important;
+            }
+
+            #facultyDepartment {
+                font-size: 0.9rem !important;
+            }
+
+            /* Teaching loads modal padding */
+            #viewTeachingLoadsModal > .modal-box > div {
+                padding: 16px !important;
+            }
         }
 
+        /* Mobile phones (480px and below) */
         @media (max-width: 480px) {
+            /* Header */
+            .faculty-title {
+                font-size: 1.3rem;
+            }
+
+            .faculty-subtitle {
+                font-size: 0.7rem;
+                margin-bottom: 12px;
+            }
+
+            /* Table - more compact */
+            .faculty-table {
+                min-width: 550px;
+                font-size: 0.7rem;
+            }
+
+            .faculty-table th,
+            .faculty-table td {
+                padding: 6px 4px;
+                font-size: 0.7rem;
+            }
+
+            /* Action buttons - even smaller */
+            .view-btn,
+            .edit-btn,
+            .delete-btn {
+                width: 28px;
+                height: 24px;
+                font-size: 0.85rem;
+            }
+
+            /* Modal adjustments for small phones */
+            .modal-box {
+                width: 95vw !important;
+                margin: 10px;
+            }
+
+            .modal-header {
+                font-size: 16px !important;
+                padding: 12px 14px !important;
+            }
+
+            .modal-form {
+                padding: 12px !important;
+            }
+
+            #addFacultyModal .modal-form-group label,
+            #updateFacultyModal .modal-form-group label {
+                font-size: 0.85rem;
+            }
+
+            #addFacultyModal .modal-form-group input,
+            #addFacultyModal .modal-form-group select,
+            #addFacultyModal .modal-form-group textarea,
+            #updateFacultyModal .modal-form-group input,
+            #updateFacultyModal .modal-form-group select,
+            #updateFacultyModal .modal-form-group textarea {
+                font-size: 0.85rem;
+                padding: 8px;
+            }
+
+            /* Images grid - single column on very small screens */
             .images-grid {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 8px;
@@ -423,6 +678,70 @@
 
             .image-item {
                 height: 80px;
+            }
+
+            .view-images-container {
+                max-height: 250px;
+                padding: 8px;
+            }
+
+            /* Teaching loads table - more compact */
+            #teachingLoadsTable table {
+                min-width: 600px;
+                font-size: 0.7rem;
+            }
+
+            #teachingLoadsTable th,
+            #teachingLoadsTable td {
+                padding: 6px 3px;
+                font-size: 0.7rem;
+            }
+
+            /* Delete modal warning */
+            .delete-warning {
+                margin: 20px 0;
+            }
+
+            .warning-icon {
+                font-size: 3rem;
+                margin-bottom: 15px;
+            }
+
+            .warning-title {
+                font-size: 1rem;
+            }
+
+            .warning-message {
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Very small phones (360px and below) */
+        @media (max-width: 360px) {
+            .faculty-title {
+                font-size: 1.2rem;
+            }
+
+            .faculty-table {
+                min-width: 500px;
+            }
+
+            .modal-header {
+                font-size: 14px !important;
+                padding: 10px 12px !important;
+            }
+
+            #addFacultyModal .modal-form-group label,
+            #updateFacultyModal .modal-form-group label {
+                font-size: 0.8rem;
+            }
+
+            #addFacultyModal .modal-form-group input,
+            #addFacultyModal .modal-form-group select,
+            #updateFacultyModal .modal-form-group input,
+            #updateFacultyModal .modal-form-group select {
+                font-size: 0.8rem;
+                padding: 8px;
             }
         }
 
@@ -462,10 +781,10 @@
             <div class="faculty-title">Faculty Management</div>
             <div class="faculty-subtitle"></div>
         </div>
-        <div class="faculty-actions-row">
-            <input type="text" class="search-input" placeholder="Search...">
-            <button class="add-btn" onclick="openModal('addFacultyModal')">Add</button>
-        </div>
+    </div>
+    <div class="faculty-actions-row">
+        <input type="text" class="search-input" placeholder="Search...">
+        <button class="add-btn" onclick="openModal('addFacultyModal')">Add</button>
     </div>
 
     <div class="faculty-table-container">
@@ -515,7 +834,7 @@
 
     <!-- Add Faculty Modal -->
     <div id="addFacultyModal" class="modal-overlay" style="display:none;">
-        <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px;">
+        <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px; width: 432px; max-width: 95vw;">
             <form method="POST" enctype="multipart/form-data" action="{{ route('deptHead.faculty.store') }}"
                 style="padding: 0;">
                 @csrf
@@ -645,7 +964,7 @@
 
     <!-- Update Faculty Modal -->
     <div id="updateFacultyModal" class="modal-overlay" style="display:none;">
-        <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px;">
+        <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px; width: 432px; max-width: 95vw;">
             <form id="updateFacultyForm" method="POST" enctype="multipart/form-data" style="padding: 0;">
                 @csrf
                 @method('PUT')
@@ -788,8 +1107,8 @@
 
             <!-- Action Buttons -->
             <div class="modal-buttons" style="display: flex; gap: 12px; justify-content: center; margin-top: 12px;">
-                <button type="submit" class="modal-btn delete" style="min-width: 140px;">Delete Faculty</button>
-                <button type="button" class="modal-btn cancel" style="min-width: 140px;"
+                <button type="submit" class="modal-btn delete" style="min-width: 140px; width: auto;">Delete Faculty</button>
+                <button type="button" class="modal-btn cancel" style="min-width: 140px; width: auto;"
                     onclick="closeModal('deleteFacultyModal')">Cancel</button>
             </div>
         </form>
@@ -798,12 +1117,16 @@
 
     <!-- View Images Modal -->
     <div id="viewImagesModal" class="modal-overlay" style="display:none;">
-        <div class="modal-box" style="width: 600px; max-width: 95vw;">
-            <div class="modal-header-custom">FACULTY IMAGES</div>
-            <div class="view-images-container">
-                <div id="viewImagesContainer" class="images-grid"></div>
+        <div class="modal-box" style="width: 640px; max-width: 95vw; padding: 0; overflow: hidden; border-radius: 8px;">
+            <div class="modal-header-custom" style="margin-bottom: 0;">FACULTY IMAGES</div>
+            <div style="padding: 20px;">
+                <div class="view-images-container">
+                    <div id="viewImagesContainer" class="images-grid"></div>
+                </div>
+                <div style="margin-top: 20px; text-align: center;">
+                    <button type="button" class="modal-btn cancel" onclick="closeModal('viewImagesModal')">Close</button>
+                </div>
             </div>
-            <button type="button" class="modal-btn cancel" onclick="closeModal('viewImagesModal')">Close</button>
         </div>
     </div>
 

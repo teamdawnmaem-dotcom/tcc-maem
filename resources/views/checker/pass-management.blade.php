@@ -10,7 +10,7 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            margin-bottom: 40px;
+            margin-bottom: 32px;
         }
 
         .faculty-title-group {
@@ -20,39 +20,39 @@
 
 
         .faculty-title {
-            font-size: 2.3rem;
+            font-size: 1.84rem;
             font-weight: bold;
             color: #6d0000;
         }
 
         .faculty-subtitle {
-            font-size: 1rem;
+            font-size: 0.8rem;
             color: #666;
-            margin-bottom: 30px;
+            margin-bottom: 24px;
         }
 
         .faculty-actions-row {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             position: absolute;
-            top: 130px;
-            right: 40px;
+            top: 104px;
+            right: 32px;
             z-index: 100;
         }
 
         .search-input {
-            padding: 8px;
-            font-size: 14px;
+            padding: 6.4px;
+            font-size: 11.2px;
             border: 1px solid #ccc;
-            border-radius: 4px;
-            width: 400px;
+            border-radius: 3.2px;
+            width: 320px;
         }
 
         .add-btn {
-            padding: 8px 24px;
-            font-size: 14px;
+            padding: 6.4px 19.2px;
+            font-size: 11.2px;
             border: none;
-            border-radius: 4px;
+            border-radius: 3.2px;
             background-color: #2ecc71;
             color: #fff;
             cursor: pointer;
@@ -61,7 +61,7 @@
 
         .teaching-load-table-container {
             background: #fff;
-            border-radius: 10px;
+            border-radius: 8px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
             overflow: hidden;
         }
@@ -74,8 +74,8 @@
         .teaching-load-table th {
             background: #8B0000;
             color: #fff;
-            padding: 16px 0;
-            font-size: 1.1rem;
+            padding: 12.8px 0;
+            font-size: 0.88rem;
             font-weight: bold;
             border: none;
         }
@@ -88,9 +88,9 @@
         }
 
         .teaching-load-table td {
-            padding: 12px 0;
+            padding: 9.6px 0;
             text-align: center;
-            font-size: 1rem;
+            font-size: 0.8rem;
             border: none;
         }
 
@@ -108,28 +108,28 @@
 
         /* Make only the table area scroll vertically */
         .teaching-load-table-scroll {
-            max-height: 670px;
+            max-height: 536px;
             overflow-y: auto;
             width: 100%;
         }
 
         .action-btns {
             display: flex;
-            gap: 8px;
+            gap: 6.4px;
             justify-content: center;
             align-items: center;
         }
 
         .edit-btn,
         .delete-btn {
-            width: 60px;
-            height: 32px;
-            border-radius: 6px;
+            width: 48px;
+            height: 25.6px;
+            border-radius: 4.8px;
             border: none;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.9rem;
+            font-size: 0.72rem;
             font-weight: bold;
             cursor: pointer;
         }
@@ -159,22 +159,22 @@
 
         .modal-box {
             background: #fff;
-            border-radius: 10px;
+            border-radius: 8px;
             width: 100%;
-            max-width: 450px;
-            padding: 40px 40px 30px 40px;
+            max-width: 360px;
+            padding: 0;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
             display: flex;
             flex-direction: column;
-            align-items: center;
+            overflow: hidden;
         }
 
         .modal-header {
-            font-size: 2rem;
+            font-size: 1.6rem;
             font-weight: bold;
             color: #8B0000;
             text-align: center;
-            margin-bottom: 28px;
+            margin-bottom: 0;
         }
 
         .modal-form {
@@ -184,21 +184,32 @@
             align-items: stretch;
         }
 
+        .modal-content {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        #deleteModal .modal-box {
+            padding: 32px 32px 24px 32px;
+        }
+
         .modal-form-group {
             display: flex;
             flex-direction: row;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
+            gap: 9.6px;
+            margin-bottom: 9.6px;
             position: relative;
-            padding-bottom: 18px;
+            padding-bottom: 14.4px;
         }
 
         .modal-form-group label {
-            min-width: 130px;
+            min-width: 104px;
             text-align: left;
             margin-bottom: 0;
-            font-size: 1rem;
+            font-size: 0.8rem;
             color: #222;
         }
 
@@ -207,35 +218,35 @@
         .modal-form-group select {
             flex: 1;
             width: 100%;
-            padding: 10px 12px;
-            font-size: 1rem;
+            padding: 8px 9.6px;
+            font-size: 0.8rem;
             border: 1px solid #bbb;
-            border-radius: 5px;
+            border-radius: 4px;
         }
 
         .modal-form-group input.valid,
         .modal-form-group select.valid,
         .modal-form-group textarea.valid {
             border-color: #2ecc71;
-            box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.1);
+            box-shadow: 0 0 0 1.6px rgba(46, 204, 113, 0.1);
         }
 
         .modal-form-group input.invalid,
         .modal-form-group select.invalid,
         .modal-form-group textarea.invalid {
             border-color: #ff3636;
-            box-shadow: 0 0 0 2px rgba(255, 54, 54, 0.1);
+            box-shadow: 0 0 0 1.6px rgba(255, 54, 54, 0.1);
         }
 
         .validation-message {
             position: absolute;
-            left: 130px;
-            right: 12px;
+            left: 104px;
+            right: 9.6px;
             bottom: 0;
-            font-size: 0.85rem;
+            font-size: 0.68rem;
             color: #ff3636;
             pointer-events: none;
-            padding-left: 12px;
+            padding-left: 9.6px;
         }
 
         .modal-form-group textarea {
@@ -244,28 +255,28 @@
 
         .modal-btn {
             width: 100%;
-            padding: 14px 0;
-            font-size: 1.1rem;
+            padding: 11.2px 0;
+            font-size: 0.88rem;
             font-weight: bold;
             border: none;
-            border-radius: 6px;
+            border-radius: 4.8px;
             margin-top: 0;
             cursor: pointer;
         }
 
         .modal-buttons {
             display: flex;
-            gap: 12px;
+            gap: 9.6px;
             justify-content: center;
-            margin-top: 18px;
+            margin-top: 14.4px;
         }
 
         .modal-btn.cancel {
             background: #fff !important;
             color: #800000 !important;
             border: 2px solid #800000 !important;
-            border-radius: 8px;
-            padding: 10px 20px;
+            border-radius: 6.4px;
+            padding: 8px 16px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
@@ -279,8 +290,8 @@
             background: #fff !important;
             color: #ff0000 !important;
             border: 2px solid #ff0000 !important;
-            border-radius: 8px;
-            padding: 10px 20px;
+            border-radius: 6.4px;
+            padding: 8px 16px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
@@ -297,10 +308,10 @@
 
 
         .view-slip-btn {
-            padding: 8px 16px;
-            font-size: 0.9rem;
+            padding: 6.4px 12.8px;
+            font-size: 0.72rem;
             border: none;
-            border-radius: 5px;
+            border-radius: 4px;
             background-color: #8B0000;
             color: #fff;
             cursor: pointer;
@@ -320,14 +331,14 @@
             padding: 0;
             position: relative;
             background: #fff;
-            border-radius: 12px;
+            border-radius: 9.6px;
             overflow: hidden;
         }
 
         #slipImage {
             max-width: 100%;
             max-height: 75vh;
-            border-radius: 8px;
+            border-radius: 6.4px;
             object-fit: contain;
             display: block;
         }
@@ -335,23 +346,23 @@
         /* Close button styles for slip modal */
         #slipModal .close {
             position: absolute;
-            top: 15px;
-            right: 20px;
+            top: 12px;
+            right: 16px;
             z-index: 1000;
-            width: 40px;
-            height: 40px;
+            width: 32px;
+            height: 32px;
             background: rgba(0, 0, 0, 0.7);
             color: #fff;
             border: none;
             border-radius: 50%;
-            font-size: 24px;
+            font-size: 19.2px;
             font-weight: bold;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 3.2px 9.6px rgba(0, 0, 0, 0.3);
         }
 
         #slipModal .close:hover {
@@ -368,20 +379,328 @@
         #slipModal .modal-header {
             background: transparent;
             color: #8B0000;
-            padding: 15px 20px;
+            padding: 12px 16px;
             margin: 0;
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             font-weight: bold;
             text-align: center;
         }
 
         /* Slip modal content */
         #slipModal .slip-content {
-            padding: 20px;
+            padding: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: #f8f9fa;
+        }
+
+        /* Mobile Responsive Design for phones (max-width: 430px) */
+        @media (max-width: 430px) {
+            /* Faculty Header */
+            .faculty-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+                margin-bottom: 20px;
+                position: relative;
+            }
+
+            .faculty-title-group {
+                width: 100%;
+            }
+
+            .faculty-title {
+                font-size: 1.4rem;
+                margin-bottom: 4px;
+            }
+
+            .faculty-subtitle {
+                font-size: 0.75rem;
+                margin-bottom: 0;
+            }
+
+            /* Faculty Actions Row */
+            .faculty-actions-row {
+                position: relative;
+                top: 0;
+                right: 0;
+                width: 100%;
+                flex-direction: row;
+                align-items: center;
+                gap: 8px;
+                z-index: 1;
+            }
+
+            .search-input {
+                flex: 0 0 calc(75% - 4px);
+                width: calc(75% - 4px);
+                padding: 10px 12px;
+                font-size: 0.9rem;
+                border-radius: 6px;
+                box-sizing: border-box;
+                margin: 0;
+            }
+
+            .add-btn {
+                flex: 0 0 calc(25% - 4px);
+                width: calc(25% - 4px);
+                padding: 12px;
+                font-size: 0.9rem;
+                border-radius: 6px;
+                font-weight: bold;
+                text-align: center;
+                margin: 0;
+            }
+
+            /* Table Container */
+            .teaching-load-table-container {
+                border-radius: 8px;
+                overflow: hidden;
+            }
+
+            .teaching-load-table-scroll {
+                max-height: 50vh;
+                overflow-x: auto;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .teaching-load-table {
+                min-width: 1000px; /* Minimum width to maintain readability */
+            }
+
+            .teaching-load-table th {
+                padding: 10px 6px;
+                font-size: 0.7rem;
+                white-space: nowrap;
+            }
+
+            .teaching-load-table td {
+                padding: 8px 6px;
+                font-size: 0.7rem;
+                white-space: nowrap;
+            }
+
+            /* Empty state message */
+            .teaching-load-table td[colspan] {
+                font-size: 0.75rem;
+                padding: 20px 12px;
+            }
+
+            /* Action Buttons */
+            .action-btns {
+                gap: 6px;
+            }
+
+            .edit-btn,
+            .delete-btn {
+                width: 40px;
+                height: 28px;
+                font-size: 0.9rem;
+            }
+
+            .view-slip-btn {
+                padding: 6px 10px !important;
+                font-size: 0.7rem !important;
+            }
+
+            /* Modals - Mobile Optimized */
+            .modal-overlay {
+                padding: 10px;
+                align-items: flex-start;
+                padding-top: 60px;
+            }
+
+            .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+                padding: 0 !important;
+                margin: 0;
+                max-height: 85vh;
+                overflow-y: auto;
+            }
+
+            /* Add Modal */
+            #addModal .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+            }
+
+            #addModal .modal-header {
+                font-size: 1.1rem !important;
+                padding: 12px 16px !important;
+            }
+
+            #addModal .modal-content {
+                padding: 16px !important;
+            }
+
+            #addModal .modal-form-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+                margin-bottom: 12px;
+                padding-bottom: 18px;
+            }
+
+            #addModal .modal-form-group label {
+                min-width: auto;
+                width: 100%;
+                margin-bottom: 4px;
+                font-size: 0.85rem;
+            }
+
+            #addModal .modal-form-group input,
+            #addModal .modal-form-group select,
+            #addModal .modal-form-group textarea {
+                width: 100%;
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+
+            #addModal .validation-message {
+                position: relative;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding-left: 0;
+                margin-top: 4px;
+            }
+
+            #addModal .modal-buttons {
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 16px;
+            }
+
+            #addModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 0.9rem !important;
+            }
+
+            /* Edit Modal */
+            #editModal .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+            }
+
+            #editModal .modal-header {
+                font-size: 1.1rem !important;
+                padding: 12px 16px !important;
+            }
+
+            #editModal .modal-content {
+                padding: 16px !important;
+            }
+
+            #editModal .modal-form-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+                margin-bottom: 12px;
+                padding-bottom: 18px;
+            }
+
+            #editModal .modal-form-group label {
+                min-width: auto;
+                width: 100%;
+                margin-bottom: 4px;
+                font-size: 0.85rem;
+            }
+
+            #editModal .modal-form-group input,
+            #editModal .modal-form-group select,
+            #editModal .modal-form-group textarea {
+                width: 100%;
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+
+            #editModal .validation-message {
+                position: relative;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding-left: 0;
+                margin-top: 4px;
+            }
+
+            #editModal .modal-buttons {
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 16px;
+            }
+
+            #editModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 0.9rem !important;
+            }
+
+            /* Delete Modal */
+            #deleteModal .modal-box {
+                width: 90vw !important;
+                max-width: 90vw !important;
+                padding: 24px 20px !important;
+            }
+
+            #deleteModal .modal-header {
+                font-size: 1.1rem !important;
+                margin-bottom: 16px !important;
+            }
+
+            #deleteModal .modal-buttons {
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 20px !important;
+            }
+
+            #deleteModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 0.9rem !important;
+            }
+
+            /* Slip Modal */
+            #slipModal .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+                padding: 0 !important;
+            }
+
+            #slipModal .modal-header {
+                font-size: 1rem !important;
+                padding: 10px 16px !important;
+            }
+
+            #slipModal .slip-content {
+                padding: 12px !important;
+            }
+
+            #slipImage {
+                max-height: 60vh !important;
+            }
+
+            #slipModal .close {
+                width: 28px !important;
+                height: 28px !important;
+                font-size: 16px !important;
+                top: 8px !important;
+                right: 12px !important;
+            }
+
+            /* Logic Error Messages */
+            .logic-error {
+                font-size: 0.8rem !important;
+                padding: 8px 12px !important;
+            }
+
+            .server-error {
+                font-size: 0.8rem !important;
+                padding: 8px 12px !important;
+            }
         }
     </style>
 @endsection
@@ -471,30 +790,29 @@
 
     <!-- Add Modal -->
     <div id="addModal" class="modal-overlay" style="display:none;">
-        <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px;">
-            <form style="padding: 0;" action="{{ route('checker.passes.store') }}" method="POST"
+        <div class="modal-box">
+            <form class="modal-form" action="{{ route('checker.passes.store') }}" method="POST"
                 enctype="multipart/form-data">
                 @csrf
                 <div class="modal-header"
-                    style="
-                background-color: #8B0000; color: white; padding: 18px 24px; font-size: 24px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.5px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                    style="background-color: #8B0000; color: white; padding: 14.4px 19.2px; font-size: 19.2px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.4px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
                     ADD PASS
                 </div>
-                <div class="modal-form" style="padding: 24px 24px 24px;">
+                <div class="modal-content" style="padding: 19.2px;">
                     <style>
                         #addModal .modal-form-group {
                             display: flex;
                             align-items: center;
-                            gap: 6px;
-                            margin-bottom: 4px;
-                            padding-bottom: 6px;
+                            gap: 4.8px;
+                            margin-bottom: 3.2px;
+                            padding-bottom: 4.8px;
                             position: relative;
                         }
 
                         #addModal .modal-form-group label {
-                            min-width: 130px;
+                            min-width: 104px;
                             margin-bottom: 0;
-                            font-size: 1rem;
+                            font-size: 0.8rem;
                             text-align: left;
                         }
 
@@ -502,18 +820,18 @@
                         #addModal .modal-form-group select {
                             flex: 1;
                             width: 100%;
-                            padding: 10px 12px;
-                            font-size: 1rem;
+                            padding: 8px 9.6px;
+                            font-size: 0.8rem;
                             border: 1px solid #bbb;
-                            border-radius: 5px;
+                            border-radius: 4px;
                         }
 
                         #addModal .validation-message {
-                            font-size: 0.8rem;
-                            left: 130px;
-                            right: 10px;
-                            bottom: -10px;
-                            padding-left: 10px;
+                            font-size: 0.64rem;
+                            left: 104px;
+                            right: 8px;
+                            bottom: -8px;
+                            padding-left: 8px;
                             line-height: 1.1;
                             position: absolute;
                             color: #ff3636;
@@ -522,9 +840,9 @@
 
                         #addModal .modal-buttons {
                             display: flex;
-                            gap: 12px;
+                            gap: 9.6px;
                             justify-content: center;
-                            margin-top: 12px;
+                            margin-top: 9.6px;
                         }
 
                         #addModal .modal-btn {
@@ -612,29 +930,28 @@
 
     <!-- Edit Modal -->
     <div id="editModal" class="modal-overlay" style="display:none;">
-        <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px;">
-            <form style="padding: 0;" id="editForm" method="POST" enctype="multipart/form-data">
+        <div class="modal-box">
+            <form class="modal-form" id="editForm" method="POST" enctype="multipart/form-data">
                 @csrf @method('PUT')
                 <div class="modal-header"
-                    style="
-                background-color: #8B0000; color: white; padding: 18px 24px; font-size: 24px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.5px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                    style="background-color: #8B0000; color: white; padding: 14.4px 19.2px; font-size: 19.2px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.4px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
                     UPDATE PASS
                 </div>
-                <div class="modal-form" style="width:100%; padding: 24px 24px 24px;">
+                <div class="modal-content" style="padding: 19.2px;">
                     <style>
                         #editModal .modal-form-group {
                             display: flex;
                             align-items: center;
-                            gap: 6px;
-                            margin-bottom: 4px;
-                            padding-bottom: 6px;
+                            gap: 4.8px;
+                            margin-bottom: 3.2px;
+                            padding-bottom: 4.8px;
                             position: relative;
                         }
 
                         #editModal .modal-form-group label {
-                            min-width: 130px;
+                            min-width: 104px;
                             margin-bottom: 0;
-                            font-size: 1rem;
+                            font-size: 0.8rem;
                             text-align: left;
                         }
 
@@ -642,18 +959,18 @@
                         #editModal .modal-form-group select {
                             flex: 1;
                             width: 100%;
-                            padding: 10px 12px;
-                            font-size: 1rem;
+                            padding: 8px 9.6px;
+                            font-size: 0.8rem;
                             border: 1px solid #bbb;
-                            border-radius: 5px;
+                            border-radius: 4px;
                         }
 
                         #editModal .validation-message {
-                            font-size: 0.8rem;
-                            left: 130px;
-                            right: 10px;
-                            bottom: -10px;
-                            padding-left: 10px;
+                            font-size: 0.64rem;
+                            left: 104px;
+                            right: 8px;
+                            bottom: -8px;
+                            padding-left: 8px;
                             line-height: 1.1;
                             position: absolute;
                             color: #ff3636;
@@ -662,9 +979,9 @@
 
                         #editModal .modal-buttons {
                             display: flex;
-                            gap: 12px;
+                            gap: 9.6px;
                             justify-content: center;
-                            margin-top: 12px;
+                            margin-top: 9.6px;
                         }
 
                         #editModal .modal-btn.add {

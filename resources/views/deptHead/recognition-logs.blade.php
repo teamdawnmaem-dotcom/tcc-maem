@@ -9,29 +9,29 @@
         display: flex;
         justify-content: space-between;
         align-items: flex-end;
-        margin-bottom: 40px;
+        margin-bottom: 32px;
     }
     .faculty-title-group {
         display: flex;
         flex-direction: column;
     }
     .faculty-title {
-        font-size: 2.3rem;
+        font-size: 1.84rem;
         font-weight: bold;
         color: #6d0000;
     }
     .faculty-subtitle {
-        font-size: 1rem;
+        font-size: 0.8rem;
         color: #666;
-        margin-bottom: 30px;
+        margin-bottom: 24px;
     }
 
     .recognition-logs-table-container {
         background: #fff;
-        border-radius: 10px;
+        border-radius: 8px;
         box-shadow: 0 8px 32px rgba(0,0,0,0.22), 0 1.5px 8px rgba(0,0,0,0.12);
         overflow: hidden;
-        max-height: 70vh;
+        max-height: 56vh;
         overflow-y: auto;
     }
     .recognition-logs-table {
@@ -41,20 +41,20 @@
     .recognition-logs-table th {
         background: #8B0000;
         color: #fff;
-        padding: 20px 15px;
+        padding: 16px 12px;
         text-align: left;
         font-weight: 600;
-        font-size: 0.95rem;
-        letter-spacing: 0.5px;
+        font-size: 0.76rem;
+        letter-spacing: 0.4px;
         text-transform: uppercase;
         position: sticky;
         top: 0;
         z-index: 10;
     }
     .recognition-logs-table td {
-        padding: 18px 15px;
+        padding: 14.4px 12px;
         border-bottom: 1px solid #f1f3f4;
-        font-size: 0.9rem;
+        font-size: 0.72rem;
         color: #495057;
         vertical-align: middle;
     }
@@ -69,21 +69,21 @@
 
     .filter-section {
         background: #fff;
-        border-radius: 12px;
-        padding: 30px;
-        margin-bottom: 30px;
+        border-radius: 9.6px;
+        padding: 24px;
+        margin-bottom: 24px;
         box-shadow: 0 4px 20px rgba(0,0,0,0.08);
         border: 1px solid #e9ecef;
     }
 
     .filter-header {
-        margin-bottom: 25px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #f1f3f4;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 1.6px solid #f1f3f4;
     }
 
     .filter-title {
-        font-size: 1.4rem;
+        font-size: 1.12rem;
         font-weight: 600;
         color: #2c3e50;
         margin: 0;
@@ -92,8 +92,8 @@
     .filter-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 20px;
-        margin-bottom: 25px;
+        gap: 16px;
+        margin-bottom: 20px;
     }
 
     .filter-group {
@@ -104,22 +104,22 @@
     .filter-group:has(button) {
         display: flex;
         flex-direction: row;
-        gap: 15px;
+        gap: 12px;
         align-items: end;
     }
 
     .filter-label {
         font-weight: 600;
         color: #495057;
-        margin-bottom: 8px;
-        font-size: 0.9rem;
+        margin-bottom: 6.4px;
+        font-size: 0.72rem;
     }
 
     .filter-input, .filter-select {
-        padding: 12px 16px;
-        border: 2px solid #e9ecef;
-        border-radius: 8px;
-        font-size: 0.95rem;
+        padding: 9.6px 12.8px;
+        border: 1.6px solid #e9ecef;
+        border-radius: 6.4px;
+        font-size: 0.76rem;
         background: #ffffff;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         color: #495057;
@@ -129,31 +129,31 @@
     .filter-input:focus, .filter-select:focus {
         outline: none;
         border-color: #8B0000;
-        box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+        box-shadow: 0 0 0 2.4px rgba(139, 0, 0, 0.1);
         transform: translateY(-1px);
     }
 
     .filter-actions {
         display: flex;
-        gap: 15px;
+        gap: 12px;
         align-items: center;
         justify-content: center;
         flex-wrap: wrap;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
     }
 
     .filter-btn, .clear-btn {
-        padding: 15px 32px;
+        padding: 12px 25.6px;
         border: none;
-        border-radius: 8px;
+        border-radius: 6.4px;
         font-weight: 600;
-        font-size: 0.95rem;
+        font-size: 0.76rem;
         cursor: pointer;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.4px;
         white-space: nowrap;
-        min-width: 200px;
+        min-width: 160px;
         width: auto;
     }
 
@@ -183,11 +183,11 @@
 
     .search-section {
         display: flex;
-        gap: 20px;
+        gap: 16px;
         align-items: end;
-        margin-top: 20px;
-        padding-top: 20px;
-        border-top: 2px solid #f1f3f4;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1.6px solid #f1f3f4;
     }
 
     .search-group {
@@ -197,10 +197,10 @@
 
     .search-input {
         width: 100%;
-        padding: 12px 16px;
-        border: 2px solid #e9ecef;
-        border-radius: 8px;
-        font-size: 0.95rem;
+        padding: 9.6px 12.8px;
+        border: 1.6px solid #e9ecef;
+        border-radius: 6.4px;
+        font-size: 0.76rem;
         background: #ffffff;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         color: #495057;
@@ -210,13 +210,13 @@
     .search-input:focus {
         outline: none;
         border-color: #8B0000;
-        box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+        box-shadow: 0 0 0 2.4px rgba(139, 0, 0, 0.1);
         transform: translateY(-1px);
     }
 
     .search-actions {
         display: flex;
-        gap: 15px;
+        gap: 12px;
         align-items: end;
         flex-shrink: 0;
     }
@@ -225,43 +225,43 @@
     .status-recognized {
         background: #28a745;
         color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.8rem;
+        padding: 3.2px 6.4px;
+        border-radius: 3.2px;
+        font-size: 0.64rem;
         font-weight: bold;
     }
 
     .status-unknown_face {
         background: #dc3545;
         color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.8rem;
+        padding: 3.2px 6.4px;
+        border-radius: 3.2px;
+        font-size: 0.64rem;
         font-weight: bold;
     }
 
     .status-processing {
         background: #ffc107;
         color: #212529;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.8rem;
+        padding: 3.2px 6.4px;
+        border-radius: 3.2px;
+        font-size: 0.64rem;
         font-weight: bold;
     }
 
     .no-records {
         text-align: center;
-        padding: 40px;
+        padding: 32px;
         color: #6c757d;
-        font-size: 1.1rem;
+        font-size: 0.88rem;
         font-style: italic;
     }
 
     .loading {
         text-align: center;
-        padding: 40px;
+        padding: 32px;
         color: #8B0000;
-        font-size: 1.1rem;
+        font-size: 0.88rem;
     }
 
     @media (max-width: 768px) {
@@ -288,6 +288,204 @@
             flex-direction: row;
             justify-content: center;
             margin-top: 15px;
+        }
+    }
+
+    /* Mobile responsive design for 430px width */
+    @media (max-width: 430px) {
+        .faculty-header {
+            margin-bottom: 20px;
+        }
+
+        .faculty-title {
+            font-size: 1.4rem;
+        }
+
+        .faculty-subtitle {
+            font-size: 0.7rem;
+            margin-bottom: 16px;
+        }
+
+        .filter-section {
+            padding: 16px;
+            margin-bottom: 16px;
+            border-radius: 8px;
+        }
+
+        .filter-header {
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+        }
+
+        .filter-title {
+            font-size: 0.95rem;
+        }
+
+        .filter-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .filter-group {
+            margin-bottom: 0;
+        }
+
+        .filter-label {
+            font-size: 0.7rem;
+            margin-bottom: 5px;
+        }
+
+        .filter-input, .filter-select {
+            padding: 10px 12px;
+            font-size: 0.75rem;
+            border-radius: 5px;
+        }
+
+        .filter-group:has(button) {
+            flex-direction: column;
+            gap: 8px;
+            align-items: stretch;
+        }
+
+        .filter-btn, .clear-btn {
+            width: 100%;
+            min-width: auto;
+            padding: 11px 20px;
+            font-size: 0.74rem;
+            margin: 0;
+        }
+
+        .search-section {
+            margin-top: 12px;
+            padding-top: 12px;
+            gap: 12px;
+        }
+
+        .search-input {
+            padding: 10px 12px;
+            font-size: 0.75rem;
+            border-radius: 5px;
+        }
+
+        .search-input::placeholder {
+            font-size: 0.7rem;
+        }
+
+        .search-actions {
+            width: 100%;
+            margin-top: 0;
+        }
+
+        .search-actions .filter-btn {
+            width: 100%;
+        }
+
+        .recognition-logs-table-container {
+            border-radius: 8px;
+            max-height: 65vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            padding: 8px;
+            background: #f8f9fa;
+        }
+
+        /* Add scroll indicator */
+        .recognition-logs-table-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .recognition-logs-table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .recognition-logs-table-container::-webkit-scrollbar-thumb {
+            background: #8B0000;
+            border-radius: 3px;
+        }
+
+        .recognition-logs-table-container::-webkit-scrollbar-thumb:hover {
+            background: #A52A2A;
+        }
+
+        /* Convert table to card layout on mobile */
+        .recognition-logs-table {
+            width: 100%;
+            display: block;
+        }
+
+        .recognition-logs-table thead {
+            display: none;
+        }
+
+        .recognition-logs-table tbody {
+            display: block;
+        }
+
+        .recognition-logs-table tr {
+            display: block;
+            margin-bottom: 12px;
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .recognition-logs-table td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f3f4;
+            text-align: right;
+            font-size: 0.72rem;
+        }
+
+        .recognition-logs-table td:last-child {
+            border-bottom: none;
+        }
+
+        .recognition-logs-table td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            font-size: 0.68rem;
+            color: #495057;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-right: auto;
+            text-align: left;
+            padding-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .status-recognized,
+        .status-unknown_face,
+        .status-processing {
+            padding: 4px 8px;
+            font-size: 0.62rem;
+            border-radius: 4px;
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        .no-records {
+            padding: 24px 16px;
+            font-size: 0.8rem;
+            background: #fff;
+            border-radius: 8px;
+            margin: 12px;
+        }
+
+        .loading {
+            padding: 24px 16px;
+            font-size: 0.8rem;
+            background: #fff;
+            border-radius: 8px;
+            margin: 12px;
         }
     }
 </style>
@@ -383,12 +581,12 @@
         <tbody id="logsTableBody">
             @forelse ($logs as $log)
                 <tr>
-                    <td>{{ \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $log->recognition_time)->format('F j, Y - g:i:sa') }}</td>
-                    <td>{{ $log->camera_name ?? 'N/A' }}</td>
-                    <td>{{ $log->room_name ?? 'N/A' }}</td>
-                    <td>{{ $log->building_no ?? 'N/A' }}</td>
-                    <td>{{ $log->faculty_name ?? 'Unknown' }}</td>
-                    <td><span class="status-{{ $log->status }}">{{ $log->status }}</span></td>
+                    <td data-label="Time">{{ \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $log->recognition_time)->format('F j, Y - g:i:sa') }}</td>
+                    <td data-label="Camera">{{ $log->camera_name ?? 'N/A' }}</td>
+                    <td data-label="Room">{{ $log->room_name ?? 'N/A' }}</td>
+                    <td data-label="Building">{{ $log->building_no ?? 'N/A' }}</td>
+                    <td data-label="Instructor">{{ $log->faculty_name ?? 'Unknown' }}</td>
+                    <td data-label="Status"><span class="status-{{ $log->status }}">{{ $log->status }}</span></td>
                 </tr>
             @empty
                 <tr>
@@ -471,12 +669,12 @@ function displayLogs(logs) {
         
         return `
         <tr>
-            <td>${formattedTime}</td>
-            <td>${log.camera_name || 'N/A'}</td>
-            <td>${log.room_name || 'N/A'}</td>
-            <td>${log.building_no || 'N/A'}</td>
-            <td>${log.faculty_name || 'Unknown'}</td>
-            <td><span class="status-${log.status}">${log.status}</span></td>
+            <td data-label="Time">${formattedTime}</td>
+            <td data-label="Camera">${log.camera_name || 'N/A'}</td>
+            <td data-label="Room">${log.room_name || 'N/A'}</td>
+            <td data-label="Building">${log.building_no || 'N/A'}</td>
+            <td data-label="Instructor">${log.faculty_name || 'Unknown'}</td>
+            <td data-label="Status"><span class="status-${log.status}">${log.status}</span></td>
         </tr>
         `;
     }).join('');

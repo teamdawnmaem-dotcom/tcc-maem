@@ -32,8 +32,6 @@ class TeachingLoadArchive extends Model
 
     protected $casts = [
         'archived_at' => 'datetime',
-        'teaching_load_time_in' => 'datetime:H:i:s',
-        'teaching_load_time_out' => 'datetime:H:i:s',
     ];
 
     // Relationship to Faculty

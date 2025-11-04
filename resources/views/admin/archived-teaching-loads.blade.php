@@ -1,4 +1,4 @@
-@extends('layouts.appdeptHead')
+@extends('layouts.appAdmin')
 
 @section('title', 'Archived Teaching Loads - Tagoloan Community College')
 @section('files-active', 'active')
@@ -229,13 +229,13 @@
              display: flex;
              align-items: center;
              justify-content: center;
-             z-index: 1000;
+             z-index: 9999;
          }
 
          .modal-box {
              background: #fff;
-             border-radius: 10px;
-             width: 450px;
+             border-radius: 8px;
+             width: 360px;
              max-width: 95vw;
              padding: 0;
              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
@@ -243,6 +243,9 @@
              flex-direction: column;
              align-items: center;
              overflow: hidden;
+             position: relative;
+             z-index: 10000;
+             pointer-events: auto;
          }
 
          .modal-header-custom {
@@ -250,21 +253,21 @@
              color: #fff;
              font-weight: bold;
              text-align: center;
-             border-top-left-radius: 12px;
-             border-top-right-radius: 12px;
-             padding: 15px 20px;
-             font-size: 1.5rem;
-             letter-spacing: 1px;
+             border-top-left-radius: 9.6px;
+             border-top-right-radius: 9.6px;
+             padding: 12px 16px;
+             font-size: 1.2rem;
+             letter-spacing: 0.8px;
              width: 100%;
              margin-bottom: 0;
          }
 
          .modal-btn {
              width: auto;
-             padding: 12px 24px;
-             font-size: 1rem;
+             padding: 9.6px 19px;
+             font-size: 0.8rem;
              font-weight: bold;
-             border-radius: 10px;
+             border-radius: 8px;
              cursor: pointer;
              margin-top: 10px;
              border: none;
@@ -280,6 +283,255 @@
          .modal-btn.cancel:hover {
              background: #800000;
              color: #fff;
+         }
+
+         /* Mobile Responsive Design for phones (max-width: 430px) */
+         @media (max-width: 430px) {
+             /* Faculty Header */
+             .faculty-header {
+                 flex-direction: column;
+                 align-items: flex-start;
+                 gap: 16px;
+                 margin-bottom: 20px;
+                 position: relative;
+             }
+
+             .faculty-title-group {
+                 width: 100%;
+             }
+
+             .faculty-title {
+                 font-size: 1.4rem;
+                 margin-bottom: 4px;
+             }
+
+             .faculty-subtitle {
+                 font-size: 0.75rem;
+                 margin-bottom: 0;
+             }
+
+             /* Faculty Actions Row */
+             .faculty-actions-row {
+                 position: relative;
+                 top: 0;
+                 right: 0;
+                 width: 100%;
+                 flex-direction: column;
+                 gap: 10px;
+                 z-index: 1;
+             }
+
+             .search-input {
+                 width: 100% !important;
+                 padding: 10px 12px;
+                 font-size: 0.9rem;
+                 border-radius: 6px;
+                 box-sizing: border-box;
+             }
+
+             .back-btn {
+                 width: 100%;
+                 padding: 12px;
+                 font-size: 0.9rem;
+                 border-radius: 6px;
+                 font-weight: bold;
+                 text-align: center;
+                 display: block;
+             }
+
+             /* Filter Section */
+             .filter-section {
+                 flex-direction: column;
+                 align-items: stretch;
+                 gap: 12px;
+                 padding: 16px 12px;
+                 margin-bottom: 16px;
+                 border-radius: 8px;
+             }
+
+             .filter-group {
+                 width: 100%;
+             }
+
+             .filter-group label {
+                 font-size: 0.7rem;
+                 margin-bottom: 6px;
+             }
+
+             .filter-group select {
+                 width: 100%;
+                 padding: 10px 12px;
+                 font-size: 0.85rem;
+                 border-radius: 6px;
+                 box-sizing: border-box;
+             }
+
+             /* Archive Info */
+             .archive-info {
+                 padding: 10px 10px;
+                 font-size: 0.7rem;
+             }
+
+             .archive-info h4 {
+                 font-size: 0.8rem;
+                 margin-bottom: 4px;
+             }
+
+             .archive-info p {
+                 font-size: 0.7rem;
+                 margin: 2px 0;
+             }
+
+             .archive-info small {
+                 font-size: 0.65rem;
+             }
+
+             /* Table Container */
+             .faculty-table-container {
+                 border-radius: 8px;
+                 overflow: hidden;
+             }
+
+             .faculty-table-scroll {
+                 max-height: 50vh;
+                 overflow-x: auto;
+                 overflow-y: auto;
+                 -webkit-overflow-scrolling: touch;
+             }
+
+             .faculty-table {
+                 min-width: 1000px; /* Minimum width to maintain readability */
+             }
+
+             .faculty-table th {
+                 padding: 10px 6px;
+                 font-size: 0.7rem;
+                 white-space: nowrap;
+             }
+
+             .faculty-table td {
+                 padding: 8px 6px;
+                 font-size: 0.7rem;
+                 white-space: nowrap;
+             }
+
+             /* Empty state message */
+             .faculty-table td[colspan] {
+                 font-size: 0.75rem;
+                 padding: 20px 12px;
+             }
+
+             /* Action Buttons */
+             .action-btns {
+                 gap: 6px;
+             }
+
+             .restore-btn,
+             .delete-btn {
+                 width: 32px;
+                 height: 28px;
+                 font-size: 0.9rem;
+             }
+
+             /* Attendance Count Badge */
+             .attendance-count {
+                 font-size: 0.75rem !important;
+                 padding: 3px 6px !important;
+             }
+
+             /* Modals - Mobile Optimized */
+             .modal-overlay {
+                 padding: 10px;
+             }
+
+             .modal-box {
+                 width: 95vw !important;
+                 max-width: 95vw !important;
+                 padding: 0 !important;
+                 margin: 0;
+             }
+
+             /* Restore Modal */
+             #restoreModal .modal-box {
+                 width: 95vw !important;
+                 max-width: 95vw !important;
+             }
+
+             #restoreModal .modal-header-custom {
+                 font-size: 1.1rem !important;
+                 padding: 12px 16px !important;
+             }
+
+             #restoreModal > div {
+                 padding: 16px !important;
+             }
+
+             #restoreModal .modal-btn {
+                 width: 100% !important;
+                 padding: 12px !important;
+                 font-size: 0.9rem !important;
+                 margin: 5px 0 !important;
+             }
+
+             /* Delete Modal */
+             #deleteModal .modal-box {
+                 width: 95vw !important;
+                 max-width: 95vw !important;
+             }
+
+             #deleteModal .modal-header-custom {
+                 font-size: 1.1rem !important;
+                 padding: 12px 16px !important;
+             }
+
+             #deleteModal > div {
+                 padding: 16px !important;
+             }
+
+             #deleteModal .modal-btn {
+                 width: 100% !important;
+                 padding: 12px !important;
+                 font-size: 0.9rem !important;
+                 margin: 5px 0 !important;
+             }
+
+             /* Modal Content Adjustments */
+             .modal-box > div {
+                 padding: 16px !important;
+             }
+
+             .modal-box div[style*="padding"] {
+                 padding: 12px !important;
+             }
+
+             /* Info boxes in modals */
+             .modal-box div[style*="background"] {
+                 padding: 12px !important;
+                 margin-bottom: 12px !important;
+             }
+
+             .modal-box div[style*="background"] span {
+                 font-size: 1.2rem !important;
+             }
+
+             .modal-box div[style*="background"] strong {
+                 font-size: 0.85rem !important;
+             }
+
+             .modal-box div[style*="background"] p {
+                 font-size: 0.8rem !important;
+             }
+
+             /* Modal buttons container */
+             .modal-box div[style*="text-align: center"] {
+                 flex-direction: column !important;
+                 gap: 10px !important;
+             }
+
+             .modal-box div[style*="text-align: center"] button {
+                 width: 100% !important;
+                 margin: 0 !important;
+             }
          }
      </style>
  @endsection
@@ -303,11 +555,11 @@
     <div class="faculty-header">
         <div class="faculty-title-group">
             <div class="faculty-title">Archived Teaching Loads</div>
-            <div class="faculty-subtitle">View and manage archived teaching loads from previous school years</div>
+            <br>
         </div>
         <div class="faculty-actions-row">
             <input type="text" class="search-input" placeholder="Search archived loads...">
-            <a href="{{ route('deptHead.teaching.load.management') }}" class="back-btn">Back to Current</a>
+            <a href="{{ route('admin.teaching.load.management') }}" class="back-btn">Back to Current</a>
         </div>
     </div>
 
@@ -492,7 +744,7 @@
              searchInput.addEventListener('input', filterRows);
          });
 
-         // Close modals when clicking outside
+         // Close modals when clicking outside (only on overlay, not modal box)
          document.addEventListener('click', function(e) {
              if (e.target.classList && e.target.classList.contains('modal-overlay')) {
                  const overlayId = e.target.id;
@@ -500,73 +752,237 @@
              }
          });
 
+         // Prevent modal box clicks from closing the modal
+         document.addEventListener('click', function(e) {
+             if (e.target.closest && e.target.closest('.modal-box')) {
+                 e.stopPropagation();
+             }
+         });
+
          // Modal functions
          function openModal(id) {
-             document.getElementById(id).style.display = 'flex';
+             const modal = document.getElementById(id);
+             if (modal) {
+                 modal.style.display = 'flex';
+             }
          }
 
          function closeModal(id) {
-             document.getElementById(id).style.display = 'none';
+             const modal = document.getElementById(id);
+             if (modal) {
+                 modal.style.display = 'none';
+             }
          }
 
+         // Initialize restore button event listener on page load
+         document.addEventListener('DOMContentLoaded', function() {
+             const restoreBtn = document.getElementById('confirmRestoreBtn');
+             if (restoreBtn) {
+                 restoreBtn.addEventListener('click', function(e) {
+                     e.preventDefault();
+                     e.stopPropagation();
+                     
+                     const archiveId = this.getAttribute('data-archive-id');
+                     if (archiveId) {
+                         restoreTeachingLoad(parseInt(archiveId));
+                     } else {
+                         console.error('Archive ID not found on restore button');
+                         Swal.fire({
+                             icon: 'error',
+                             title: 'Error',
+                             text: 'Unable to restore: Archive ID not found. Please try again.',
+                             confirmButtonColor: '#8B0000',
+                             confirmButtonText: 'OK'
+                         });
+                     }
+                 });
+             }
+
+             // Initialize delete button event listener on page load
+             const deleteBtn = document.getElementById('confirmDeleteBtn');
+             if (deleteBtn) {
+                 deleteBtn.addEventListener('click', function(e) {
+                     e.preventDefault();
+                     e.stopPropagation();
+                     
+                     const archiveId = this.getAttribute('data-archive-id');
+                     if (archiveId) {
+                         permanentlyDelete(parseInt(archiveId));
+                     } else {
+                         console.error('Archive ID not found on delete button');
+                         Swal.fire({
+                             icon: 'error',
+                             title: 'Error',
+                             text: 'Unable to delete: Archive ID not found. Please try again.',
+                             confirmButtonColor: '#8B0000',
+                             confirmButtonText: 'OK'
+                         });
+                     }
+                 });
+             }
+         });
+
          function openRestoreModal(archiveId, courseCode, subject, faculty) {
-             document.getElementById('restoreCourseCode').textContent = courseCode;
-             document.getElementById('restoreSubject').textContent = subject;
-             document.getElementById('restoreFaculty').textContent = faculty;
-             document.getElementById('confirmRestoreBtn').onclick = function() {
-                 restoreTeachingLoad(archiveId);
-             };
+             // Update modal content
+             const courseCodeEl = document.getElementById('restoreCourseCode');
+             const subjectEl = document.getElementById('restoreSubject');
+             const facultyEl = document.getElementById('restoreFaculty');
+             const restoreBtn = document.getElementById('confirmRestoreBtn');
+             
+             if (courseCodeEl) courseCodeEl.textContent = courseCode;
+             if (subjectEl) subjectEl.textContent = subject;
+             if (facultyEl) facultyEl.textContent = faculty;
+             
+             // Store archiveId in button's data attribute
+             if (restoreBtn) {
+                 restoreBtn.setAttribute('data-archive-id', archiveId);
+             }
+             
              openModal('restoreModal');
          }
 
          function openDeleteModal(archiveId, courseCode, subject, faculty) {
-             document.getElementById('deleteCourseCode').textContent = courseCode;
-             document.getElementById('deleteSubject').textContent = subject;
-             document.getElementById('deleteFaculty').textContent = faculty;
-             document.getElementById('confirmDeleteBtn').onclick = function() {
-                 permanentlyDelete(archiveId);
-             };
+             // Update modal content
+             const courseCodeEl = document.getElementById('deleteCourseCode');
+             const subjectEl = document.getElementById('deleteSubject');
+             const facultyEl = document.getElementById('deleteFaculty');
+             const deleteBtn = document.getElementById('confirmDeleteBtn');
+             
+             if (courseCodeEl) courseCodeEl.textContent = courseCode;
+             if (subjectEl) subjectEl.textContent = subject;
+             if (facultyEl) facultyEl.textContent = faculty;
+             
+             // Store archiveId in button's data attribute
+             if (deleteBtn) {
+                 deleteBtn.setAttribute('data-archive-id', archiveId);
+             }
+             
              openModal('deleteModal');
          }
 
          function restoreTeachingLoad(archiveId) {
-             fetch(`/deptHead/teaching-load/restore/${archiveId}`, {
+             if (!archiveId || isNaN(archiveId)) {
+                 console.error('Invalid archive ID:', archiveId);
+                 Swal.fire({
+                     icon: 'error',
+                     title: 'Error',
+                     text: 'Invalid archive ID. Please try again.',
+                     confirmButtonColor: '#8B0000',
+                     confirmButtonText: 'OK'
+                 });
+                 return;
+             }
+
+             // Disable button during request
+             const restoreBtn = document.getElementById('confirmRestoreBtn');
+             if (restoreBtn) {
+                 restoreBtn.disabled = true;
+                 restoreBtn.style.opacity = '0.6';
+                 restoreBtn.style.cursor = 'not-allowed';
+             }
+
+             const csrfToken = document.querySelector('meta[name="csrf-token"]');
+             if (!csrfToken) {
+                 console.error('CSRF token not found');
+                 Swal.fire({
+                     icon: 'error',
+                     title: 'Error',
+                     text: 'Security token not found. Please refresh the page.',
+                     confirmButtonColor: '#8B0000',
+                     confirmButtonText: 'OK'
+                 });
+                 if (restoreBtn) {
+                     restoreBtn.disabled = false;
+                     restoreBtn.style.opacity = '1';
+                     restoreBtn.style.cursor = 'pointer';
+                 }
+                 return;
+             }
+
+             fetch(`/admin/teaching-load/restore/${archiveId}`, {
                  method: 'POST',
                  headers: {
-                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                     'X-CSRF-TOKEN': csrfToken.getAttribute('content'),
                      'Content-Type': 'application/json',
+                     'Accept': 'application/json',
                  },
              })
-             .then(response => response.json())
-             .then(data => {
+             .then(async (response) => {
+                 const contentType = response.headers.get('content-type') || '';
+                 let data = null;
+                 
+                 if (contentType.includes('application/json')) {
+                     try {
+                         data = await response.json();
+                     } catch (e) {
+                         console.error('Failed to parse JSON response:', e);
+                         data = null;
+                     }
+                 } else {
+                     // Try to get text response for debugging
+                     const text = await response.text();
+                     console.error('Non-JSON response received:', text);
+                 }
+                 
+                 return { ok: response.ok, status: response.status, data };
+             })
+             .then(({ ok, status, data }) => {
+                 // Re-enable button
+                 if (restoreBtn) {
+                     restoreBtn.disabled = false;
+                     restoreBtn.style.opacity = '1';
+                     restoreBtn.style.cursor = 'pointer';
+                 }
+
                  closeModal('restoreModal');
-                 if (data.success) {
+                 
+                 if (ok && data && data.success === true) {
+                     const message = (data && data.message) ? data.message : 'Teaching load restored successfully';
                      Swal.fire({
                          icon: 'success',
                          title: 'Success!',
-                         text: data.message,
+                         text: message,
                          confirmButtonColor: '#8B0000',
                          confirmButtonText: 'OK'
                      }).then(() => {
                          location.reload();
                      });
                  } else {
+                     let errorMessage = 'Failed to restore teaching load';
+                     if (data && data.message) {
+                         errorMessage = data.message;
+                     } else if (status === 404) {
+                         errorMessage = 'Teaching load not found. It may have already been deleted.';
+                     } else if (status === 403) {
+                         errorMessage = 'You do not have permission to perform this action.';
+                     } else if (status === 500) {
+                         errorMessage = 'Server error occurred. Please try again later.';
+                     }
+                     
                      Swal.fire({
                          icon: 'error',
                          title: 'Error',
-                         text: data.message || 'Failed to restore teaching load',
+                         text: errorMessage,
                          confirmButtonColor: '#8B0000',
                          confirmButtonText: 'OK'
                      });
                  }
              })
              .catch(error => {
-                 console.error('Error:', error);
+                 console.error('Restore error:', error);
+                 
+                 // Re-enable button
+                 if (restoreBtn) {
+                     restoreBtn.disabled = false;
+                     restoreBtn.style.opacity = '1';
+                     restoreBtn.style.cursor = 'pointer';
+                 }
+                 
                  closeModal('restoreModal');
                  Swal.fire({
                      icon: 'error',
                      title: 'Error',
-                     text: 'Error restoring teaching load',
+                     text: 'Network error occurred. Please check your connection and try again.',
                      confirmButtonColor: '#8B0000',
                      confirmButtonText: 'OK'
                  });
@@ -574,21 +990,29 @@
          }
 
          function permanentlyDelete(archiveId) {
-             fetch(`/deptHead/teaching-load/archived/${archiveId}`, {
+             fetch(`/admin/teaching-load/archived/${archiveId}`, {
                  method: 'DELETE',
                  headers: {
                      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                      'Content-Type': 'application/json',
                  },
              })
-             .then(response => response.json())
-             .then(data => {
+             .then(async (response) => {
+                 const contentType = response.headers.get('content-type') || '';
+                 let data = null;
+                 if (contentType.includes('application/json')) {
+                     try { data = await response.json(); } catch (_) { data = null; }
+                 }
+                 return { ok: response.ok, data };
+             })
+             .then(({ ok, data }) => {
                  closeModal('deleteModal');
-                 if (data.success) {
+                 if (ok && data && data.success === true) {
+                     const message = (data && data.message) ? data.message : 'Archived teaching load deleted successfully';
                      Swal.fire({
                          icon: 'success',
                          title: 'Success!',
-                         text: data.message,
+                         text: message,
                          confirmButtonColor: '#8B0000',
                          confirmButtonText: 'OK'
                      }).then(() => {
@@ -598,7 +1022,7 @@
                      Swal.fire({
                          icon: 'error',
                          title: 'Error',
-                         text: data.message || 'Failed to delete archived teaching load',
+                         text: (data && data.message) ? data.message : 'Failed to delete archived teaching load',
                          confirmButtonColor: '#8B0000',
                          confirmButtonText: 'OK'
                      });
@@ -618,35 +1042,35 @@
          }
      </script>
 
-     <!-- Restore Modal -->
-     <div id="restoreModal" class="modal-overlay" style="display:none;">
-         <div class="modal-box" style="width: 450px; max-width: 95vw;">
-             <div class="modal-header-custom">RESTORE TEACHING LOAD</div>
-             <div style="padding: 20px;">
-                 <div style="margin-bottom: 20px; padding: 15px; background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px;">
-                     <div style="display: flex; align-items: center; margin-bottom: 10px;">
-                         <span style="font-size: 1.5rem; margin-right: 10px;">ℹ️</span>
-                         <strong style="color: #0c5460;">Restore Teaching Load</strong>
-                     </div>
-                        <p style="margin: 0; color: #0c5460; font-size: 0.9rem;">
-                            This will restore the teaching load and all its attendance records back to the current schedule. 
-                            Make sure there are no time conflicts before proceeding.
-                        </p>
-                 </div>
+    <!-- Restore Modal -->
+    <div id="restoreModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box" style="width: 450px; max-width: 95vw;">
+            <div class="modal-header-custom">RESTORE TEACHING LOAD</div>
+            <div style="padding: 20px;">
+                <div style="margin-bottom: 20px; padding: 15px; background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px;">
+                    <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                        <span style="font-size: 1.5rem; margin-right: 10px;">ℹ️</span>
+                        <strong style="color: #0c5460;">Restore Teaching Load</strong>
+                    </div>
+                       <p style="margin: 0; color: #0c5460; font-size: 0.9rem;">
+                           This will restore the teaching load and all its attendance records back to the current schedule. 
+                           Make sure there are no time conflicts before proceeding.
+                       </p>
+                </div>
 
-                 <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #28a745;">
-                     <h4 id="restoreCourseCode" style="margin: 0 0 5px 0; color: #28a745; font-size: 1.1rem;"></h4>
-                     <p id="restoreSubject" style="margin: 0 0 5px 0; color: #666; font-size: 1rem;"></p>
-                     <p id="restoreFaculty" style="margin: 0; color: #666; font-size: 0.9rem;"></p>
-                 </div>
+                <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #28a745;">
+                    <h4 id="restoreCourseCode" style="margin: 0 0 5px 0; color: #28a745; font-size: 1.1rem;"></h4>
+                    <p id="restoreSubject" style="margin: 0 0 5px 0; color: #666; font-size: 1rem;"></p>
+                    <p id="restoreFaculty" style="margin: 0; color: #666; font-size: 0.9rem;"></p>
+                </div>
 
-                 <div style="margin-top: 20px; text-align: center;">
-                     <button type="button" class="modal-btn" id="confirmRestoreBtn" style="background-color: #28a745; color: white; margin-right: 10px; position: relative; padding-left: 40px;">↻ Restore</button>
-                     <button type="button" class="modal-btn cancel" onclick="closeModal('restoreModal')">Cancel</button>
-                 </div>
-             </div>
-         </div>
-     </div>
+                <div style="margin-top: 20px; text-align: center;">
+                    <button type="button" class="modal-btn" id="confirmRestoreBtn" data-archive-id="" style="background-color: #28a745; color: white; margin-right: 10px; position: relative; padding-left: 40px; cursor: pointer;">↻ Restore</button>
+                    <button type="button" class="modal-btn cancel" onclick="closeModal('restoreModal')" style="cursor: pointer;">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
      <!-- Delete Modal -->
      <div id="deleteModal" class="modal-overlay" style="display:none;">
