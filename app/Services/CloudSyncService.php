@@ -46,9 +46,9 @@ class CloudSyncService
         try {
             Log::info('Starting cloud sync...');
             
-            // Sync in order of dependencies
-            $results['synced']['subjects'] = $this->syncSubjects();
+            // Sync in order of dependencies - users first
             $results['synced']['users'] = $this->syncUsers();
+            $results['synced']['subjects'] = $this->syncSubjects();
             $results['synced']['rooms'] = $this->syncRooms();
             $results['synced']['cameras'] = $this->syncCameras();
             $results['synced']['faculties'] = $this->syncFaculties();
