@@ -1485,7 +1485,10 @@ class CloudSyncService
         try {
             $cloudLeaves = $this->fetchBulkFromCloud('leaves', ['days' => 90]);
             
+            Log::info("Fetched " . count($cloudLeaves) . " leaves from cloud");
+            
             if (empty($cloudLeaves)) {
+                Log::info("No leaves found in cloud");
                 return $synced;
             }
             
@@ -1494,33 +1497,52 @@ class CloudSyncService
                     // Download leave slip image from cloud
                     $localImagePath = $this->downloadLeaveImage($cloudLeave['lp_image'] ?? null);
                     
+                    // Ensure lp_image is not null (database requires it)
+                    if (empty($localImagePath)) {
+                        $localImagePath = $cloudLeave['lp_image'] ?? '';
+                    }
+                    
+                    // Validate required fields
+                    if (empty($cloudLeave['lp_id'])) {
+                        Log::warning("Skipping leave record without lp_id");
+                        continue;
+                    }
+                    
+                    if (empty($cloudLeave['lp_purpose'])) {
+                        Log::warning("Leave {$cloudLeave['lp_id']} has empty lp_purpose, using default");
+                        $cloudLeave['lp_purpose'] = 'N/A';
+                    }
+                    
                     DB::table('tbl_leave_pass')->upsert([
                         [
                             'lp_id' => $cloudLeave['lp_id'],
                             'faculty_id' => $cloudLeave['faculty_id'] ?? null,
                             'lp_type' => $cloudLeave['lp_type'] ?? 'Leave',
-                            'lp_purpose' => $cloudLeave['lp_purpose'] ?? null,
+                            'lp_purpose' => $cloudLeave['lp_purpose'] ?? 'N/A',
                             'pass_slip_itinerary' => $cloudLeave['pass_slip_itinerary'] ?? null,
                             'pass_slip_date' => $this->formatDateTime($cloudLeave['pass_slip_date'] ?? null),
                             'pass_slip_departure_time' => $cloudLeave['pass_slip_departure_time'] ?? null,
                             'pass_slip_arrival_time' => $cloudLeave['pass_slip_arrival_time'] ?? null,
-                            'lp_start_date' => $this->formatDateTime($cloudLeave['lp_start_date'] ?? null),
-                            'lp_end_date' => $this->formatDateTime($cloudLeave['lp_end_date'] ?? null),
-                            'lp_image' => $localImagePath,
+                            'leave_start_date' => $this->formatDateTime($cloudLeave['leave_start_date'] ?? null),
+                            'leave_end_date' => $this->formatDateTime($cloudLeave['leave_end_date'] ?? null),
+                            'lp_image' => $localImagePath ?: '',
                             'created_at' => $this->formatDateTime($cloudLeave['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudLeave['updated_at'] ?? null),
                         ]
                     ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'lp_start_date', 'lp_end_date', 'lp_image', 'updated_at']);
                     
                     $synced[] = $cloudLeave['lp_id'];
+                    Log::info("Successfully synced leave {$cloudLeave['lp_id']} from cloud");
                 } catch (\Exception $e) {
                     Log::error("Error syncing leave {$cloudLeave['lp_id']} from cloud: " . $e->getMessage());
+                    Log::error("Leave data: " . json_encode($cloudLeave));
                 }
             }
             
             Log::info("Synced " . count($synced) . " leaves from cloud to local");
         } catch (\Exception $e) {
             Log::error("Error syncing leaves from cloud: " . $e->getMessage());
+            Log::error("Stack trace: " . $e->getTraceAsString());
         }
         
         return $synced;
@@ -1536,7 +1558,10 @@ class CloudSyncService
         try {
             $cloudPasses = $this->fetchBulkFromCloud('passes', ['days' => 90]);
             
+            Log::info("Fetched " . count($cloudPasses) . " passes from cloud");
+            
             if (empty($cloudPasses)) {
+                Log::info("No passes found in cloud");
                 return $synced;
             }
             
@@ -1545,33 +1570,52 @@ class CloudSyncService
                     // Download pass slip image from cloud
                     $localImagePath = $this->downloadPassImage($cloudPass['lp_image'] ?? null);
                     
+                    // Ensure lp_image is not null (database requires it)
+                    if (empty($localImagePath)) {
+                        $localImagePath = $cloudPass['lp_image'] ?? '';
+                    }
+                    
+                    // Validate required fields
+                    if (empty($cloudPass['lp_id'])) {
+                        Log::warning("Skipping pass record without lp_id");
+                        continue;
+                    }
+                    
+                    if (empty($cloudPass['lp_purpose'])) {
+                        Log::warning("Pass {$cloudPass['lp_id']} has empty lp_purpose, using default");
+                        $cloudPass['lp_purpose'] = 'N/A';
+                    }
+                    
                     DB::table('tbl_leave_pass')->upsert([
                         [
                             'lp_id' => $cloudPass['lp_id'],
                             'faculty_id' => $cloudPass['faculty_id'] ?? null,
                             'lp_type' => $cloudPass['lp_type'] ?? 'Pass',
-                            'lp_purpose' => $cloudPass['lp_purpose'] ?? null,
+                            'lp_purpose' => $cloudPass['lp_purpose'] ?? 'N/A',
                             'pass_slip_itinerary' => $cloudPass['pass_slip_itinerary'] ?? null,
                             'pass_slip_date' => $this->formatDateTime($cloudPass['pass_slip_date'] ?? null),
                             'pass_slip_departure_time' => $cloudPass['pass_slip_departure_time'] ?? null,
                             'pass_slip_arrival_time' => $cloudPass['pass_slip_arrival_time'] ?? null,
                             'lp_start_date' => $this->formatDateTime($cloudPass['lp_start_date'] ?? null),
                             'lp_end_date' => $this->formatDateTime($cloudPass['lp_end_date'] ?? null),
-                            'lp_image' => $localImagePath,
+                            'lp_image' => $localImagePath ?: '',
                             'created_at' => $this->formatDateTime($cloudPass['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudPass['updated_at'] ?? null),
                         ]
                     ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'lp_start_date', 'lp_end_date', 'lp_image', 'updated_at']);
                     
                     $synced[] = $cloudPass['lp_id'];
+                    Log::info("Successfully synced pass {$cloudPass['lp_id']} from cloud");
                 } catch (\Exception $e) {
                     Log::error("Error syncing pass {$cloudPass['lp_id']} from cloud: " . $e->getMessage());
+                    Log::error("Pass data: " . json_encode($cloudPass));
                 }
             }
             
             Log::info("Synced " . count($synced) . " passes from cloud to local");
         } catch (\Exception $e) {
             Log::error("Error syncing passes from cloud: " . $e->getMessage());
+            Log::error("Stack trace: " . $e->getTraceAsString());
         }
         
         return $synced;
