@@ -149,15 +149,18 @@ class CloudSyncService
         try {
             $localFaculties = Faculty::all();
             $payload = $localFaculties->map(function ($faculty) {
+                // Sync faculty images to cloud and update paths
+                $cloudImages = $this->syncFacultyImages($faculty->faculty_images);
+                
                 return [
                     'faculty_id' => $faculty->faculty_id,
                     'faculty_fname' => $faculty->faculty_fname,
                     'faculty_lname' => $faculty->faculty_lname,
                     'faculty_department' => $faculty->faculty_department,
-                    'faculty_images' => $faculty->faculty_images,
+                    'faculty_images' => $cloudImages,
                     'faculty_face_embedding' => $faculty->faculty_face_embedding,
-                    'created_at' => $faculty->created_at,
-                    'updated_at' => $faculty->updated_at,
+                    'created_at' => $this->formatDateTime($faculty->created_at),
+                    'updated_at' => $this->formatDateTime($faculty->updated_at),
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('faculties', $payload);
@@ -191,8 +194,8 @@ class CloudSyncService
                     'teaching_load_time_in' => $load->teaching_load_time_in,
                     'teaching_load_time_out' => $load->teaching_load_time_out,
                     'room_no' => $load->room_no,
-                    'created_at' => $load->created_at,
-                    'updated_at' => $load->updated_at,
+                    'created_at' => $this->formatDateTime($load->created_at),
+                    'updated_at' => $this->formatDateTime($load->updated_at),
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('teaching-loads', $payload);
@@ -224,7 +227,7 @@ class CloudSyncService
             $payload = $localRecords->map(function ($record) {
                 return [
                     'record_id' => $record->record_id,
-                    'record_date' => $record->record_date,
+                    'record_date' => $this->formatDateTime($record->record_date),
                     'faculty_id' => $record->faculty_id,
                     'teaching_load_id' => $record->teaching_load_id,
                     'record_time_in' => $record->record_time_in,
@@ -258,6 +261,9 @@ class CloudSyncService
             // Sync ALL leaves
             $localLeaves = Leave::all();
             $payload = $localLeaves->map(function ($leave) {
+                // Sync leave image to cloud and update path
+                $cloudImagePath = $this->syncLeaveImage($leave->lp_image);
+                
                 return [
                     'lp_id' => $leave->lp_id,
                     'faculty_id' => $leave->faculty_id,
@@ -265,9 +271,9 @@ class CloudSyncService
                     'lp_purpose' => $leave->lp_purpose,
                     'leave_start_date' => $leave->leave_start_date,
                     'leave_end_date' => $leave->leave_end_date,
-                    'lp_image' => $leave->lp_image,
-                    'created_at' => $leave->created_at,
-                    'updated_at' => $leave->updated_at,
+                    'lp_image' => $cloudImagePath,
+                    'created_at' => $this->formatDateTime($leave->created_at),
+                    'updated_at' => $this->formatDateTime($leave->updated_at),
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('leaves', $payload);
@@ -293,6 +299,9 @@ class CloudSyncService
             // Sync ALL passes
             $localPasses = Pass::all();
             $payload = $localPasses->map(function ($pass) {
+                // Sync pass image to cloud and update path
+                $cloudImagePath = $this->syncPassImage($pass->lp_image);
+                
                 return [
                     'lp_id' => $pass->lp_id,
                     'faculty_id' => $pass->faculty_id,
@@ -302,9 +311,9 @@ class CloudSyncService
                     'pass_slip_date' => $pass->pass_slip_date,
                     'pass_slip_departure_time' => $pass->pass_slip_departure_time,
                     'pass_slip_arrival_time' => $pass->pass_slip_arrival_time,
-                    'lp_image' => $pass->lp_image,
-                    'created_at' => $pass->created_at,
-                    'updated_at' => $pass->updated_at,
+                    'lp_image' => $cloudImagePath,
+                    'created_at' => $this->formatDateTime($pass->created_at),
+                    'updated_at' => $this->formatDateTime($pass->updated_at),
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('passes', $payload);
@@ -331,7 +340,7 @@ class CloudSyncService
             $payload = $localLogs->map(function ($log) {
                 return [
                     'log_id' => $log->log_id,
-                    'recognition_time' => $log->recognition_time,
+                    'recognition_time' => $this->formatDateTime($log->recognition_time),
                     'camera_name' => $log->camera_name,
                     'room_name' => $log->room_name,
                     'building_no' => $log->building_no,
@@ -361,7 +370,7 @@ class CloudSyncService
     }
     
     /**
-     * Sync stream recordings (metadata only, videos handled separately)
+     * Sync stream recordings (including video files)
      */
     protected function syncStreamRecordings()
     {
@@ -371,11 +380,14 @@ class CloudSyncService
             // Sync ALL stream recordings
             $localRecordings = StreamRecording::all();
             $payload = $localRecordings->map(function ($recording) {
+                // Sync video file to cloud and update path
+                $cloudVideoPath = $this->syncStreamRecordingVideo($recording->filepath);
+                
                 return [
                     'recording_id' => $recording->recording_id,
                     'camera_id' => $recording->camera_id,
                     'filename' => $recording->filename,
-                    'filepath' => $recording->filepath,
+                    'filepath' => $cloudVideoPath,
                     'start_time' => date('Y-m-d H:i:s', strtotime($recording->start_time)),
                     'duration' => $recording->duration,
                     'frames' => $recording->frames,
@@ -448,6 +460,29 @@ class CloudSyncService
     }
 
     /**
+     * Format datetime for MySQL compatibility
+     * Converts Carbon/DateTime objects to MySQL datetime format (Y-m-d H:i:s)
+     */
+    protected function formatDateTime($value)
+    {
+        if (empty($value)) {
+            return null;
+        }
+        if ($value instanceof \Carbon\Carbon || $value instanceof \DateTime) {
+            return $value->format('Y-m-d H:i:s');
+        }
+        if (is_string($value)) {
+            // Try to parse and reformat if it's an ISO 8601 string
+            try {
+                return \Carbon\Carbon::parse($value)->format('Y-m-d H:i:s');
+            } catch (\Exception $e) {
+                return $value;
+            }
+        }
+        return $value;
+    }
+
+    /**
      * Bulk push helper: POST records array to /bulk/{endpoint}
      */
     protected function pushBulkToCloud(string $endpoint, array $records)
@@ -507,8 +542,8 @@ class CloudSyncService
                     'subject_code' => $s->subject_code,
                     'subject_description' => $s->subject_description,
                     'department' => $s->department,
-                    'created_at' => $s->created_at,
-                    'updated_at' => $s->updated_at,
+                    'created_at' => $this->formatDateTime($s->created_at),
+                    'updated_at' => $this->formatDateTime($s->updated_at),
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('subjects', $payload);
@@ -546,8 +581,8 @@ class CloudSyncService
                     'user_lname' => $u->user_lname,
                     'username' => $u->username,
                     'user_password' => $u->user_password,
-                    'created_at' => $u->created_at,
-                    'updated_at' => $u->updated_at,
+                    'created_at' => $this->formatDateTime($u->created_at),
+                    'updated_at' => $this->formatDateTime($u->updated_at),
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('users', $payload);
@@ -582,7 +617,7 @@ class CloudSyncService
                     'user_id' => $log->user_id,
                     'logs_action' => $log->logs_action,
                     'logs_description' => $log->logs_description,
-                    'logs_timestamp' => $log->logs_timestamp,
+                    'logs_timestamp' => $this->formatDateTime($log->logs_timestamp),
                     'logs_module' => $log->logs_module,
                 ];
             })->values()->all();
@@ -620,7 +655,7 @@ class CloudSyncService
                     'room_no' => $a->room_no,
                     'school_year' => $a->school_year,
                     'semester' => $a->semester,
-                    'archived_at' => $a->archived_at,
+                    'archived_at' => $this->formatDateTime($a->archived_at),
                     'archived_by' => $a->archived_by,
                     'archive_notes' => $a->archive_notes,
                 ];
@@ -658,7 +693,7 @@ class CloudSyncService
                     'faculty_id' => $a->faculty_id,
                     'teaching_load_id' => $a->teaching_load_id,
                     'camera_id' => $a->camera_id,
-                    'record_date' => $a->record_date,
+                    'record_date' => $this->formatDateTime($a->record_date),
                     'record_time_in' => $a->record_time_in,
                     'record_time_out' => $a->record_time_out,
                     'time_duration_seconds' => $a->time_duration_seconds,
@@ -666,11 +701,11 @@ class CloudSyncService
                     'record_remarks' => $a->record_remarks,
                     'school_year' => $a->school_year,
                     'semester' => $a->semester,
-                    'archived_at' => $a->archived_at,
+                    'archived_at' => $this->formatDateTime($a->archived_at),
                     'archived_by' => $a->archived_by,
                     'archive_notes' => $a->archive_notes,
-                    'created_at' => $a->created_at,
-                    'updated_at' => $a->updated_at,
+                    'created_at' => $this->formatDateTime($a->created_at),
+                    'updated_at' => $this->formatDateTime($a->updated_at),
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('attendance-record-archives', $payload);
@@ -691,32 +726,169 @@ class CloudSyncService
     }
     
     /**
-     * Upload file to cloud storage (AWS S3, Google Cloud Storage, etc.)
+     * Upload file to cloud storage
+     * @param string $localPath Relative path from storage/app/public (e.g., 'faculty_images/file.jpg')
+     * @param string $directory Directory name on cloud server (e.g., 'faculty_images')
+     * @return array|null Returns ['success' => true, 'url' => cloud_url, 'path' => cloud_path] or null on failure
      */
-    protected function uploadFileToCloud($filePath, $directory)
+    protected function uploadFileToCloud($localPath, $directory)
     {
         try {
-            $filename = basename($filePath);
+            // Build full local file path
+            $fullPath = storage_path('app/public/' . $localPath);
             
-            // Using multipart file upload
-            $response = Http::timeout(120)
+            // Check if file exists
+            if (!file_exists($fullPath)) {
+                Log::warning("File not found for upload: {$fullPath}");
+                return null;
+            }
+            
+            $filename = basename($localPath);
+            
+            // Using multipart file upload with increased timeout for large files
+            // Directory structure: storage/app/public/{directory}/
+            $response = Http::timeout(300) // 5 minutes for large video files
                 ->withHeaders([
                     'Authorization' => 'Bearer ' . $this->cloudApiKey,
                 ])
-                ->attach('file', file_get_contents($filePath), $filename)
+                ->attach('file', file_get_contents($fullPath), $filename)
                 ->post("{$this->cloudApiUrl}/sync/upload/{$directory}");
             
             if ($response->successful()) {
                 $result = $response->json();
-                return $result['url'] ?? null;
+                return [
+                    'success' => true,
+                    'url' => $result['url'] ?? null,
+                    'path' => $result['path'] ?? null
+                ];
             }
             
+            Log::error("Failed to upload file to cloud: " . $response->body());
             return null;
             
         } catch (\Exception $e) {
-            Log::error("Error uploading file to cloud: " . $e->getMessage());
+            Log::error("Error uploading file to cloud ({$localPath}): " . $e->getMessage());
             return null;
         }
+    }
+    
+    /**
+     * Sync faculty images (handles JSON array of image paths)
+     * @param string|array $facultyImages JSON string or array of image paths
+     * @return string|array Updated image paths with cloud URLs
+     */
+    protected function syncFacultyImages($facultyImages)
+    {
+        if (empty($facultyImages)) {
+            return $facultyImages;
+        }
+        
+        // Parse JSON if it's a string
+        if (is_string($facultyImages)) {
+            $images = json_decode($facultyImages, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                // Not valid JSON, return as is
+                return $facultyImages;
+            }
+        } else {
+            $images = $facultyImages;
+        }
+        
+        if (!is_array($images)) {
+            return $facultyImages;
+        }
+        
+        $cloudImages = [];
+        foreach ($images as $imagePath) {
+            if (empty($imagePath)) {
+                continue;
+            }
+            
+            // Upload image to cloud - directory: storage/app/public/faculty_images/
+            $uploadResult = $this->uploadFileToCloud($imagePath, 'faculty_images');
+            
+            if ($uploadResult && $uploadResult['success']) {
+                // Use cloud path/URL instead of local path
+                $cloudImages[] = $uploadResult['path'] ?? $uploadResult['url'] ?? $imagePath;
+                Log::info("Synced faculty image to cloud: {$imagePath} -> " . ($uploadResult['path'] ?? $uploadResult['url']));
+            } else {
+                // Keep original path if upload failed
+                $cloudImages[] = $imagePath;
+                Log::warning("Failed to sync faculty image: {$imagePath}");
+            }
+        }
+        
+        // Return as JSON string (same format as database)
+        return json_encode($cloudImages);
+    }
+    
+    /**
+     * Sync leave slip image
+     * @param string $imagePath Local image path
+     * @return string Cloud image path/URL
+     */
+    protected function syncLeaveImage($imagePath)
+    {
+        if (empty($imagePath)) {
+            return $imagePath;
+        }
+        
+        // Directory: storage/app/public/leave_slips/
+        $uploadResult = $this->uploadFileToCloud($imagePath, 'leave_slips');
+        
+        if ($uploadResult && $uploadResult['success']) {
+            Log::info("Synced leave slip image to cloud: {$imagePath} -> " . ($uploadResult['path'] ?? $uploadResult['url']));
+            return $uploadResult['path'] ?? $uploadResult['url'] ?? $imagePath;
+        }
+        
+        Log::warning("Failed to sync leave slip image: {$imagePath}");
+        return $imagePath;
+    }
+    
+    /**
+     * Sync pass slip image
+     * @param string $imagePath Local image path
+     * @return string Cloud image path/URL
+     */
+    protected function syncPassImage($imagePath)
+    {
+        if (empty($imagePath)) {
+            return $imagePath;
+        }
+        
+        // Directory: storage/app/public/passes/
+        $uploadResult = $this->uploadFileToCloud($imagePath, 'passes');
+        
+        if ($uploadResult && $uploadResult['success']) {
+            Log::info("Synced pass slip image to cloud: {$imagePath} -> " . ($uploadResult['path'] ?? $uploadResult['url']));
+            return $uploadResult['path'] ?? $uploadResult['url'] ?? $imagePath;
+        }
+        
+        Log::warning("Failed to sync pass slip image: {$imagePath}");
+        return $imagePath;
+    }
+    
+    /**
+     * Sync stream recording video file
+     * @param string $filepath Local video file path
+     * @return string Cloud video path/URL
+     */
+    protected function syncStreamRecordingVideo($filepath)
+    {
+        if (empty($filepath)) {
+            return $filepath;
+        }
+        
+        // Directory: storage/app/public/stream_recordings/
+        $uploadResult = $this->uploadFileToCloud($filepath, 'stream_recordings');
+        
+        if ($uploadResult && $uploadResult['success']) {
+            Log::info("Synced stream recording video to cloud: {$filepath} -> " . ($uploadResult['path'] ?? $uploadResult['url']));
+            return $uploadResult['path'] ?? $uploadResult['url'] ?? $filepath;
+        }
+        
+        Log::warning("Failed to sync stream recording video: {$filepath}");
+        return $filepath;
     }
     
     /**
