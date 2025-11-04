@@ -540,8 +540,8 @@ class SyncReceiverController extends Controller
             $file = $request->file('file');
             $filename = time() . '_' . $file->getClientOriginalName();
             
-            // Store in public/sync/{directory}
-            $path = $file->storeAs("sync/{$directory}", $filename, 'public');
+            // Store directly in storage/app/public/{directory} (no sync folder)
+            $path = $file->storeAs($directory, $filename, 'public');
             
             // Generate URL
             $url = asset("storage/{$path}");
