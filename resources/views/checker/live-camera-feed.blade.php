@@ -524,8 +524,28 @@
                 delete pcs[camera.camera_id];
             }
 
-            const pc = new RTCPeerConnection();
+            // Configure RTCPeerConnection with proper settings
+            const pc = new RTCPeerConnection({
+                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            });
             pcs[camera.camera_id] = pc;
+            
+            // Add event listeners for debugging
+            pc.onicecandidate = function(event) {
+                if (event.candidate) {
+                    console.log("ICE candidate:", event.candidate.candidate);
+                } else {
+                    console.log("ICE gathering completed");
+                }
+            };
+            
+            pc.onicecandidateerror = function(event) {
+                console.error("ICE candidate error:", event);
+            };
+            
+            pc.oniceconnectionstatechange = function() {
+                console.log("ICE connection state:", pc.iceConnectionState);
+            };
 
             pc.ontrack = function(event) {
                 console.log("WebRTC track received for camera:", camera.camera_name, "Detail mode:", detail);

@@ -17,6 +17,7 @@ use App\Http\Controllers\PassController;
 
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\AttendanceRecordArchiveController;
+use App\Http\Controllers\CloudSyncController;
 
 // --------------------
 // Login routes
@@ -74,6 +75,11 @@ Route::prefix('admin')->middleware('role:admin')->group(function () {
     Route::get('/teaching-load/archived', [TeachingLoadController::class, 'viewArchivedTeachingLoadsAdmin'])->name('admin.teaching-load.archived');
     Route::post('/teaching-load/restore/{archiveId}', [TeachingLoadController::class, 'restoreTeachingLoad'])->name('admin.teaching-load.restore');
     Route::delete('/teaching-load/archived/{archiveId}', [TeachingLoadController::class, 'permanentlyDeleteArchived'])->name('admin.teaching-load.permanently-delete-archived');
+    
+    // Cloud Sync Routes
+    Route::get('/cloud-sync', [CloudSyncController::class, 'index'])->name('admin.cloud-sync');
+    Route::post('/cloud-sync/sync-now', [CloudSyncController::class, 'syncNow'])->name('admin.cloud-sync.sync-now');
+    Route::get('/cloud-sync/status', [CloudSyncController::class, 'status'])->name('admin.cloud-sync.status');
 });
 
 

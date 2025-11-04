@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Recordings Test Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .controls {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        select, button {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        select {
+            min-width: 150px;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            font-weight: 600;
+            padding: 10px 20px;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .recordings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(600px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .recording-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .recording-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            background: #000;
+        }
+
+        .video-wrapper video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .playlist-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            z-index: 10;
+        }
+
+        .recording-info {
+            padding: 15px;
+        }
+
+        .recording-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .camera-badge {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 1em;
+            font-weight: 600;
+        }
+
+        .recording-details {
+            font-size: 0.9em;
+            color: #666;
+            line-height: 1.6;
+            margin-top: 10px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+        }
+
+        .playlist-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        .playlist-controls button {
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+
+        .current-video-info {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #c33;
+            margin-bottom: 20px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 Stream Recordings Test Player</h1>
+        <p class="subtitle">Auto-play recordings grouped by Camera ID</p>
+
+        <div class="controls">
+            <div class="filter-group">
+                <label for="cameraFilter">Filter by Camera:</label>
+                <select id="cameraFilter">
+                    <option value="all">All Cameras</option>
+                </select>
+            </div>
+            <button onclick="loadRecordings()" id="loadBtn">🔄 Refresh Recordings</button>
+            <button onclick="toggleAutoPlay()" id="autoPlayBtn">⏸️ Pause Auto-Play</button>
+            <button onclick="toggleBackgroundRefresh()" id="bgRefreshBtn">⏸️ Stop Auto-Refresh</button>
+            <button onclick="forcePlayAllVideos()" id="playAllBtn" style="background: #28a745; display: none;">▶️ Play All Videos</button>
+        </div>
+        
+        <!-- Auto-play notice -->
+        <div id="autoplayNotice" class="error" style="background: #fff3cd; border-color: #ffc107; color: #856404; display: none;">
+            <strong>💡 Auto-play is blocked by your browser.</strong> Click anywhere on this page to enable video playback, or click the button below.
+            <br><br>
+            <button onclick="enableAutoplay()" style="background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">
+                ▶️ Enable Auto-Play
+            </button>
+        </div>
+
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-label">Total Recordings</div>
+                <div class="stat-value" id="totalCount">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Cameras</div>
+                <div class="stat-value" id="cameraCount">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Duration</div>
+                <div class="stat-value" id="totalDuration">-</div>
+            </div>
+        </div>
+
+        <div id="errorMessage" class="error" style="display: none;"></div>
+        
+        <div id="loading" class="loading">Loading recordings</div>
+        <div id="recordingsContainer" class="recordings-grid" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Global variables
+        let recordingsArray = [];
+        let recordingsByCamera = {};
+        let recordingsById = {};
+        let autoPlayEnabled = true;
+        let backgroundRefreshInterval = null;
+        let isRefreshing = false;
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (!bytes || bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // Format duration
+        function formatDuration(seconds) {
+            if (!seconds) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleString();
+            } catch (e) {
+                return dateString;
+            }
+        }
+
+        // Build video URL - try multiple methods
+        // 1. First try direct storage path (symlink): /storage/stream_recordings/{filename}
+        // 2. Fallback to streaming API: /api/stream-recordings/{id}/stream
+        function buildVideoUrl(recording) {
+            let url = '';
+            
+            // Method 1: Try direct storage path (preferred - faster)
+            if (recording.filepath) {
+                let normalizedPath = recording.filepath.trim();
+                
+                // Remove leading slash
+                if (normalizedPath.startsWith('/')) {
+                    normalizedPath = normalizedPath.substring(1);
+                }
+                
+                // If path contains "stream_recordings"
+                if (normalizedPath.includes('stream_recordings')) {
+                    // Extract filename if path is longer
+                    if (!normalizedPath.startsWith('stream_recordings/')) {
+                        const parts = normalizedPath.split('stream_recordings/');
+                        if (parts.length > 1) {
+                            normalizedPath = `stream_recordings/${parts[parts.length - 1]}`;
+                        }
+                    }
+                    url = `${window.location.origin}/storage/${normalizedPath}`;
+                } else if (normalizedPath.startsWith('storage/')) {
+                    url = `${window.location.origin}/${normalizedPath}`;
+                } else {
+                    url = `${window.location.origin}/storage/stream_recordings/${normalizedPath}`;
+                }
+            }
+            
+            // Fallback 1: Use filename
+            if (!url && recording.filename) {
+                url = `${window.location.origin}/storage/stream_recordings/${recording.filename}`;
+            }
+            
+            // Fallback 2: Use streaming API endpoint (always works if recording_id exists)
+            // This serves the file directly from storage via Laravel
+            if (recording.recording_id) {
+                // Store streaming URL as backup
+                const streamingUrl = `${window.location.origin}/api/stream-recordings/${recording.recording_id}/stream`;
+                // We'll use direct URL first, streaming URL as fallback on error
+                recording._streamingUrl = streamingUrl;
+            }
+            
+            // Debug logging
+            console.log(`Video URL for recording ${recording.recording_id || 'N/A'}:`, {
+                filepath: recording.filepath,
+                filename: recording.filename,
+                directUrl: url,
+                streamingUrl: recording._streamingUrl
+            });
+            
+            return url;
+        }
+
+        // Load recordings from API (can be silent for background refresh)
+        async function loadRecordings(silent = false) {
+            // Prevent multiple simultaneous refreshes
+            if (isRefreshing) {
+                console.log('Refresh already in progress, skipping...');
+                return;
+            }
+            
+            isRefreshing = true;
+            const loading = document.getElementById('loading');
+            const container = document.getElementById('recordingsContainer');
+            const errorMsg = document.getElementById('errorMessage');
+            const loadBtn = document.getElementById('loadBtn');
+
+            if (!silent) {
+                loading.style.display = 'block';
+                container.style.display = 'none';
+                errorMsg.style.display = 'none';
+                if (loadBtn) loadBtn.disabled = true;
+            }
+
+            try {
+                const API_BASE = window.location.origin + '/api';
+                const response = await fetch(`${API_BASE}/stream-recordings?per_page=1000`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Handle paginated response
+                let recordings = data.data || data;
+                
+                // Check if we have new recordings (compare by count and IDs)
+                const newRecordingsArray = Array.isArray(recordings) ? recordings : [];
+                const hasNewRecordings = checkForNewRecordings(newRecordingsArray);
+                
+                if (hasNewRecordings || !silent) {
+                    // Organize recordings in arrays
+                    recordingsArray = newRecordingsArray;
+                    const previousRecordingsById = { ...recordingsById };
+                    recordingsByCamera = {};
+                    recordingsById = {};
+
+                    recordingsArray.forEach(recording => {
+                        // Group by camera_id
+                        if (!recordingsByCamera[recording.camera_id]) {
+                            recordingsByCamera[recording.camera_id] = [];
+                        }
+                        recordingsByCamera[recording.camera_id].push(recording);
+
+                        // Index by recording_id
+                        recordingsById[recording.recording_id] = recording;
+                    });
+
+                    // Sort recordings within each camera by start_time (oldest first for sequential playback)
+                    Object.keys(recordingsByCamera).forEach(cameraId => {
+                        recordingsByCamera[cameraId].sort((a, b) => {
+                            return new Date(a.start_time) - new Date(b.start_time);
+                        });
+                    });
+
+                    // Update camera filter dropdown
+                    updateCameraFilter();
+
+                    // Update statistics
+                    updateStatistics();
+
+                        // Update playlists without interrupting playback
+                    if (silent && hasNewRecordings) {
+                        updatePlaylistsQuietly(previousRecordingsById);
+                    } else {
+                        // Full display update (initial load or manual refresh)
+                        displayRecordings();
+                        
+                        // After displaying, attempt to auto-play if enabled
+                        if (autoPlayEnabled && !silent) {
+                            // Multiple attempts to ensure videos play
+                            setTimeout(() => attemptAutoPlayAll(), 500);
+                            setTimeout(() => attemptAutoPlayAll(), 1500);
+                            setTimeout(() => attemptAutoPlayAll(), 3000);
+                        }
+                    }
+
+                    console.log('Recordings loaded:', {
+                        total: recordingsArray.length,
+                        cameras: Object.keys(recordingsByCamera).length,
+                        newRecordings: hasNewRecordings
+                    });
+                } else {
+                    console.log('No new recordings found');
+                }
+
+            } catch (error) {
+                console.error('Error loading recordings:', error);
+                if (!silent) {
+                    errorMsg.textContent = `Error loading recordings: ${error.message}`;
+                    errorMsg.style.display = 'block';
+                }
+            } finally {
+                if (!silent) {
+                    loading.style.display = 'none';
+                    container.style.display = 'grid';
+                    if (loadBtn) loadBtn.disabled = false;
+                }
+                isRefreshing = false;
+            }
+        }
+        
+        // Check if there are new recordings compared to current data
+        function checkForNewRecordings(newRecordings) {
+            if (recordingsArray.length !== newRecordings.length) {
+                return true;
+            }
+            
+            // Check if any recording IDs are new
+            const currentIds = new Set(recordingsArray.map(r => r.recording_id));
+            const newIds = new Set(newRecordings.map(r => r.recording_id));
+            
+            // If sets are different sizes, there are new recordings
+            if (currentIds.size !== newIds.size) {
+                return true;
+            }
+            
+            // Check if any new IDs exist that weren't in current
+            for (let id of newIds) {
+                if (!currentIds.has(id)) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+        
+        // Update playlists quietly without interrupting playback
+        function updatePlaylistsQuietly(previousRecordingsById) {
+            console.log('Updating playlists quietly (background refresh)...');
+            
+            // Track which videos are currently playing
+            const playingVideos = {};
+            Object.keys(recordingsByCamera).forEach(cameraId => {
+                const video = document.getElementById(`video-${cameraId}`);
+                if (video && !video.paused && !video.ended) {
+                    const currentIndex = parseInt(video.dataset.currentIndex) || 0;
+                    const currentSrc = video.currentSrc || video.src;
+                    playingVideos[cameraId] = {
+                        video: video,
+                        currentIndex: currentIndex,
+                        currentSrc: currentSrc,
+                        isPlaying: !video.paused,
+                        currentTime: video.currentTime
+                    };
+                }
+            });
+            
+            // Update each camera's playlist
+            Object.keys(recordingsByCamera).forEach(cameraId => {
+                const recordings = recordingsByCamera[cameraId];
+                const video = document.getElementById(`video-${cameraId}`);
+                
+                if (!video) {
+                    // Video element doesn't exist yet, create it (shouldn't happen but just in case)
+                    displayRecordings();
+                    return;
+                }
+                
+                // Build new playlist
+                const newPlaylist = recordings.map(r => buildVideoUrl(r));
+                const oldPlaylist = JSON.parse(video.dataset.playlist || '[]');
+                
+                // Check if playlist has changed
+                const playlistChanged = JSON.stringify(oldPlaylist) !== JSON.stringify(newPlaylist);
+                
+                if (playlistChanged) {
+                    // If this camera has a playing video, preserve its state
+                    const playingState = playingVideos[cameraId];
+                    
+                    if (playingState) {
+                        // Video is playing - preserve current position
+                        const wasPlaying = playingState.isPlaying;
+                        const savedTime = playingState.currentTime;
+                        const savedIndex = playingState.currentIndex;
+                        
+                        // Update playlist in data attribute
+                        video.dataset.playlist = JSON.stringify(newPlaylist);
+                        
+                        // If current video source has changed, update it but preserve playback
+                        if (savedIndex < newPlaylist.length) {
+                            const newSrc = newPlaylist[savedIndex];
+                            if (video.src !== newSrc && video.currentSrc !== newSrc) {
+                                // Only update source if it's different
+                                video.src = newSrc;
+                                video.load();
+                                
+                                // Restore playback position and state
+                                video.currentTime = savedTime;
+                                if (wasPlaying) {
+                                    const playPromise = video.play();
+                                    if (playPromise !== undefined) {
+                                        playPromise.then(() => {
+                                            console.log(`✅ Auto-resumed playback for camera ${cameraId}`);
+                                        }).catch(e => {
+                                            console.log(`⚠️  Auto-resume blocked for camera ${cameraId}:`, e.message);
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                        
+                        console.log(`Camera ${cameraId}: Playlist updated, playback preserved at index ${savedIndex}`);
+                    } else {
+                        // Video is not playing - safe to update
+                        video.dataset.playlist = JSON.stringify(newPlaylist);
+                        
+                        // Update current video info display
+                        updateCurrentVideoInfo(cameraId, parseInt(video.dataset.currentIndex) || 0);
+                        
+                        console.log(`Camera ${cameraId}: Playlist updated`);
+                    }
+                }
+            });
+            
+            // Update UI elements for all cameras
+            Object.keys(recordingsByCamera).forEach(cameraId => {
+                const recordings = recordingsByCamera[cameraId];
+                const currentIndex = document.getElementById(`current-index-${cameraId}`);
+                const video = document.getElementById(`video-${cameraId}`);
+                
+                if (currentIndex && video) {
+                    const currentIdx = parseInt(video.dataset.currentIndex) || 0;
+                    currentIndex.textContent = `${currentIdx + 1} / ${recordings.length}`;
+                }
+                
+                // Update current video info if not playing
+                const playingState = playingVideos[cameraId];
+                if (!playingState) {
+                    const video = document.getElementById(`video-${cameraId}`);
+                    if (video) {
+                        updateCurrentVideoInfo(cameraId, parseInt(video.dataset.currentIndex) || 0);
+                    }
+                }
+            });
+        }
+
+        // Update camera filter dropdown
+        function updateCameraFilter() {
+            const cameraFilter = document.getElementById('cameraFilter');
+            const currentValue = cameraFilter.value;
+            
+            // Clear existing options except "All"
+            cameraFilter.innerHTML = '<option value="all">All Cameras</option>';
+
+            // Add camera options
+            const cameraIds = Object.keys(recordingsByCamera).sort((a, b) => a - b);
+            cameraIds.forEach(cameraId => {
+                const option = document.createElement('option');
+                option.value = cameraId;
+                option.textContent = `Camera ${cameraId} (${recordingsByCamera[cameraId].length} recordings)`;
+                cameraFilter.appendChild(option);
+            });
+
+            // Restore previous selection if still valid
+            if (currentValue !== 'all' && recordingsByCamera[currentValue]) {
+                cameraFilter.value = currentValue;
+            }
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            document.getElementById('totalCount').textContent = recordingsArray.length;
+            
+            const cameraCount = Object.keys(recordingsByCamera).length;
+            document.getElementById('cameraCount').textContent = cameraCount;
+
+            const totalDuration = recordingsArray.reduce((sum, r) => sum + (r.duration || 0), 0);
+            const minutes = Math.floor(totalDuration / 60);
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            
+            if (hours > 0) {
+                document.getElementById('totalDuration').textContent = `${hours}h ${mins}m`;
+            } else {
+                document.getElementById('totalDuration').textContent = `${mins}m`;
+            }
+        }
+
+        // Display recordings - one card per camera
+        function displayRecordings() {
+            const container = document.getElementById('recordingsContainer');
+            const cameraFilter = document.getElementById('cameraFilter');
+            const selectedCamera = cameraFilter.value;
+
+            let camerasToDisplay = Object.keys(recordingsByCamera);
+
+            // Filter by camera if selected
+            if (selectedCamera !== 'all') {
+                camerasToDisplay = [selectedCamera];
+            }
+
+            // Sort cameras
+            camerasToDisplay.sort((a, b) => a - b);
+
+            if (camerasToDisplay.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                        <h3>No recordings found</h3>
+                        <p>${selectedCamera !== 'all' ? `No recordings for Camera ${selectedCamera}` : 'No recordings available. Start recording to see videos here.'}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = camerasToDisplay.map(cameraId => {
+                const recordings = recordingsByCamera[cameraId];
+                // Build playlist URLs - ensure all are valid
+                const playlist = recordings.map(r => {
+                    const url = buildVideoUrl(r);
+                    // Log each URL for debugging
+                    console.log(`Camera ${cameraId} - Recording ${r.recording_id}: ${url}`);
+                    return url;
+                }).filter(url => url && url.length > 0); // Filter out empty URLs
+                const cardId = `camera-${cameraId}`;
+                const videoId = `video-${cameraId}`;
+                const currentIndexId = `current-index-${cameraId}`;
+
+                // Calculate total duration and size for this camera
+                const totalDuration = recordings.reduce((sum, r) => sum + (r.duration || 0), 0);
+                const totalSize = recordings.reduce((sum, r) => sum + (r.file_size || 0), 0);
+
+                return `
+                    <div class="recording-card" data-camera-id="${cameraId}" id="${cardId}">
+                        <div class="video-wrapper">
+                            <video 
+                                id="${videoId}"
+                                controls 
+                                autoplay
+                                muted
+                                loop
+                                preload="auto"
+                                playsinline
+                                data-camera-id="${cameraId}"
+                                data-current-index="0"
+                                data-playlist='${JSON.stringify(playlist)}'
+                                data-auto-play-attempted="false"
+                                onended="playNextVideo('${cameraId}')"
+                                onerror="handleVideoError(this, '${cameraId}')"
+                                onloadedmetadata="tryAutoPlayVideo(this, '${cameraId}', true)"
+                                oncanplay="tryAutoPlayVideo(this, '${cameraId}', true)"
+                                oncanplaythrough="tryAutoPlayVideo(this, '${cameraId}', true)"
+                                onloadeddata="tryAutoPlayVideo(this, '${cameraId}', true)"
+                                onplay="console.log('Video playing for camera ${cameraId}')"
+                            >
+                                <source src="${playlist[0] || ''}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                            <div class="playlist-info" id="${currentIndexId}">
+                                1 / ${recordings.length}
+                            </div>
+                        </div>
+                        <div class="recording-info">
+                            <div class="recording-header">
+                                <span class="camera-badge">Camera ${cameraId}</span>
+                            </div>
+                            <div class="recording-details">
+                                <div class="detail-row">
+                                    <span class="detail-label">Total Recordings:</span>
+                                    <span>${recordings.length}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Total Duration:</span>
+                                    <span>${formatDuration(totalDuration)}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Total Size:</span>
+                                    <span>${formatFileSize(totalSize)}</span>
+                                </div>
+                            </div>
+                            <div class="playlist-controls">
+                                <button onclick="playPreviousVideo('${cameraId}')">⏮️ Previous</button>
+                                <button onclick="playNextVideo('${cameraId}')">Next ⏭️</button>
+                                <button onclick="restartPlaylist('${cameraId}')">🔄 Restart</button>
+                            </div>
+                            <div class="current-video-info" id="current-info-${cameraId}">
+                                <strong>Current:</strong> ${recordings[0]?.filename || 'N/A'}<br>
+                                <strong>Time:</strong> ${formatDate(recordings[0]?.start_time)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Auto-play first video if enabled - with user interaction workaround
+            if (autoPlayEnabled && camerasToDisplay.length > 0) {
+                // Wait a bit for video elements to be fully created
+                setTimeout(() => {
+                    camerasToDisplay.forEach(cameraId => {
+                        const video = document.getElementById(`video-${cameraId}`);
+                        if (video) {
+                            // Reset autoplay attempt flag
+                            video.dataset.autoPlayAttempted = 'false';
+                            
+                            // Set up event listeners for video ready states
+                            const playWhenReady = () => {
+                                if (video.readyState >= 3) { // HAVE_FUTURE_DATA or HAVE_ENOUGH_DATA
+                                    console.log(`Video ready for camera ${cameraId} - attempting play`);
+                                    tryAutoPlayVideo(video, cameraId, true);
+                                }
+                            };
+                            
+                            video.addEventListener('loadedmetadata', playWhenReady, { once: true });
+                            video.addEventListener('loadeddata', playWhenReady, { once: true });
+                            video.addEventListener('canplay', playWhenReady, { once: true });
+                            video.addEventListener('canplaythrough', playWhenReady, { once: true });
+                            
+                            // Multiple attempts at different intervals
+                            // Attempt 1: Immediate (if video is ready)
+                            setTimeout(() => {
+                                console.log(`Auto-play attempt 1 for camera ${cameraId}`);
+                                tryAutoPlayVideo(video, cameraId, true);
+                            }, 100);
+                            
+                            // Attempt 2: After short delay
+                            setTimeout(() => {
+                                console.log(`Auto-play attempt 2 for camera ${cameraId}`);
+                                tryAutoPlayVideo(video, cameraId, true);
+                            }, 500);
+                            
+                            // Attempt 3: After medium delay
+                            setTimeout(() => {
+                                console.log(`Auto-play attempt 3 for camera ${cameraId}`);
+                                tryAutoPlayVideo(video, cameraId, true);
+                            }, 1000);
+                            
+                            // Attempt 4: Fallback after longer delay
+                            setTimeout(() => {
+                                console.log(`Auto-play attempt 4 for camera ${cameraId}`);
+                                tryAutoPlayVideo(video, cameraId, true);
+                            }, 2000);
+                            
+                            // Attempt 5: Final attempt
+                            setTimeout(() => {
+                                console.log(`Auto-play attempt 5 (final) for camera ${cameraId}`);
+                                tryAutoPlayVideo(video, cameraId, true);
+                            }, 3000);
+                            
+                            // Attempt 6: Very aggressive - after 5 seconds
+                            setTimeout(() => {
+                                console.log(`Auto-play attempt 6 (aggressive) for camera ${cameraId}`);
+                                tryAutoPlayVideo(video, cameraId, true);
+                            }, 5000);
+                        }
+                    });
+                }, 100); // Reduced wait time for faster initial attempt
+            }
+        }
+
+        // Play next video in playlist
+        function playNextVideo(cameraId) {
+            const video = document.getElementById(`video-${cameraId}`);
+            if (!video) return;
+
+            const currentIndex = parseInt(video.dataset.currentIndex) || 0;
+            const playlist = JSON.parse(video.dataset.playlist || '[]');
+            const recordings = recordingsByCamera[cameraId] || [];
+
+            if (currentIndex < playlist.length - 1) {
+                const nextIndex = currentIndex + 1;
+                const nextUrl = playlist[nextIndex];
+
+                video.dataset.currentIndex = nextIndex;
+                video.dataset.autoPlayAttempted = 'false'; // Reset for new video
+                video.src = nextUrl;
+                video.load();
+                
+                // Update UI
+                updateCurrentVideoInfo(cameraId, nextIndex);
+                
+                // Auto-play if enabled - wait for video to load
+                if (autoPlayEnabled) {
+                    // Wait for video to be ready, then play
+                    video.addEventListener('canplay', function playOnReady() {
+                        video.removeEventListener('canplay', playOnReady);
+                        video.muted = true; // Ensure muted for autoplay
+                        const playPromise = video.play();
+                        if (playPromise !== undefined) {
+                            playPromise.then(() => {
+                                console.log(`✅ Auto-played next video for camera ${cameraId}`);
+                            }).catch(e => {
+                                console.log(`⚠️  Auto-play blocked for camera ${cameraId}:`, e.message);
+                            });
+                        }
+                    }, { once: true });
+                    
+                    // Also try immediate play if video is already ready
+                    if (video.readyState >= 2) {
+                        video.muted = true;
+                        video.play().catch(e => {
+                            console.log(`⚠️  Immediate play blocked for camera ${cameraId}:`, e.message);
+                        });
+                    }
+                }
+            } else {
+                console.log(`End of playlist for camera ${cameraId}`);
+            }
+        }
+
+        // Play previous video in playlist
+        function playPreviousVideo(cameraId) {
+            const video = document.getElementById(`video-${cameraId}`);
+            if (!video) return;
+
+            const currentIndex = parseInt(video.dataset.currentIndex) || 0;
+            const playlist = JSON.parse(video.dataset.playlist || '[]');
+
+            if (currentIndex > 0) {
+                const prevIndex = currentIndex - 1;
+                const prevUrl = playlist[prevIndex];
+
+                video.dataset.currentIndex = prevIndex;
+                video.dataset.autoPlayAttempted = 'false'; // Reset for new video
+                video.src = prevUrl;
+                video.load();
+                
+                // Update UI
+                updateCurrentVideoInfo(cameraId, prevIndex);
+                
+                // Auto-play if enabled - wait for video to load
+                if (autoPlayEnabled) {
+                    // Wait for video to be ready, then play
+                    video.addEventListener('canplay', function playOnReady() {
+                        video.removeEventListener('canplay', playOnReady);
+                        video.muted = true; // Ensure muted for autoplay
+                        const playPromise = video.play();
+                        if (playPromise !== undefined) {
+                            playPromise.then(() => {
+                                console.log(`✅ Auto-played previous video for camera ${cameraId}`);
+                            }).catch(e => {
+                                console.log(`⚠️  Auto-play blocked for camera ${cameraId}:`, e.message);
+                            });
+                        }
+                    }, { once: true });
+                    
+                    // Also try immediate play if video is already ready
+                    if (video.readyState >= 2) {
+                        video.muted = true;
+                        video.play().catch(e => {
+                            console.log(`⚠️  Immediate play blocked for camera ${cameraId}:`, e.message);
+                        });
+                    }
+                }
+            }
+        }
+
+        // Restart playlist from beginning
+        function restartPlaylist(cameraId) {
+            const video = document.getElementById(`video-${cameraId}`);
+            if (!video) return;
+
+            const playlist = JSON.parse(video.dataset.playlist || '[]');
+            if (playlist.length > 0) {
+                video.dataset.currentIndex = 0;
+                video.dataset.autoPlayAttempted = 'false'; // Reset for restart
+                video.src = playlist[0];
+                video.load();
+                
+                // Update UI
+                updateCurrentVideoInfo(cameraId, 0);
+                
+                // Auto-play if enabled - wait for video to load
+                if (autoPlayEnabled) {
+                    // Wait for video to be ready, then play
+                    video.addEventListener('canplay', function playOnReady() {
+                        video.removeEventListener('canplay', playOnReady);
+                        video.muted = true; // Ensure muted for autoplay
+                        const playPromise = video.play();
+                        if (playPromise !== undefined) {
+                            playPromise.then(() => {
+                                console.log(`✅ Auto-played restarted video for camera ${cameraId}`);
+                            }).catch(e => {
+                                console.log(`⚠️  Auto-play blocked for camera ${cameraId}:`, e.message);
+                            });
+                        }
+                    }, { once: true });
+                    
+                    // Also try immediate play if video is already ready
+                    if (video.readyState >= 2) {
+                        video.muted = true;
+                        video.play().catch(e => {
+                            console.log(`⚠️  Immediate play blocked for camera ${cameraId}:`, e.message);
+                        });
+                    }
+                }
+            }
+        }
+
+        // Update current video info
+        function updateCurrentVideoInfo(cameraId, index) {
+            const recordings = recordingsByCamera[cameraId] || [];
+            const currentInfo = document.getElementById(`current-info-${cameraId}`);
+            const currentIndex = document.getElementById(`current-index-${cameraId}`);
+
+            if (recordings[index]) {
+                const recording = recordings[index];
+                if (currentInfo) {
+                    currentInfo.innerHTML = `
+                        <strong>Current:</strong> ${recording.filename || 'N/A'}<br>
+                        <strong>Time:</strong> ${formatDate(recording.start_time)}<br>
+                        <strong>Duration:</strong> ${formatDuration(recording.duration)}
+                    `;
+                }
+                if (currentIndex) {
+                    currentIndex.textContent = `${index + 1} / ${recordings.length}`;
+                }
+            }
+        }
+
+        // Handle video errors - try streaming API as fallback
+        function handleVideoError(videoElement, cameraId) {
+            const error = videoElement.error;
+            const currentIndex = parseInt(videoElement.dataset.currentIndex) || 0;
+            const playlist = JSON.parse(videoElement.dataset.playlist || '[]');
+            const recordings = recordingsByCamera[cameraId] || [];
+            const recording = recordings[currentIndex];
+            
+            console.error(`Error loading video for camera ${cameraId}:`, {
+                error: error,
+                code: error?.code,
+                message: error?.message,
+                currentSrc: videoElement.currentSrc,
+                src: videoElement.src,
+                failedUrl: playlist[currentIndex]
+            });
+            
+            // Try streaming API as fallback if direct URL failed
+            if (recording && recording.recording_id && recording._streamingUrl) {
+                console.log(`Trying streaming API fallback for recording ${recording.recording_id}`);
+                const streamingUrl = recording._streamingUrl;
+                
+                // Update video source to use streaming API
+                videoElement.src = streamingUrl;
+                videoElement.load();
+                
+                // Try to play
+                const playPromise = videoElement.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        console.log(`✅ Successfully loaded video via streaming API`);
+                    }).catch(e => {
+                        console.error(`❌ Streaming API also failed:`, e);
+                        // Show error in UI
+                        showVideoError(videoElement, cameraId, error, playlist[currentIndex], streamingUrl);
+                    });
+                }
+            } else {
+                // Show error and try next video
+                showVideoError(videoElement, cameraId, error, playlist[currentIndex]);
+                
+                // Try to play next video if current fails
+                if (currentIndex < playlist.length - 1) {
+                    console.log(`Attempting to skip to next video for camera ${cameraId}`);
+                    setTimeout(() => playNextVideo(cameraId), 2000);
+                }
+            }
+        }
+        
+        // Show video error in UI
+        function showVideoError(videoElement, cameraId, error, directUrl, streamingUrl) {
+            const card = videoElement.closest('.recording-card');
+            if (card) {
+                // Remove existing error messages
+                const existingErrors = card.querySelectorAll('.error');
+                existingErrors.forEach(e => e.remove());
+                
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'error';
+                errorMsg.style.margin = '10px';
+                let html = `<strong>Video Error:</strong> ${error?.message || 'Unknown error'}<br>`;
+                html += `<strong>Direct URL:</strong> ${directUrl || 'N/A'}<br>`;
+                if (streamingUrl) {
+                    html += `<strong>Streaming URL:</strong> ${streamingUrl}<br>`;
+                }
+                html += `<strong>Code:</strong> ${error?.code || 'N/A'}`;
+                errorMsg.innerHTML = html;
+                card.querySelector('.recording-info').appendChild(errorMsg);
+            }
+        }
+
+        // Toggle auto-play
+        function toggleAutoPlay() {
+            autoPlayEnabled = !autoPlayEnabled;
+            const btn = document.getElementById('autoPlayBtn');
+            btn.textContent = autoPlayEnabled ? '⏸️ Pause Auto-Play' : '▶️ Resume Auto-Play';
+        }
+        
+        // Toggle background refresh
+        let backgroundRefreshEnabled = true;
+        function toggleBackgroundRefresh() {
+            backgroundRefreshEnabled = !backgroundRefreshEnabled;
+            const btn = document.getElementById('bgRefreshBtn');
+            
+            if (backgroundRefreshEnabled) {
+                startBackgroundRefresh();
+                btn.textContent = '⏸️ Stop Auto-Refresh';
+            } else {
+                stopBackgroundRefresh();
+                btn.textContent = '▶️ Start Auto-Refresh';
+            }
+        }
+
+        // Start background refresh (checks for new recordings every 30 seconds)
+        function startBackgroundRefresh() {
+            // Clear any existing interval
+            if (backgroundRefreshInterval) {
+                clearInterval(backgroundRefreshInterval);
+            }
+            
+            // Refresh every 30 seconds
+            backgroundRefreshInterval = setInterval(() => {
+                console.log('Background refresh: Checking for new recordings...');
+                loadRecordings(true); // Silent refresh
+            }, 30000); // 30 seconds
+            
+            console.log('Background refresh started (every 30 seconds)');
+        }
+        
+        // Stop background refresh
+        function stopBackgroundRefresh() {
+            if (backgroundRefreshInterval) {
+                clearInterval(backgroundRefreshInterval);
+                backgroundRefreshInterval = null;
+                console.log('Background refresh stopped');
+            }
+        }
+
+        // Filter change handler
+        document.getElementById('cameraFilter').addEventListener('change', displayRecordings);
+
+        // Try to auto-play a single video
+        function tryAutoPlayVideo(video, cameraId, forceRetry = false) {
+            if (!video || !autoPlayEnabled) return;
+            
+            autoplayAttempts++;
+            
+            // Skip if already playing
+            if (!video.paused && video.currentTime > 0 && !video.ended) {
+                return;
+            }
+            
+            // If autoplay was enabled by user interaction, force play
+            if (userAutoplayEnabled) {
+                forceRetry = true;
+            }
+            
+            // Ensure video is muted for autoplay policy (always muted for autoplay)
+            video.muted = true;
+            
+            // Ensure autoplay attribute is set
+            if (!video.hasAttribute('autoplay')) {
+                video.setAttribute('autoplay', 'autoplay');
+            }
+            
+            console.log(`🎬 Attempting to play video for camera ${cameraId} (readyState: ${video.readyState}, paused: ${video.paused}, muted: ${video.muted})`);
+            
+            // Try to play regardless of readyState if forced
+            if (forceRetry || video.readyState >= 2) {
+                try {
+                    // Multiple play attempts
+                    const playAttempts = [
+                        () => video.play(),
+                        () => setTimeout(() => video.play(), 50),
+                        () => setTimeout(() => video.play(), 100)
+                    ];
+                    
+                    let attemptIndex = 0;
+                    const tryPlay = () => {
+                        if (attemptIndex < playAttempts.length) {
+                            const playPromise = playAttempts[attemptIndex]();
+                            attemptIndex++;
+                            
+                            if (playPromise !== undefined) {
+                                playPromise.then(() => {
+                                    console.log(`✅ Video auto-playing for camera ${cameraId}`);
+                                    // Keep muted - user can unmute manually if needed
+                                }).catch(e => {
+                                    console.log(`⚠️  Play attempt ${attemptIndex} blocked for camera ${cameraId}:`, e.message);
+                                    // Try next attempt
+                                    if (attemptIndex < playAttempts.length) {
+                                        tryPlay();
+                                    } else {
+                                        // All attempts failed
+                                        if (!userAutoplayEnabled) {
+                                            setupUserInteractionPlayback(cameraId);
+                                        }
+                                    }
+                                });
+                            } else {
+                                // play() not available, try next attempt
+                                if (attemptIndex < playAttempts.length) {
+                                    tryPlay();
+                                }
+                            }
+                        }
+                    };
+                    
+                    tryPlay();
+                } catch (e) {
+                    console.error(`Error attempting to play video for camera ${cameraId}:`, e);
+                    if (!userAutoplayEnabled) {
+                        setupUserInteractionPlayback(cameraId);
+                    }
+                }
+            } else {
+                console.log(`Video for camera ${cameraId} not ready yet (readyState: ${video.readyState}), will retry when ready`);
+            }
+        }
+        
+        // Setup user interaction playback (for browsers that block autoplay)
+        function setupUserInteractionPlayback(cameraId) {
+            const video = document.getElementById(`video-${cameraId}`);
+            if (!video) return;
+            
+            // Only setup if video is still paused
+            if (!video.paused) return;
+            
+            // Check if we've already set up interaction listeners
+            if (video.dataset.interactionSetup === 'true') {
+                return; // Already set up
+            }
+            
+            video.dataset.interactionSetup = 'true';
+            
+            // One-time event listeners that remove themselves after first interaction
+            const playOnInteraction = () => {
+                if (video && video.paused && autoPlayEnabled) {
+                    video.muted = true; // Ensure muted
+                    const playPromise = video.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            console.log(`✅ Played video on user interaction for camera ${cameraId}`);
+                        }).catch(e => {
+                            console.log(`⚠️  Play on interaction failed for camera ${cameraId}:`, e.message);
+                        });
+                    }
+                }
+            };
+            
+            // Use { once: true } so listeners auto-remove after first use
+            document.addEventListener('click', playOnInteraction, { once: true });
+            document.addEventListener('touchstart', playOnInteraction, { once: true });
+            document.addEventListener('keydown', playOnInteraction, { once: true });
+            
+            // Also listen to video element directly
+            video.addEventListener('click', playOnInteraction, { once: true });
+        }
+        
+        // Force play all videos (can be called after user interaction)
+        function forcePlayAllVideos() {
+            console.log('Force playing all videos...');
+            Object.keys(recordingsByCamera).forEach(cameraId => {
+                const video = document.getElementById(`video-${cameraId}`);
+                if (video && video.paused && autoPlayEnabled) {
+                    video.muted = true;
+                    tryAutoPlayVideo(video, cameraId, true); // Force retry
+                }
+            });
+        }
+        
+        // Auto-play all videos (attempts to bypass browser restrictions)
+        function attemptAutoPlayAll(forceRetry = false) {
+            const camerasToDisplay = Object.keys(recordingsByCamera).sort((a, b) => a - b);
+            
+            if (!autoPlayEnabled || camerasToDisplay.length === 0) {
+                return;
+            }
+            
+            console.log(`Attempting to auto-play all videos (force: ${forceRetry})...`);
+            
+            camerasToDisplay.forEach(cameraId => {
+                const video = document.getElementById(`video-${cameraId}`);
+                if (video) {
+                    tryAutoPlayVideo(video, cameraId, forceRetry);
+                }
+            });
+        }
+        
+        // Auto-load on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('Page loaded - starting automatic recording load and playback...');
+            
+            // Load recordings and attempt auto-play after loading
+            (async () => {
+                await loadRecordings(false); // Initial load (not silent)
+                
+                // After recordings are loaded, attempt to play videos multiple times
+                // Browsers can be slow to load video metadata, so we try multiple times
+                // Note: Videos also try to autoplay via onloadedmetadata/oncanplay events
+                
+                setTimeout(() => {
+                    console.log('Auto-play attempt 1 (500ms delay)');
+                    attemptAutoPlayAll();
+                }, 500);
+                
+                setTimeout(() => {
+                    console.log('Auto-play attempt 2 (1 second delay)');
+                    attemptAutoPlayAll();
+                }, 1000);
+                
+                setTimeout(() => {
+                    console.log('Auto-play attempt 3 (2 second delay)');
+                    attemptAutoPlayAll();
+                }, 2000);
+                
+                setTimeout(() => {
+                    console.log('Auto-play attempt 4 (3 second delay)');
+                    attemptAutoPlayAll();
+                }, 3000);
+                
+                setTimeout(() => {
+                    console.log('Auto-play attempt 5 (4 second delay)');
+                    attemptAutoPlayAll();
+                }, 4000);
+                
+                // Final attempt after 5 seconds
+                setTimeout(() => {
+                    console.log('Auto-play attempt 6 (5 second delay - final)');
+                    attemptAutoPlayAll();
+                    // Check autoplay status and show notice if needed
+                    checkAutoplayStatus();
+                }, 5000);
+            })();
+            
+            // Start background refresh after initial load
+            setTimeout(() => {
+                startBackgroundRefresh();
+            }, 6000); // Start after 6 seconds
+        });
+        
+        // Also try to play on page visibility change (when tab becomes visible)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && recordingsArray.length > 0) {
+                // Page became visible - try to play videos
+                setTimeout(() => {
+                    attemptAutoPlayAll(true); // Force retry
+                }, 500);
+            }
+        });
+        
+        // Track if autoplay was enabled by user interaction (to force play)
+        let userAutoplayEnabled = false;
+        let autoplayAttempts = 0;
+        const MAX_AUTOPLAY_ATTEMPTS = 10;
+        
+        // Function to enable autoplay after user interaction
+        function enableAutoplay() {
+            userAutoplayEnabled = true;
+            console.log('✅ Autoplay enabled by user interaction');
+            
+            // Hide notice
+            const notice = document.getElementById('autoplayNotice');
+            if (notice) {
+                notice.style.display = 'none';
+            }
+            
+            // Hide play all button
+            const playAllBtn = document.getElementById('playAllBtn');
+            if (playAllBtn) {
+                playAllBtn.style.display = 'none';
+            }
+            
+            // Force play all videos
+            forcePlayAllVideos();
+        }
+        
+        // Add click handler to entire page to enable autoplay after first click
+        let userInteracted = false;
+        const enableAutoplayOnInteraction = () => {
+            if (!userInteracted && autoPlayEnabled) {
+                userInteracted = true;
+                console.log('User interacted with page - enabling autoplay...');
+                enableAutoplay();
+            }
+        };
+        
+        document.addEventListener('click', enableAutoplayOnInteraction, { once: true });
+        document.addEventListener('touchstart', enableAutoplayOnInteraction, { once: true });
+        document.addEventListener('keydown', enableAutoplayOnInteraction, { once: true });
+        
+        // Check if videos are playing after autoplay attempts
+        function checkAutoplayStatus() {
+            setTimeout(() => {
+                let allPaused = true;
+                Object.keys(recordingsByCamera).forEach(cameraId => {
+                    const video = document.getElementById(`video-${cameraId}`);
+                    if (video && !video.paused && video.currentTime > 0) {
+                        allPaused = false;
+                    }
+                });
+                
+                // If all videos are still paused after multiple attempts, show notice
+                if (allPaused && autoplayAttempts >= 5 && !userAutoplayEnabled && recordingsArray.length > 0) {
+                    const notice = document.getElementById('autoplayNotice');
+                    const playAllBtn = document.getElementById('playAllBtn');
+                    if (notice) {
+                        notice.style.display = 'block';
+                    }
+                    if (playAllBtn) {
+                        playAllBtn.style.display = 'inline-block';
+                    }
+                }
+            }, 6000); // Check after 6 seconds
+        }
+        
+        // Stop background refresh when page is hidden (to save resources)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopBackgroundRefresh();
+            } else {
+                startBackgroundRefresh();
+                // Also do a refresh when page becomes visible again
+                loadRecordings(true);
+            }
+        });
+
+        // Expose global functions for console debugging
+        window.getRecordingById = (id) => recordingsById[id];
+        window.getRecordingsByCamera = (cameraId) => recordingsByCamera[cameraId] || [];
+        window.getAllRecordings = () => recordingsArray;
+        window.startBackgroundRefresh = startBackgroundRefresh;
+        window.stopBackgroundRefresh = stopBackgroundRefresh;
+        window.forcePlayAllVideos = forcePlayAllVideos;
+        window.attemptAutoPlayAll = attemptAutoPlayAll;
+    </script>
+</body>
+</html>
