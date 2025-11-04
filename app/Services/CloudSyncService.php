@@ -726,6 +726,69 @@ class CloudSyncService
     }
     
     /**
+     * Download file from cloud storage
+     * @param string $cloudUrl Cloud URL or path to the file
+     * @param string $directory Directory name on local server (e.g., 'faculty_images')
+     * @return string|null Returns local relative path or null on failure
+     */
+    protected function downloadFileFromCloud($cloudUrl, $directory)
+    {
+        try {
+            if (empty($cloudUrl)) {
+                return null;
+            }
+            
+            // Build full cloud URL if it's a relative path
+            $fullUrl = $cloudUrl;
+            if (!filter_var($cloudUrl, FILTER_VALIDATE_URL)) {
+                // It's a relative path, prepend cloud domain
+                $cloudDomain = rtrim($this->cloudApiUrl, '/api');
+                if (strpos($cloudUrl, '/storage/') === 0) {
+                    $fullUrl = $cloudDomain . $cloudUrl;
+                } elseif (strpos($cloudUrl, 'storage/') === 0) {
+                    $fullUrl = $cloudDomain . '/' . $cloudUrl;
+                } else {
+                    $fullUrl = $cloudDomain . '/storage/' . $directory . '/' . basename($cloudUrl);
+                }
+            }
+            
+            // Extract filename from URL
+            $filename = basename(parse_url($fullUrl, PHP_URL_PATH));
+            if (empty($filename)) {
+                $filename = basename($cloudUrl);
+            }
+            
+            // Ensure directory exists
+            $localDir = storage_path('app/public/' . $directory);
+            if (!is_dir($localDir)) {
+                mkdir($localDir, 0755, true);
+            }
+            
+            // Download file
+            $response = Http::timeout(300) // 5 minutes for large files
+                ->get($fullUrl);
+            
+            if ($response->successful()) {
+                $localPath = $directory . '/' . $filename;
+                $fullLocalPath = storage_path('app/public/' . $localPath);
+                
+                // Save file
+                file_put_contents($fullLocalPath, $response->body());
+                
+                Log::info("Downloaded file from cloud: {$fullUrl} -> {$localPath}");
+                return $localPath;
+            }
+            
+            Log::warning("Failed to download file from cloud: {$fullUrl}");
+            return null;
+            
+        } catch (\Exception $e) {
+            Log::error("Error downloading file from cloud ({$cloudUrl}): " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
      * Upload file to cloud storage
      * @param string $localPath Relative path from storage/app/public (e.g., 'faculty_images/file.jpg')
      * @param string $directory Directory name on cloud server (e.g., 'faculty_images')
@@ -889,6 +952,122 @@ class CloudSyncService
         
         Log::warning("Failed to sync stream recording video: {$filepath}");
         return $filepath;
+    }
+    
+    /**
+     * Download faculty images from cloud (handles JSON array of image paths)
+     * @param string|array $cloudImages JSON string or array of cloud image paths/URLs
+     * @return string JSON string of local image paths
+     */
+    protected function downloadFacultyImages($cloudImages)
+    {
+        if (empty($cloudImages)) {
+            return $cloudImages;
+        }
+        
+        // Parse JSON if it's a string
+        if (is_string($cloudImages)) {
+            $images = json_decode($cloudImages, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                // Not valid JSON, try to download as single image
+                $localPath = $this->downloadFileFromCloud($cloudImages, 'faculty_images');
+                return $localPath ? json_encode([$localPath]) : $cloudImages;
+            }
+        } else {
+            $images = $cloudImages;
+        }
+        
+        if (!is_array($images)) {
+            return $cloudImages;
+        }
+        
+        $localImages = [];
+        foreach ($images as $imagePath) {
+            if (empty($imagePath)) {
+                continue;
+            }
+            
+            // Download image from cloud
+            $localPath = $this->downloadFileFromCloud($imagePath, 'faculty_images');
+            
+            if ($localPath) {
+                $localImages[] = $localPath;
+                Log::info("Downloaded faculty image from cloud: {$imagePath} -> {$localPath}");
+            } else {
+                // Keep original path if download failed
+                $localImages[] = $imagePath;
+                Log::warning("Failed to download faculty image: {$imagePath}");
+            }
+        }
+        
+        // Return as JSON string (same format as database)
+        return json_encode($localImages);
+    }
+    
+    /**
+     * Download leave slip image from cloud
+     * @param string $cloudImagePath Cloud image path/URL
+     * @return string Local image path
+     */
+    protected function downloadLeaveImage($cloudImagePath)
+    {
+        if (empty($cloudImagePath)) {
+            return $cloudImagePath;
+        }
+        
+        $localPath = $this->downloadFileFromCloud($cloudImagePath, 'leave_slips');
+        
+        if ($localPath) {
+            Log::info("Downloaded leave slip image from cloud: {$cloudImagePath} -> {$localPath}");
+            return $localPath;
+        }
+        
+        Log::warning("Failed to download leave slip image: {$cloudImagePath}");
+        return $cloudImagePath;
+    }
+    
+    /**
+     * Download pass slip image from cloud
+     * @param string $cloudImagePath Cloud image path/URL
+     * @return string Local image path
+     */
+    protected function downloadPassImage($cloudImagePath)
+    {
+        if (empty($cloudImagePath)) {
+            return $cloudImagePath;
+        }
+        
+        $localPath = $this->downloadFileFromCloud($cloudImagePath, 'passes');
+        
+        if ($localPath) {
+            Log::info("Downloaded pass slip image from cloud: {$cloudImagePath} -> {$localPath}");
+            return $localPath;
+        }
+        
+        Log::warning("Failed to download pass slip image: {$cloudImagePath}");
+        return $cloudImagePath;
+    }
+    
+    /**
+     * Download stream recording video from cloud
+     * @param string $cloudVideoPath Cloud video path/URL
+     * @return string Local video path
+     */
+    protected function downloadStreamRecordingVideo($cloudVideoPath)
+    {
+        if (empty($cloudVideoPath)) {
+            return $cloudVideoPath;
+        }
+        
+        $localPath = $this->downloadFileFromCloud($cloudVideoPath, 'stream_recordings');
+        
+        if ($localPath) {
+            Log::info("Downloaded stream recording video from cloud: {$cloudVideoPath} -> {$localPath}");
+            return $localPath;
+        }
+        
+        Log::warning("Failed to download stream recording video: {$cloudVideoPath}");
+        return $cloudVideoPath;
     }
     
     /**
@@ -1175,13 +1354,16 @@ class CloudSyncService
             
             foreach ($cloudFaculties as $cloudFaculty) {
                 try {
+                    // Download faculty images from cloud
+                    $localImages = $this->downloadFacultyImages($cloudFaculty['faculty_images'] ?? null);
+                    
                     DB::table('tbl_faculty')->upsert([
                         [
                             'faculty_id' => $cloudFaculty['faculty_id'],
                             'faculty_fname' => $cloudFaculty['faculty_fname'] ?? null,
                             'faculty_lname' => $cloudFaculty['faculty_lname'] ?? null,
                             'faculty_department' => $cloudFaculty['faculty_department'] ?? null,
-                            'faculty_images' => $cloudFaculty['faculty_images'] ?? null,
+                            'faculty_images' => $localImages,
                             'faculty_face_embedding' => $cloudFaculty['faculty_face_embedding'] ?? null,
                             'created_at' => $this->formatDateTime($cloudFaculty['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudFaculty['updated_at'] ?? null),
@@ -1309,6 +1491,9 @@ class CloudSyncService
             
             foreach ($cloudLeaves as $cloudLeave) {
                 try {
+                    // Download leave slip image from cloud
+                    $localImagePath = $this->downloadLeaveImage($cloudLeave['lp_image'] ?? null);
+                    
                     DB::table('tbl_leave_pass')->upsert([
                         [
                             'lp_id' => $cloudLeave['lp_id'],
@@ -1321,7 +1506,7 @@ class CloudSyncService
                             'pass_slip_arrival_time' => $cloudLeave['pass_slip_arrival_time'] ?? null,
                             'lp_start_date' => $this->formatDateTime($cloudLeave['lp_start_date'] ?? null),
                             'lp_end_date' => $this->formatDateTime($cloudLeave['lp_end_date'] ?? null),
-                            'lp_image' => $cloudLeave['lp_image'] ?? null,
+                            'lp_image' => $localImagePath,
                             'lp_status' => $cloudLeave['lp_status'] ?? null,
                             'lp_remarks' => $cloudLeave['lp_remarks'] ?? null,
                             'created_at' => $this->formatDateTime($cloudLeave['created_at'] ?? null),
@@ -1359,6 +1544,9 @@ class CloudSyncService
             
             foreach ($cloudPasses as $cloudPass) {
                 try {
+                    // Download pass slip image from cloud
+                    $localImagePath = $this->downloadPassImage($cloudPass['lp_image'] ?? null);
+                    
                     DB::table('tbl_leave_pass')->upsert([
                         [
                             'lp_id' => $cloudPass['lp_id'],
@@ -1371,7 +1559,7 @@ class CloudSyncService
                             'pass_slip_arrival_time' => $cloudPass['pass_slip_arrival_time'] ?? null,
                             'lp_start_date' => $this->formatDateTime($cloudPass['lp_start_date'] ?? null),
                             'lp_end_date' => $this->formatDateTime($cloudPass['lp_end_date'] ?? null),
-                            'lp_image' => $cloudPass['lp_image'] ?? null,
+                            'lp_image' => $localImagePath,
                             'lp_status' => $cloudPass['lp_status'] ?? null,
                             'lp_remarks' => $cloudPass['lp_remarks'] ?? null,
                             'created_at' => $this->formatDateTime($cloudPass['created_at'] ?? null),
@@ -1455,6 +1643,16 @@ class CloudSyncService
             
             foreach ($cloudRecordings as $cloudRecording) {
                 try {
+                    // Download video file from cloud (use filepath or filename)
+                    $cloudVideoPath = $cloudRecording['filepath'] ?? $cloudRecording['filename'] ?? null;
+                    $localVideoPath = $this->downloadStreamRecordingVideo($cloudVideoPath);
+                    
+                    // Extract filename if we have filepath
+                    $localFilename = $cloudRecording['filename'] ?? null;
+                    if ($localVideoPath && !$localFilename) {
+                        $localFilename = basename($localVideoPath);
+                    }
+                    
                     DB::table('tbl_stream_recordings')->upsert([
                         [
                             'recording_id' => $cloudRecording['recording_id'],
@@ -1462,8 +1660,8 @@ class CloudSyncService
                             'start_time' => $this->formatDateTime($cloudRecording['start_time'] ?? null),
                             'duration' => $cloudRecording['duration'] ?? null,
                             'frames' => $cloudRecording['frames'] ?? null,
-                            'filepath' => $cloudRecording['filepath'] ?? null,
-                            'filename' => $cloudRecording['filename'] ?? null,
+                            'filepath' => $localVideoPath,
+                            'filename' => $localFilename,
                             'file_size' => $cloudRecording['file_size'] ?? null,
                             'created_at' => $this->formatDateTime($cloudRecording['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudRecording['updated_at'] ?? null),
