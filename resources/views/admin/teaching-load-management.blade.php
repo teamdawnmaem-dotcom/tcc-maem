@@ -1,4 +1,4 @@
-@extends('layouts.appdeptHead')
+@extends('layouts.appAdmin')
 
 @section('title', 'Teaching Load Management - Tagoloan Community College')
 @section('files-active', 'active')
@@ -131,7 +131,7 @@
 
         .action-btns {
             display: flex;
-            gap: 6.4px;
+            gap: 8px;
             justify-content: center;
             align-items: center;
         }
@@ -274,13 +274,13 @@
 
         .validation-message {
             position: absolute;
-            left: 72px;
-            right: 9.6px;
+            left: 90px;
+            right: 12px;
             bottom: 0;
-            font-size: 0.68rem;
+            font-size: 0.85rem;
             color: #ff3636;
             pointer-events: none;
-            padding-left: 9.6px;
+            padding-left: 12px;
         }
 
         .modal-form-group textarea {
@@ -315,7 +315,7 @@
 
         .modal-row {
             display: flex;
-            gap: 14.4px;
+            gap: 18px;
             width: 100%;
         }
 
@@ -338,23 +338,23 @@
 
         .modal-buttons {
             display: flex;
-            gap: 9.6px;
+            gap: 12px;
             justify-content: center;
-            margin-top: 14.4px;
+            margin-top: 18px;
         }
 
         .modal-box {
             align-items: center;
             width: 100%;
-            max-width: 360px;
+            max-width: 450px;
         }
 
         .modal-form {
             width: 100%;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 14.4px 19.2px;
-            margin-bottom: 14.4px;
+            gap: 18px 24px;
+            margin-bottom: 18px;
         }
 
         .modal-form-group {
@@ -366,9 +366,9 @@
         }
 
         .modal-form-group label {
-            min-width: 72px;
+            min-width: 90px;
             text-align: left;
-            font-size: 0.8rem;
+            font-size: 1rem;
             color: #222;
         }
 
@@ -502,27 +502,27 @@
         .modal-form-group select {
             flex: 1;
             width: 100%;
-            padding: 8px 9.6px;
-            font-size: 0.8rem;
+            padding: 10px 12px;
+            font-size: 1rem;
             border: 1px solid #bbb;
-            border-radius: 4px;
+            border-radius: 5px;
         }
 
 
         .modal-buttons {
             display: flex;
-            gap: 9.6px;
+            gap: 12px;
             grid-column: 1 / span 2;
-            margin-top: 8px;
+            margin-top: 10px;
         }
 
         .modal-btn {
             width: 60%;
-            padding: 9.6px 0;
-            font-size: 0.88rem;
+            padding: 12px 0;
+            font-size: 1.1rem;
             font-weight: bold;
-            border: 1.6px solid #bbb;
-            border-radius: 4.8px;
+            border: 2px solid #bbb;
+            border-radius: 6px;
             cursor: pointer;
             background: #fff;
             transition: background 0.2s, color 0.2s;
@@ -561,6 +561,399 @@
             background: #27ae60;
             border-color: #27ae60;
         }
+
+        /* Mobile Responsive Design for phones (max-width: 430px) */
+        @media (max-width: 430px) {
+            /* Faculty Header */
+            .faculty-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+                margin-bottom: 20px;
+                position: relative;
+            }
+
+            .faculty-title-group {
+                width: 100%;
+            }
+
+            .faculty-title {
+                font-size: 1.4rem;
+                margin-bottom: 4px;
+            }
+
+            .faculty-subtitle {
+                font-size: 0.75rem;
+                margin-bottom: 0;
+            }
+
+            /* Faculty Actions Row */
+            .faculty-actions-row {
+                position: relative;
+                top: 0;
+                right: 0;
+                width: 100%;
+                flex-direction: column;
+                gap: 10px;
+                z-index: 1;
+            }
+
+            .search-input {
+                width: 100% !important;
+                padding: 10px 12px;
+                font-size: 0.9rem;
+                border-radius: 6px;
+                box-sizing: border-box;
+            }
+
+            .csv-btn,
+            .add-btn,
+            .archive-btn,
+            .view-archive-btn {
+                width: 100%;
+                padding: 12px;
+                font-size: 0.9rem;
+                border-radius: 6px;
+                font-weight: bold;
+                text-align: center;
+            }
+
+            /* Table Container */
+            .teaching-load-table-container {
+                border-radius: 8px;
+                overflow: hidden;
+            }
+
+            .teaching-load-table-scroll {
+                max-height: 50vh;
+                overflow-x: auto;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .teaching-load-table {
+                min-width: 900px; /* Minimum width to maintain readability */
+            }
+
+            .teaching-load-table th {
+                padding: 10px 6px;
+                font-size: 0.7rem;
+                white-space: nowrap;
+            }
+
+            .teaching-load-table td {
+                padding: 8px 6px;
+                font-size: 0.7rem;
+                white-space: nowrap;
+            }
+
+            /* Empty state message */
+            .teaching-load-table td[colspan] {
+                font-size: 0.75rem;
+                padding: 20px 12px;
+            }
+
+            /* Action Buttons */
+            .action-btns {
+                gap: 6px;
+            }
+
+            .edit-btn,
+            .delete-btn {
+                width: 32px;
+                height: 28px;
+                font-size: 0.9rem;
+            }
+
+            /* Modals - Mobile Optimized */
+            .modal-overlay {
+                padding: 10px;
+            }
+
+            .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+                padding: 20px 16px !important;
+                margin: 0;
+            }
+
+            /* Add Teaching Load Modal */
+            #addTeachingLoadModal .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+            }
+
+            #addTeachingLoadModal .modal-header {
+                font-size: 1.1rem !important;
+                padding: 12px 16px !important;
+            }
+
+            #addTeachingLoadModal .modal-form {
+                padding: 16px !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 16px !important;
+            }
+
+            #addTeachingLoadModal .form-section {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+
+            #addTeachingLoadModal .section-title {
+                grid-column: 1 !important;
+                font-size: 1rem !important;
+                margin-bottom: 8px !important;
+            }
+
+            #addTeachingLoadModal .modal-form-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+                margin-bottom: 12px;
+                padding-bottom: 18px;
+            }
+
+            #addTeachingLoadModal .modal-form-group.full-width {
+                grid-column: 1 !important;
+            }
+
+            #addTeachingLoadModal .modal-form-group label {
+                min-width: auto;
+                width: 100%;
+                margin-bottom: 4px;
+                font-size: 0.85rem;
+            }
+
+            #addTeachingLoadModal .modal-form-group input,
+            #addTeachingLoadModal .modal-form-group select {
+                width: 100%;
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+
+            #addTeachingLoadModal .validation-message {
+                position: relative;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding-left: 0;
+                margin-top: 4px;
+            }
+
+            #addTeachingLoadModal .modal-buttons {
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 16px;
+            }
+
+            #addTeachingLoadModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 0.9rem !important;
+            }
+
+            /* Update Teaching Load Modal */
+            #updateTeachingLoadModal .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+            }
+
+            #updateTeachingLoadModal .modal-header {
+                font-size: 1.1rem !important;
+                padding: 12px 16px !important;
+            }
+
+            #updateTeachingLoadModal .modal-form {
+                padding: 16px !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 16px !important;
+            }
+
+            #updateTeachingLoadModal .form-section {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+
+            #updateTeachingLoadModal .section-title {
+                grid-column: 1 !important;
+                font-size: 1rem !important;
+                margin-bottom: 8px !important;
+            }
+
+            #updateTeachingLoadModal .modal-form-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+                margin-bottom: 12px;
+                padding-bottom: 18px;
+            }
+
+            #updateTeachingLoadModal .modal-form-group.full-width {
+                grid-column: 1 !important;
+            }
+
+            #updateTeachingLoadModal .modal-form-group label {
+                min-width: auto;
+                width: 100%;
+                margin-bottom: 4px;
+                font-size: 0.85rem;
+            }
+
+            #updateTeachingLoadModal .modal-form-group input,
+            #updateTeachingLoadModal .modal-form-group select {
+                width: 100%;
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+
+            #updateTeachingLoadModal .validation-message {
+                position: relative;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding-left: 0;
+                margin-top: 4px;
+            }
+
+            #updateTeachingLoadModal .modal-buttons {
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 16px;
+            }
+
+            #updateTeachingLoadModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 0.9rem !important;
+            }
+
+            /* Delete Teaching Load Modal */
+            #deleteTeachingLoadModal .modal-box {
+                width: 90vw !important;
+                max-width: 90vw !important;
+                padding: 24px 20px !important;
+            }
+
+            #deleteTeachingLoadModal .modal-header {
+                font-size: 1.1rem !important;
+                margin-bottom: 16px !important;
+            }
+
+            #deleteTeachingLoadModal .modal-buttons {
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 20px !important;
+            }
+
+            #deleteTeachingLoadModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 0.9rem !important;
+                min-width: auto !important;
+            }
+
+            /* CSV Upload Modal */
+            #csvUploadModal .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+                padding: 0 !important;
+            }
+
+            #csvUploadModal .modal-header {
+                font-size: 1.1rem !important;
+                padding: 12px 16px !important;
+            }
+
+            #csvUploadModal .modal-form,
+            #csvUploadModal > div {
+                padding: 16px !important;
+            }
+
+            #csvUploadModal .modal-buttons {
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 16px;
+            }
+
+            #csvUploadModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 0.9rem !important;
+            }
+
+            /* Archive All Modal */
+            #archiveAllModal .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+                padding: 0 !important;
+            }
+
+            #archiveAllModal .modal-header-custom {
+                font-size: 1.1rem !important;
+                padding: 12px 16px !important;
+            }
+
+            #archiveAllModal .modal-form-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+                margin-bottom: 16px;
+            }
+
+            #archiveAllModal .modal-form-group label {
+                min-width: auto;
+                width: 100%;
+                margin-bottom: 6px;
+                font-size: 0.85rem;
+            }
+
+            #archiveAllModal .modal-form-group select,
+            #archiveAllModal .modal-form-group textarea {
+                width: 100%;
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+
+            #archiveAllModal .modal-buttons {
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 20px;
+            }
+
+            #archiveAllModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 0.9rem !important;
+            }
+
+            /* General Modal Styles for Mobile */
+            .modal-header {
+                font-size: 1.1rem !important;
+            }
+
+            .modal-form-group {
+                flex-direction: column;
+            }
+
+            .modal-form-group label {
+                min-width: auto;
+                width: 100%;
+            }
+
+            .modal-form-group input,
+            .modal-form-group select,
+            .modal-form-group textarea {
+                width: 100%;
+            }
+
+            /* Time Logic Error */
+            .time-logic-error {
+                font-size: 0.8rem !important;
+                padding: 8px 12px !important;
+            }
+        }
     </style>
 @endsection
 
@@ -570,14 +963,13 @@
     @include('partials.flashdelete')
     <div class="faculty-header">
         <div class="faculty-title-group">
-            <div class="faculty-title">Teaching Load Management</div>
+            <div class="faculty-title">Semester Management</div>
             <div class="faculty-subtitle"></div>
         </div>
         <div class="faculty-actions-row">
             <input type="text" class="search-input" placeholder="Search...">
-            <button class="csv-btn" onclick="openModal('csvUploadModal')">CSV Upload</button>
-            <button class="add-btn" onclick="openModal('addTeachingLoadModal')">Add</button>
-           
+            <button class="archive-btn" onclick="openModal('archiveAllModal')" style="background-color: #ff6b35; color: white; padding: 8px 24px; font-size: 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">New Semester</button>
+            <a href="{{ route('admin.teaching-load.archived') }}" class="view-archive-btn" style="background-color: #6c757d; color: white; padding: 8px 24px; font-size: 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block;">View Archive Teaching Loads</a>
         </div>
     </div>
 
@@ -595,7 +987,6 @@
                         <th>Time In</th>
                         <th>Time Out</th>
                         <th>Room Name</th>
-                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -647,18 +1038,11 @@
                             <td class="time-in">{{ \Carbon\Carbon::createFromFormat('H:i:s', $load->teaching_load_time_in)->format('g:i a') }}</td>
                             <td class="time-out">{{ \Carbon\Carbon::createFromFormat('H:i:s', $load->teaching_load_time_out)->format('g:i a') }}</td>
                             <td class="room" data-room-no="{{ $load->room_no }}">{{ $load->room->room_name ?? $load->room_no }}</td>
-                            <td>
-                                <div class="action-btns">
-                                    <button class="edit-btn"
-                                        onclick="openUpdateModal({{ $load->teaching_load_id }})">&#9998;</button>
-                                    <button class="delete-btn"
-                                        onclick="openDeleteModal({{ $load->teaching_load_id }})">&#128465;</button>
-                                </div>
-                            </td>
+                            
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" style="text-align:center; font-style:italic; color:#666;">
+                            <td colspan="9" style="text-align:center; font-style:italic; color:#666;">
                                 No Registered Teaching Load found.
                             </td>
                         </tr>
@@ -670,8 +1054,8 @@
 
     <!-- Add Modal -->
     <div id="addTeachingLoadModal" class="modal-overlay" style="display:none;">
-        <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px; transform: scale(0.8); transform-origin: center;">
-            <form action="{{ route('deptHead.teaching-load.store') }}" method="POST" style="padding: 0;">
+        <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px;">
+            <form action="{{ route('admin.teaching-load.store') }}" method="POST" style="padding: 0;">
                 @csrf
                 <div class="modal-header"
                     style="
@@ -900,7 +1284,7 @@
 
     <!-- Update Modal -->
     <div id="updateTeachingLoadModal" class="modal-overlay" style="display:none;">
-        <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px; transform: scale(0.8); transform-origin: center;">
+        <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px;">
             <form id="updateForm" method="POST" style="padding: 0;">
                 @csrf
                 @method('PUT')
@@ -1130,7 +1514,7 @@
     </div>
     <!-- Delete Teaching Load Modal -->
     <div id="deleteTeachingLoadModal" class="modal-overlay" style="display:none;">
-        <form id="deleteForm" method="POST" class="modal-box" style="transform: scale(0.8); transform-origin: center;">
+        <form id="deleteForm" method="POST" class="modal-box">
             @csrf
             @method('DELETE')
             <div class="modal-header delete">DELETE TEACHING LOAD</div>
@@ -1155,8 +1539,8 @@
 
     <!-- CSV Upload Modal -->
     <div id="csvUploadModal" class="modal-overlay" style="display:none;">
-        <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px; max-width: 500px; transform: scale(0.8); transform-origin: center;">
-            <form id="csvUploadForm" action="{{ route('deptHead.teaching-load.csv-upload') }}" method="POST" enctype="multipart/form-data" style="padding: 0;">
+        <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px; max-width: 500px;">
+            <form id="csvUploadForm" action="{{ route('admin.teaching-load.csv-upload') }}" method="POST" enctype="multipart/form-data" style="padding: 0;">
                 @csrf
                 <div class="modal-header"
                     style="background-color: #8B0000; color: white; padding: 18px 24px; font-size: 24px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.5px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
@@ -1169,7 +1553,7 @@
                             style="width: 100%; padding: 10px; border: 2px solid #3498db; border-radius: 5px; font-size: 1rem;">
                         <div id="csvFileName" style="margin-top: 8px; font-size: 0.9rem; color: #3498db; font-weight: 500; display: none;"></div>
                         <div style="margin-top: 8px;">
-                            <a href="{{ route('deptHead.teaching-load.csv-template') }}" 
+                            <a href="{{ route('admin.teaching-load.csv-template') }}" 
                                style="color: #3498db; text-decoration: none; font-size: 0.9rem; font-weight: 500;">
                                 📥 Download Sample CSV Template
                             </a>
@@ -1294,7 +1678,7 @@
         function openUpdateModal(id) {
             const row = document.querySelector(`tr[data-id='${id}']`);
             const form = document.getElementById('updateForm');
-            form.action = `/deptHead/teaching-load/${id}`;
+            form.action = `/admin/teaching-load/${id}`;
             
             // Set course & subject from row
             const courseCode = row.querySelector('.course').innerText;
@@ -1346,7 +1730,7 @@
         // Delete Modal
         function openDeleteModal(id) {
             const form = document.getElementById('deleteForm');
-            form.action = `/deptHead/teaching-load/${id}`;
+            form.action = `/admin/teaching-load/${id}`;
             openModal('deleteTeachingLoadModal');
         }
 
@@ -1411,7 +1795,7 @@
                     noResultsRow = document.createElement('tr');
                     noResultsRow.classList.add('no-results');
                     noResultsRow.innerHTML =
-                        `<td colspan="10" style="text-align:center; padding:20px; color:#999; font-style:italic;">No results found</td>`;
+                        `<td colspan="9" style="text-align:center; padding:20px; color:#999; font-style:italic;">No results found</td>`;
                     tbody.appendChild(noResultsRow);
                 }
             } else {
@@ -2073,9 +2457,9 @@
 
     <!-- Archive All Modal -->
     <div id="archiveAllModal" class="modal-overlay" style="display:none;">
-        <div class="modal-box" style="width: 500px; max-width: 95vw; padding: 0; overflow: hidden; border-radius: 8px; transform: scale(0.8); transform-origin: center;">
+        <div class="modal-box" style="width: 500px; max-width: 95vw; padding: 0; overflow: hidden; border-radius: 8px;">
             <div class="modal-header-custom" style="background-color: #8B0000; color: white; padding: 18px 24px; font-size: 24px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.5px; border-top-left-radius: 8px; border-top-right-radius: 8px;">ARCHIVE ALL TEACHING LOADS</div>
-            <form method="POST" action="{{ route('deptHead.teaching-load.archive-all') }}">
+            <form method="POST" action="{{ route('admin.teaching-load.archive-all') }}">
                 @csrf
                 <div style="padding: 20px;">
                     <div style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px;">

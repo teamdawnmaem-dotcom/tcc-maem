@@ -112,6 +112,21 @@ class TeachingLoadController extends Controller
         return view('deptHead.teaching-load-management', compact('teachingLoads', 'faculties', 'rooms', 'subjectsOptions'));
     }
 
+    // Admin view for teaching loads
+    public function indexAdmin()
+    {
+        $teachingLoads = TeachingLoad::with(['faculty', 'room'])->get();
+        $faculties = Faculty::all();
+        $rooms = Room::all();
+
+        $subjectsOptions = Subject::select('subject_code as code', 'subject_description as name', 'department')
+            ->orderBy('subject_code')
+            ->orderBy('subject_description')
+            ->get();
+
+        return view('admin.teaching-load-management', compact('teachingLoads', 'faculties', 'rooms', 'subjectsOptions'));
+    }
+
     // API endpoint for teaching loads list
     public function apiTeachingLoads()
     {
@@ -707,6 +722,28 @@ public function apiTodaySchedule()
             return view('deptHead.archived-teaching-loads', compact('archivedLoads'));
         } catch (\Exception $e) {
             \Log::error("Error retrieving archived teaching loads: " . $e->getMessage());
+            return redirect()->back()->withErrors(['error' => 'Error loading archived teaching loads: ' . $e->getMessage()]);
+        }
+    }
+
+    // Admin archived teaching loads view
+    public function viewArchivedTeachingLoadsAdmin()
+    {
+        try {
+            $archivedLoads = TeachingLoadArchive::with(['faculty', 'room', 'archivedBy'])
+                ->orderBy('school_year', 'desc')
+                ->orderBy('semester', 'desc')
+                ->orderBy('archived_at', 'desc')
+                ->get()
+                ->map(function ($load) {
+                    $attendanceCount = AttendanceRecordArchive::where('teaching_load_id', $load->archive_id)->count();
+                    $load->attendance_records_count = $attendanceCount;
+                    return $load;
+                });
+
+            return view('admin.archived-teaching-loads', compact('archivedLoads'));
+        } catch (\Exception $e) {
+            \Log::error("Error retrieving archived teaching loads (admin): " . $e->getMessage());
             return redirect()->back()->withErrors(['error' => 'Error loading archived teaching loads: ' . $e->getMessage()]);
         }
     }

@@ -59,8 +59,22 @@ Route::prefix('admin')->middleware('role:admin')->group(function () {
 
     // Attendance Records Archive Routes
     Route::get('/attendance-records/archived', [AttendanceRecordArchiveController::class, 'index1'])->name('admin.attendance.records.archived');
+    Route::get('/attendance-records/archived/print', [AttendanceRecordArchiveController::class, 'print'])->name('admin.attendance.records.archived.print');
+    Route::post('/attendance-records/archived/archive-all', [AttendanceRecordArchiveController::class, 'archiveAll'])->name('admin.attendance.records.archive-all');
     Route::post('/attendance-records/archived/restore/{archiveId}', [AttendanceRecordArchiveController::class, 'restore'])->name('admin.attendance.records.restore');
     Route::delete('/attendance-records/archived/delete/{archiveId}', [AttendanceRecordArchiveController::class, 'permanentlyDelete'])->name('admin.attendance.records.permanently-delete');
+
+    // Teaching Load (Admin)
+    Route::get('/teaching-load-management', [TeachingLoadController::class, 'indexAdmin'])->name('admin.teaching.load.management');
+    Route::post('/teaching-load', [TeachingLoadController::class, 'store'])->name('admin.teaching-load.store');
+    Route::put('/teaching-load/{id}', [TeachingLoadController::class, 'update'])->name('admin.teaching-load.update');
+    Route::delete('/teaching-load/{id}', [TeachingLoadController::class, 'destroy'])->name('admin.teaching-load.destroy');
+    Route::post('/teaching-load/csv-upload', [TeachingLoadController::class, 'csvUpload'])->name('admin.teaching-load.csv-upload');
+    Route::get('/teaching-load/csv-template', [TeachingLoadController::class, 'csvTemplate'])->name('admin.teaching-load.csv-template');
+    Route::post('/teaching-load/archive-all', [TeachingLoadController::class, 'archiveAllTeachingLoads'])->name('admin.teaching-load.archive-all');
+    Route::get('/teaching-load/archived', [TeachingLoadController::class, 'viewArchivedTeachingLoadsAdmin'])->name('admin.teaching-load.archived');
+    Route::post('/teaching-load/restore/{archiveId}', [TeachingLoadController::class, 'restoreTeachingLoad'])->name('admin.teaching-load.restore');
+    Route::delete('/teaching-load/archived/{archiveId}', [TeachingLoadController::class, 'permanentlyDeleteArchived'])->name('admin.teaching-load.permanently-delete-archived');
     
     // Cloud Sync Routes
     Route::get('/cloud-sync', [CloudSyncController::class, 'index'])->name('admin.cloud-sync');

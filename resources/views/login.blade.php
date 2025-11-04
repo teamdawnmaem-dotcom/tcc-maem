@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Modern Attendance Enhanced Monitoring - Tagoloan Community College</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Onest:wght@100..900&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -12,8 +15,14 @@
             box-sizing: border-box;
         }
 
+        *,
+        *::before,
+        *::after {
+            font-family: 'Onest', system-ui, -apple-system, 'Segoe UI', 'Arial', sans-serif;
+        }
+
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Onest', system-ui, -apple-system, 'Segoe UI', 'Arial', sans-serif;
             background-color: #f5f5f5;
             min-height: 100vh;
             display: flex;
@@ -24,21 +33,21 @@
             background-color: #8B0000;
             color: white;
             text-align: center;
-            padding: 20px 0;
+            padding: 16px 0;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .header h1 {
             color: #FFD700;
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: bold;
             text-transform: uppercase;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
 
         .header p {
             color: #FFD700;
-            font-size: 1.2rem;
+            font-size: 0.96rem;
             font-weight: 300;
         }
 
@@ -47,17 +56,17 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 40px 20px;
+            padding: 32px 16px;
         }
 
         .content-box {
             background: white;
-            border-radius: 15px;
+            border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             display: flex;
-            max-width: 1000px;
+            max-width: 800px;
             width: 100%;
-            min-height: 600px;
+            min-height: 480px;
             overflow: hidden;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
@@ -65,7 +74,7 @@
         .login-section {
             flex: 1;
             background-color: #f8f6f0;
-            padding: 50px 40px;
+            padding: 40px 32px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -73,24 +82,24 @@
 
         .login-title {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 24px;
         }
 
         .login-title h2 {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: bold;
             color: #000;
             text-transform: uppercase;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .login-title p {
-            font-size: 1.1rem;
+            font-size: 0.88rem;
             color: #000;
         }
 
         .form-group {
-            margin-bottom: 37px;
+            margin-bottom: 29.6px;
             position: relative;
         }
 
@@ -98,9 +107,9 @@
             display: flex;
             align-items: center;
             background: white;
-            border: 2px solid #000;
-            border-radius: 8px;
-            padding: 5px;
+            border: 1.6px solid #000;
+            border-radius: 6.4px;
+            padding: 4px;
             transition: border-color 0.3s ease;
         }
 
@@ -109,25 +118,25 @@
         }
 
         .input-icon {
-            width: 40px;
-            height: 40px;
+            width: 32px;
+            height: 32px;
             background: #f0f0f0;
-            border-radius: 6px;
+            border-radius: 4.8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 15px;
+            margin-right: 12px;
             color: #666;
             font-weight: bold;
-            font-size: 1.2rem;
+            font-size: 0.96rem;
         }
 
         .form-input {
             flex: 1;
             border: none;
             outline: none;
-            padding: 12px 0;
-            font-size: 1rem;
+            padding: 9.6px 0;
+            font-size: 0.8rem;
             background: transparent;
         }
 
@@ -140,13 +149,13 @@
             background-color: #8B0000;
             color: white;
             border: none;
-            padding: 15px;
-            border-radius: 8px;
-            font-size: 1.1rem;
+            padding: 12px;
+            border-radius: 6.4px;
+            font-size: 0.88rem;
             font-weight: bold;
             cursor: pointer;
             transition: background-color 0.3s ease;
-            margin-top: 20px;
+            margin-top: 16px;
         }
 
         .login-btn:hover {
@@ -154,10 +163,10 @@
         }
 
         .login-footer {
-            margin-top: 40px;
+            margin-top: 32px;
             text-align: center;
             color: #000;
-            font-size: 0.9rem;
+            font-size: 0.72rem;
             line-height: 1.4;
         }
 
@@ -167,7 +176,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 50px;
+            padding: 40px;
         }
 
         .logo-container {
@@ -181,10 +190,10 @@
         }
 
         .logo-image {
-            width: 400px;
-            height: 400px;
+            width: 320px;
+            height: 320px;
             object-fit: contain;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
             border-radius: 50%;
             transition: transform 0.3s ease, filter 0.3s ease;
@@ -192,17 +201,17 @@
 
         .logo-text {
             color: #FFD700;
-            font-size: 1.1rem;
+            font-size: 0.88rem;
             font-weight: bold;
-            margin-bottom: 8px;
+            margin-bottom: 6.4px;
             text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
         }
 
         .motto {
             color: #FFD700;
             font-style: italic;
-            font-size: 0.9rem;
-            margin-top: 5px;
+            font-size: 0.72rem;
+            margin-top: 4px;
             text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
         }
 
@@ -213,21 +222,187 @@
             }
 
             .login-section {
-                padding: 40px 30px;
+                padding: 32px 24px;
             }
 
             .logo-section {
-                padding: 30px 20px;
+                padding: 24px 16px;
             }
 
             .logo-image {
-                width: 450px;
-                height: 450px;
-                margin-bottom: 20px;
+                width: 360px;
+                height: 360px;
+                margin-bottom: 16px;
             }
 
             .header h1 {
-                font-size: 2rem;
+                font-size: 1.6rem;
+            }
+        }
+
+        /* Mobile Responsive Design for 430px width */
+        @media (max-width: 430px) {
+            .header {
+                padding: 12px 8px;
+            }
+
+            .header h1 {
+                font-size: 1.1rem;
+                margin-bottom: 2px;
+                line-height: 1.2;
+            }
+
+            .header p {
+                font-size: 0.75rem;
+                line-height: 1.3;
+            }
+
+            .main-container {
+                padding: 20px 12px;
+            }
+
+            .content-box {
+                flex-direction: column;
+                max-width: 100%;
+                min-height: auto;
+                border-radius: 8px;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            }
+
+            .login-section {
+                padding: 24px 20px;
+                background-color: #f8f6f0;
+            }
+
+            .login-title {
+                margin-bottom: 20px;
+            }
+
+            .login-title h2 {
+                font-size: 1.4rem;
+                margin-bottom: 6px;
+                line-height: 1.2;
+            }
+
+            .login-title p {
+                font-size: 0.8rem;
+            }
+
+            .form-group {
+                margin-bottom: 20px;
+            }
+
+            .input-wrapper {
+                padding: 6px 4px;
+                border-radius: 6px;
+            }
+
+            .input-icon {
+                width: 28px;
+                height: 28px;
+                margin-right: 10px;
+                font-size: 0.85rem;
+                border-radius: 4px;
+            }
+
+            .input-icon svg {
+                width: 18px;
+                height: 18px;
+            }
+
+            .form-input {
+                padding: 10px 0;
+                font-size: 0.9rem;
+            }
+
+            .form-input::placeholder {
+                font-size: 0.85rem;
+            }
+
+            .login-btn {
+                padding: 14px;
+                font-size: 0.95rem;
+                border-radius: 6px;
+                margin-top: 12px;
+            }
+
+            .login-footer {
+                margin-top: 24px;
+                font-size: 0.65rem;
+                line-height: 1.5;
+            }
+
+            .login-footer p {
+                margin-bottom: 4px;
+            }
+
+            .logo-section {
+                padding: 20px 16px;
+                min-height: 280px;
+            }
+
+            .logo-image {
+                width: 200px;
+                height: 200px;
+                margin-bottom: 12px;
+            }
+
+            .logo-text {
+                font-size: 0.8rem;
+                margin-bottom: 4px;
+            }
+
+            .motto {
+                font-size: 0.65rem;
+                margin-top: 2px;
+            }
+
+            .about-section {
+                padding: 40px 12px;
+                min-height: auto;
+            }
+
+            .about-container {
+                max-width: 100%;
+            }
+
+            .about-title {
+                font-size: 1.2rem;
+                margin-bottom: 12px;
+            }
+
+            .about-box {
+                padding: 14px 12px;
+                max-height: 200px;
+                border-radius: 8px;
+            }
+
+            .about-text {
+                font-size: 0.75rem;
+                line-height: 1.6;
+            }
+
+            .error-message {
+                padding: 10px 12px;
+                margin-bottom: 14px;
+                font-size: 0.7rem;
+                border-radius: 6px;
+            }
+
+            .field-error {
+                font-size: 0.6rem;
+                margin-top: 3px;
+            }
+
+            /* Disable hover effects on mobile */
+            .content-box:hover {
+                transform: none;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            }
+
+            .login-btn:hover {
+                transform: none;
+                box-shadow: none;
             }
         }
 
@@ -241,7 +416,7 @@
             position: relative;
             background: linear-gradient(rgba(139, 0, 0, 0.35), rgba(139, 0, 0, 0.85)), url("{{ asset('images/TCC Image.png') }}") center/cover no-repeat;
             min-height: 100vh;
-            padding: 80px 20px;
+            padding: 64px 16px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -249,40 +424,40 @@
         }
 
         .about-container {
-            max-width: 1000px;
+            max-width: 800px;
             width: 100%;
         }
 
         .about-title {
             text-align: center;
-            font-size: 1.8rem;
+            font-size: 1.44rem;
             font-weight: bold;
-            margin-bottom: 18px;
+            margin-bottom: 14.4px;
             color: #ffffff;
         }
 
         .about-box {
             background: rgba(0, 0, 0, 0.25);
             border: 1px solid rgba(255, 255, 255, 0.25);
-            border-radius: 12px;
-            padding: 22px 20px;
-            max-height: 220px;
+            border-radius: 9.6px;
+            padding: 17.6px 16px;
+            max-height: 176px;
             overflow-y: auto;
             line-height: 1.65;
         }
 
         .about-text {
             color: #f5f5f5;
-            font-size: 1rem;
+            font-size: 0.8rem;
         }
 
         .about-box::-webkit-scrollbar {
-            width: 8px;
+            width: 6.4px;
         }
 
         .about-box::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.35);
-            border-radius: 10px;
+            border-radius: 8px;
         }
 
         .about-box::-webkit-scrollbar-track {
@@ -294,10 +469,10 @@
             background-color: #ffebee;
             color: #c62828;
             border: 1px solid #ffcdd2;
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
+            border-radius: 6.4px;
+            padding: 9.6px 12.8px;
+            margin-bottom: 16px;
+            font-size: 0.72rem;
             font-weight: 500;
             text-align: center;
             box-shadow: 0 2px 4px rgba(198, 40, 40, 0.1);
@@ -307,14 +482,14 @@
         /* Field validation error styles */
         .input-wrapper.error {
             border-color: #c62828;
-            box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.1);
+            box-shadow: 0 0 0 1.6px rgba(198, 40, 40, 0.1);
         }
 
         .field-error {
             color: #c62828;
-            font-size: 0.8rem;
-            margin-top: 5px;
-            margin-left: 5px;
+            font-size: 0.64rem;
+            margin-top: 4px;
+            margin-left: 4px;
         }
 
         /* Scroll Animation Styles */
@@ -373,8 +548,8 @@
 
         /* Enhanced hover effects */
         .content-box:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            transform: translateY(-4px);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15);
         }
 
 

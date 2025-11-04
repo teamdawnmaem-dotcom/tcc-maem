@@ -14,16 +14,16 @@
     .user-greeting {
         background: linear-gradient(to right, #6d0000, #a00000);
         color: #fff;
-        padding: 25px 35px;
-        border-radius: 12px;
-        margin-bottom: 25px;
+        padding: 20px 28px;
+        border-radius: 9.6px;
+        margin-bottom: 20px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
     .greeting-text {
-        font-size: 1.2rem;
+        font-size: 0.96rem;
         font-weight: 500;
     }
     .user-name {
@@ -34,29 +34,29 @@
         text-align: right;
     }
     .date-text {
-        font-size: 1.2rem;
+        font-size: 0.96rem;
         font-weight: bold;
     }
     .day-text {
-        font-size: 0.9rem;
+        font-size: 0.72rem;
         opacity: 0.9;
     }
 
     /* === Stats Cards Row === */
     .stats-row {
         display: flex;
-        gap: 25px;
-        margin-bottom: 30px;
+        gap: 20px;
+        margin-bottom: 24px;
     }
     .stat-card {
         flex: 1;
         background: #fff;
-        border-radius: 12px;
+        border-radius: 9.6px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.08);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 20px 25px;
+        padding: 16px 20px;
         position: relative;
         overflow: hidden;
     }
@@ -66,10 +66,10 @@
         left: 0;
         top: 0;
         bottom: 0;
-        width: 10px;
+        width: 8px;
         background: linear-gradient(to bottom, #6d0000, #a00000);
-        border-top-left-radius: 12px;
-        border-bottom-left-radius: 12px;
+        border-top-left-radius: 9.6px;
+        border-bottom-left-radius: 9.6px;
       
     }
     .stat-content {
@@ -78,18 +78,18 @@
         z-index: 1;
     }
     .stat-label-main {
-        font-size: 1.1rem;
+        font-size: 0.88rem;
         font-weight: bold;
         color: #6d0000;
         margin-bottom: 3px;
     }
     .stat-label-sub {
-        font-size: 0.9rem;
+        font-size: 0.72rem;
         color: #6d0000;
         opacity: 0.9;
     }
     .stat-number {
-        font-size: 2.3rem;
+        font-size: 1.84rem;
         font-weight: bold;
         color: #6d0000;
         z-index: 1;
@@ -98,20 +98,20 @@
     /* === Activity Logs === */
     .logs-card {
         background: #fff;
-        border-radius: 12px;
+        border-radius: 9.6px;
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
         overflow: hidden;
     }
     .logs-card-header {
         background: transparent;
-        padding: 16px 20px;
+        padding: 13px 16px;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
     .logs-card-header h5 {
         margin: 0;
-        font-size: 1.3rem;
+        font-size: 1.04rem;
         font-weight: bold;
         color: inherit;
     }
@@ -122,8 +122,8 @@
     .user-table th {
         background: #8B0000;
         color: #fff;
-        padding: 16px 7px;
-        font-size: 1.1rem;
+        padding: 13px 6px;
+        font-size: 0.88rem;
         font-weight: bold;
         border: none;
     }
@@ -134,9 +134,9 @@
         z-index: 2;
     }
     .user-table td {
-        padding: 12px 40px;
+        padding: 10px 32px;
         text-align: left;
-        font-size: 1rem;
+        font-size: 0.8rem;
         border: none;
     }
     .user-table tr:nth-child(even) {
@@ -149,22 +149,150 @@
         background: #fff2e6;
     }
       .search-input {
-            padding: 8px;
-            font-size: 14px;
+            padding: 6px;
+            font-size: 11.2px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            width: 500px;
+            width: 400px;
         }
 
     /* Make only the table area scroll vertically */
     .user-table-scroll {
-        max-height: 47vh;
+        max-height: 37.6vh;
         overflow-y: auto;
         width: 100%;
     }
     @media (max-width: 992px) {
         .user-table-scroll {
             max-height: 50vh;
+        }
+    }
+
+    /* Mobile Responsive Design for phones (max-width: 430px) */
+    @media (max-width: 430px) {
+        /* User Greeting */
+        .user-greeting {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .greeting-text {
+            font-size: 0.85rem;
+            width: 100%;
+        }
+
+        .greeting-text small {
+            font-size: 0.75rem !important;
+        }
+
+        .user-name {
+            display: block;
+            margin-top: 2px;
+        }
+
+        .greeting-date {
+            text-align: left;
+            width: 100%;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .date-text {
+            font-size: 0.85rem;
+        }
+
+        .day-text {
+            font-size: 0.7rem;
+        }
+
+        /* Stats Cards - Stack vertically */
+        .stats-row {
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            padding: 14px 16px;
+            border-radius: 8px;
+        }
+
+        .stat-label-main {
+            font-size: 0.8rem;
+        }
+
+        .stat-label-sub {
+            font-size: 0.7rem;
+        }
+
+        .stat-number {
+            font-size: 1.6rem;
+        }
+
+        /* Activity Logs Card */
+        .logs-card {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .logs-card-header {
+            flex-direction: column;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 12px 14px;
+        }
+
+        .logs-card-header h5 {
+            font-size: 0.95rem;
+            margin: 0;
+            width: 100%;
+        }
+
+        .search-input {
+            width: 100% !important;
+            font-size: 0.85rem;
+            padding: 8px 10px;
+            border-radius: 6px;
+        }
+
+        /* Table Container - Horizontal Scroll */
+        .user-table-scroll {
+            max-height: 50vh;
+            overflow-x: auto;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .user-table {
+            min-width: 600px; /* Minimum width to maintain readability */
+        }
+
+        .user-table th {
+            padding: 10px 8px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+        }
+
+        .user-table td {
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+        }
+
+        /* Badge adjustments */
+        .badge {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+        }
+
+        /* Empty state message */
+        .user-table td[colspan] {
+            font-size: 0.75rem;
+            padding: 16px 12px;
         }
     }
 

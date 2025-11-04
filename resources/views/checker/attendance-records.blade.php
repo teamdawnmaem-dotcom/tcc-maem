@@ -9,7 +9,7 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            margin-bottom: 40px;
+            margin-bottom: 32px;
         }
 
         .faculty-title-group {
@@ -18,39 +18,32 @@
         }
 
         .faculty-title {
-            font-size: 2.3rem;
+            font-size: 1.84rem;
             font-weight: bold;
             color: #6d0000;
         }
 
         .faculty-subtitle {
-            font-size: 1rem;
+            font-size: 0.8rem;
             color: #666;
-            margin-bottom: 30px;
+            margin-bottom: 24px;
         }
 
         .faculty-actions-row {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             position: fixed;
-            top: 130px;
-            right: 40px;
+            top: 104px;
+            right: 32px;
             z-index: 100;
         }
 
-        .search-input {
-            width: 700px;
-            padding: 8px;
-            font-size: 14px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
 
         .add-btn {
-            padding: 8px 24px;
-            font-size: 14px;
+            padding: 6.4px 19.2px;
+            font-size: 11.2px;
             border: none;
-            border-radius: 4px;
+            border-radius: 3.2px;
             background-color: #2ecc71;
             color: #fff;
             cursor: pointer;
@@ -59,7 +52,7 @@
 
         .teaching-load-table-container {
             background: #fff;
-            border-radius: 10px;
+            border-radius: 8px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
             overflow: hidden;
             overflow-x: auto;
@@ -67,7 +60,7 @@
 
         .teaching-load-table {
             width: 100%;
-            min-width: 1400px;
+            min-width: 1120px;
             border-collapse: collapse;
             table-layout: fixed;
         }
@@ -75,27 +68,27 @@
         .teaching-load-table th {
             background: #8B0000;
             color: #fff;
-            padding: 16px 8px;
-            font-size: 0.9rem;
+            padding: 12.8px 6.4px;
+            font-size: 0.72rem;
             font-weight: bold;
             border: none;
             text-align: center;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            min-height: 50px;
+            min-height: 40px;
         }
 
         .teaching-load-table td {
-            padding: 16px 8px;
+            padding: 12.8px 6.4px;
             text-align: center;
-            font-size: 0.85rem;
+            font-size: 0.68rem;
             border: none;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             vertical-align: middle;
-            min-height: 45px;
+            min-height: 36px;
         }
 
         .teaching-load-table tr:nth-child(even) {
@@ -136,10 +129,10 @@
         .filter-section {
             background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
             border: 1px solid #e9ecef;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-            padding: 30px;
-            margin-bottom: 25px;
+            border-radius: 12px;
+            box-shadow: 0 6.4px 20px rgba(0, 0, 0, 0.08);
+            padding: 24px;
+            margin-bottom: 20px;
             position: relative;
             overflow: hidden;
         }
@@ -150,20 +143,20 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 4px;
+            height: 3.2px;
             background: linear-gradient(90deg, #8B0000, #6d0000);
         }
 
         .filter-header {
             display: flex;
             align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #f1f3f4;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1.6px solid #f1f3f4;
         }
 
         .filter-title {
-            font-size: 1.2rem;
+            font-size: 0.96rem;
             font-weight: 600;
             color: #2c3e50;
             margin: 0;
@@ -173,15 +166,15 @@
 
         .filter-title::before {
             content: '🔍';
-            margin-right: 10px;
-            font-size: 1.1rem;
+            margin-right: 8px;
+            font-size: 0.88rem;
         }
 
         .filter-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
+            gap: 12px;
+            margin-bottom: 20px;
             align-items: end;
         }
 
@@ -193,20 +186,20 @@
         }
 
         .filter-label {
-            font-size: 0.9rem;
+            font-size: 0.72rem;
             color: #495057;
-            margin-bottom: 8px;
+            margin-bottom: 6.4px;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
         }
 
         .filter-input,
         .filter-select {
-            padding: 12px 16px;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            font-size: 0.95rem;
+            padding: 9.6px 12.8px;
+            border: 1.6px solid #e9ecef;
+            border-radius: 6.4px;
+            font-size: 0.76rem;
             background: #ffffff;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             color: #495057;
@@ -217,7 +210,7 @@
         .filter-select:focus {
             outline: none;
             border-color: #8B0000;
-            box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+            box-shadow: 0 0 0 2.4px rgba(139, 0, 0, 0.1);
             transform: translateY(-1px);
         }
 
@@ -228,11 +221,11 @@
 
         .filter-actions {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             flex-wrap: nowrap;
             align-items: center;
             justify-content: flex-end;
-            margin-top: 20px;
+            margin-top: 16px;
             flex: 0 0 auto;
         }
 
@@ -241,62 +234,62 @@
         .print-btn,
         .old-report-btn,
         .archive-btn {
-            padding: 15px 24px;
+            padding: 12px 19.2px;
             border: none;
-            border-radius: 8px;
-            font-size: 0.9rem;
+            border-radius: 6.4px;
+            font-size: 0.72rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
             position: relative;
             overflow: hidden;
             white-space: nowrap;
-            min-width: 150px;
+            min-width: 120px;
             width: auto;
         }
 
         .filter-btn {
             background: linear-gradient(135deg, #8B0000, #6d0000);
             color: #fff;
-            box-shadow: 0 4px 15px rgba(139, 0, 0, 0.3);
+            box-shadow: 0 3.2px 12px rgba(139, 0, 0, 0.3);
         }
 
         .filter-btn:hover {
             background: linear-gradient(135deg, #6d0000, #5a0000);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(139, 0, 0, 0.4);
+            box-shadow: 0 4.8px 16px rgba(139, 0, 0, 0.4);
         }
 
         .clear-btn {
             background: linear-gradient(135deg, #6c757d, #5a6268);
             color: #fff;
-            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+            box-shadow: 0 3.2px 12px rgba(108, 117, 125, 0.3);
         }
 
         .clear-btn:hover {
             background: linear-gradient(135deg, #5a6268, #495057);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+            box-shadow: 0 4.8px 16px rgba(108, 117, 125, 0.4);
         }
 
         .print-btn {
             background: linear-gradient(135deg, #2ecc71, #27ae60);
             color: #fff;
-            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
+            box-shadow: 0 3.2px 12px rgba(46, 204, 113, 0.3);
         }
 
         .print-btn:hover {
             background: linear-gradient(135deg, #27ae60, #229954);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4);
+            box-shadow: 0 4.8px 16px rgba(46, 204, 113, 0.4);
         }
 
         .archive-btn {
             background: linear-gradient(135deg, #9b59b6, #8e44ad);
             color: #fff;
-            box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+            box-shadow: 0 3.2px 12px rgba(155, 89, 182, 0.3);
             text-decoration: none;
             display: inline-block;
         }
@@ -304,40 +297,65 @@
         .old-report-btn {
             background: linear-gradient(135deg, #f39c12, #e67e22);
             color: #fff;
-            box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+            box-shadow: 0 3.2px 12px rgba(243, 156, 18, 0.3);
         }
 
         .old-report-btn:hover {
             background: linear-gradient(135deg, #e67e22, #d35400);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(243, 156, 18, 0.4);
+            box-shadow: 0 4.8px 16px rgba(243, 156, 18, 0.4);
         }
 
         .archive-btn:hover {
             background: linear-gradient(135deg, #8e44ad, #7d3c98);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(155, 89, 182, 0.4);
+            box-shadow: 0 4.8px 16px rgba(155, 89, 182, 0.4);
             text-decoration: none;
             color: #fff;
         }
 
         .search-section {
             display: flex;
-            gap: 20px;
+            gap: 16px;
             align-items: end;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 2px solid #f1f3f4;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1.6px solid #f1f3f4;
         }
 
         .search-group {
-            flex: 1;
+            flex: 0 1 auto;
             min-width: 0;
+            max-width: 400px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 9.6px 12.8px;
+            border: 1.6px solid #e9ecef;
+            border-radius: 6.4px;
+            font-size: 0.76rem;
+            background: #ffffff;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #8B0000;
+            box-shadow: 0 0 0 2.4px rgba(139, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .search-input::placeholder {
+            color: #adb5bd;
+            font-weight: 400;
         }
 
         .search-actions {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             align-items: end;
             flex-shrink: 0;
         }
@@ -361,6 +379,13 @@
 
             .search-group {
                 min-width: auto;
+                max-width: 100%;
+            }
+
+            .search-input {
+                width: 100%;
+                padding: 10px 12px;
+                font-size: 0.9rem;
             }
 
             .search-actions {
@@ -527,7 +552,7 @@
                     <input type="hidden" name="search" id="sheetSearch">
                     <button type="submit" class="old-report-btn">OLD report Format</button>
                 </form>
-                <a href="{{ route('checker.attendance.records.archived') }}" class="archive-btn">View Archive</a>
+                
             </div>
         </div>
     </div>

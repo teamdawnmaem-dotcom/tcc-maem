@@ -6,11 +6,11 @@
 
 @section('styles')
 	<style>
-		.faculty-header {
+        .faculty-header {
 			display: flex;
 			justify-content: space-between;
 			align-items: flex-end;
-			margin-bottom: 40px;
+            margin-bottom: 32px;
 		}
 
 		.faculty-title-group {
@@ -18,16 +18,16 @@
 			flex-direction: column;
 		}
 
-		.faculty-title {
-			font-size: 2.3rem;
+        .faculty-title {
+            font-size: 1.84rem;
 			font-weight: bold;
 			color: #6d0000;
 		}
 
-		.faculty-subtitle {
-			font-size: 1rem;
+        .faculty-subtitle {
+            font-size: 0.8rem;
 			color: #666;
-			margin-bottom: 30px;
+            margin-bottom: 24px;
 		}
 
 		.faculty-actions-row {
@@ -35,23 +35,23 @@
 			gap: 10px;
 		}
 
-		.camera-grid {
+        .camera-grid {
 			display: grid;
 			grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-			gap: 20px;
-			margin-top: 20px;
+            gap: 16px;
+            margin-top: 16px;
 		}
 
-		.camera-feed {
+        .camera-feed {
 			background: #fff;
-			border-radius: 10px;
+            border-radius: 8px;
 			box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
 			overflow: hidden;
 			cursor: pointer;
 			transition: transform 0.2s;
 			display: flex;
 			flex-direction: column;
-			min-height: 250px;
+            min-height: 200px;
 		}
 
 		.camera-feed.no-feed-available {
@@ -64,11 +64,11 @@
 			transform: translateY(-2px);
 		}
 
-		.camera-label {
+        .camera-label {
 			background: #8B0000;
 			color: #fff;
-			padding: 15px;
-			font-size: 1.1rem;
+            padding: 12px;
+            font-size: 0.88rem;
 			font-weight: bold;
 			text-align: center;
 			position: relative;
@@ -76,16 +76,16 @@
 			display: block !important;
 		}
 
-		.no-feed {
-			height: 200px;
+        .no-feed {
+            height: 160px;
 			display: flex;
 			flex-direction: column;
 			align-items: center;
 			justify-content: center;
 			color: #999;
-			font-size: 1rem;
+            font-size: 0.8rem;
 			flex: 1;
-			min-height: 200px;
+            min-height: 160px;
 		}
 
 		#webrtc-player-detail {
@@ -96,9 +96,9 @@
 			background: #000;
 		}
 
-		.camera-feed video {
+        .camera-feed video {
 			width: 100%;
-			height: 200px;
+            height: 160px;
 			object-fit: contain;
 			flex: 1;
 			background: #000;
@@ -111,24 +111,24 @@
 			min-height: 0;
 		}
 
-		.no-feed-icon {
-			font-size: 3rem;
-			margin-bottom: 10px;
+        .no-feed-icon {
+            font-size: 2.4rem;
+            margin-bottom: 8px;
 			color: #ccc;
 		}
 
-		.camera-feed-container {
+        .camera-feed-container {
 			display: flex;
-			gap: 20px;
-			margin-top: 20px;
-			height: calc(100vh - 200px);
-			min-height: 500px;
+            gap: 16px;
+            margin-top: 16px;
+            height: calc(100vh - 160px);
+            min-height: 400px;
 		}
 
-		.main-camera-feed {
+        .main-camera-feed {
 			flex: 2;
 			background: #fff;
-			border-radius: 10px;
+            border-radius: 8px;
 			box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
 			overflow: hidden;
 			display: flex;
@@ -136,18 +136,18 @@
 			height: 100%;
 		}
 
-		.details-panel {
+        .details-panel {
 			flex: 1;
 			display: flex;
 			flex-direction: column;
-			gap: 20px;
+            gap: 16px;
 			position: relative;
 			height: 100%;
 		}
 
-		.combined-card {
+        .combined-card {
 			background: #fff;
-			border-radius: 10px;
+            border-radius: 8px;
 			box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
 			overflow: hidden;
 			height: 100%;
@@ -155,39 +155,39 @@
 			flex-direction: column;
 		}
 
-		.lab-header {
+        .lab-header {
 			background: #8B0000;
 			color: #fff;
-			padding: 15px 25px;
+            padding: 12px 20px;
 			display: flex;
 			justify-content: space-between;
 			align-items: center;
 			font-weight: bold;
-			font-size: 1.1rem;
+            font-size: 0.88rem;
 		}
 
-		.combined-card-content {
-			padding: 25px;
+        .combined-card-content {
+            padding: 20px;
 			flex: 1;
 			display: flex;
 			flex-direction: column;
 			overflow-y: auto;
 		}
 
-		.schedule-title {
-			font-size: 1.3rem;
+        .schedule-title {
+            font-size: 1.04rem;
 			font-weight: bold;
 			color: #8B0000;
-			margin-bottom: 20px;
+            margin-bottom: 16px;
 			text-align: center;
 			flex-shrink: 0;
 		}
 
-		.schedule-item {
+        .schedule-item {
 			display: flex;
 			justify-content: space-between;
-			margin-bottom: 12px;
-			padding: 10px 0;
+            margin-bottom: 9.6px;
+            padding: 8px 0;
 			border-bottom: 1px solid #eee;
 			flex-shrink: 0;
 		}
@@ -198,35 +198,35 @@
 			margin-bottom: 15px;
 		}
 
-		.faculty-image {
-			width: 1.5in;
-			height: 1.5in;
+        .faculty-image {
+            width: 1.2in;
+            height: 1.2in;
 			object-fit: cover;
-			border-radius: 8px;
-			border: 2px solid #8B0000;
+            border-radius: 6.4px;
+            border: 1.6px solid #8B0000;
 			box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 		}
 
-		.no-schedule-image {
-			width: 1.5in;
-			height: 1.5in;
+        .no-schedule-image {
+            width: 1.2in;
+            height: 1.2in;
 			object-fit: cover;
-			border-radius: 8px;
-			border: 2px solid #ccc;
+            border-radius: 6.4px;
+            border: 1.6px solid #ccc;
 			box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 			background: #f5f5f5;
 			display: flex;
 			align-items: center;
 			justify-content: center;
 			color: #999;
-			font-size: 0.8rem;
+            font-size: 0.64rem;
 			text-align: center;
 		}
 
-		.schedule-label {
+        .schedule-label {
 			font-weight: bold;
 			color: #333;
-			min-width: 130px;
+            min-width: 104px;
 		}
 
 		.schedule-value {
@@ -234,19 +234,19 @@
 			text-align: right;
 		}
 
-		.back-btn {
+        .back-btn {
 			background: #8B0000;
 			color: #fff;
 			border: none;
-			border-radius: 6px;
-			padding: 12px 20px;
-			font-size: 1rem;
+            border-radius: 4.8px;
+            padding: 9.6px 16px;
+            font-size: 0.8rem;
 			font-weight: bold;
 			cursor: pointer;
 			transition: background 0.3s;
 			position: absolute;
-			top: 130px;
-			right: 40px;
+            top: 104px;
+            right: 32px;
 			z-index: 100;
 		}
 
@@ -254,21 +254,21 @@
 			background: #6d0000;
 		}
 
-		.recognition-status {
-			margin-top: 20px;
+        .recognition-status {
+            margin-top: 16px;
 			background: #fff;
-			border-radius: 10px;
+            border-radius: 8px;
 			box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
 			overflow: hidden;
 			display: none;
-			max-height: 400px;
+            max-height: 320px;
 		}
 
-		.recognition-title {
+        .recognition-title {
 			background: #8B0000;
 			color: #fff;
-			padding: 15px;
-			font-size: 1.1rem;
+            padding: 12px;
+            font-size: 0.88rem;
 			font-weight: bold;
 			text-align: center;
 		}
@@ -278,8 +278,8 @@
 			border-collapse: collapse;
 		}
 
-		.attendance-table-container {
-			max-height: 300px;
+        .attendance-table-container {
+            max-height: 240px;
 			overflow-y: auto;
 		}
 
@@ -293,19 +293,19 @@
 			font-weight: bold;
 		}
 
-		.attendance-table th {
+        .attendance-table th {
 			background: #f5f5f5;
 			color: #333;
-			padding: 12px;
-			font-size: 0.9rem;
+            padding: 9.6px;
+            font-size: 0.72rem;
 			font-weight: bold;
 			text-align: left;
 			border-bottom: 1px solid #ddd;
 		}
 
-		.attendance-table td {
-			padding: 12px;
-			font-size: 0.9rem;
+        .attendance-table td {
+            padding: 9.6px;
+            font-size: 0.72rem;
 			border-bottom: 1px solid #eee;
 		}
 

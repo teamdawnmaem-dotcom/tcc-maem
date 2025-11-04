@@ -7,44 +7,44 @@
 @section('styles')
 <style>
     .dashboard-title {
-        font-size: 3.5rem;
+        font-size: 2.8rem;
         font-weight: bold;
         color: #6d0000;
         margin-bottom: 0.2em;
     }
     .dashboard-subtitle {
         color: #6d0000;
-        font-size: 1.1rem;
-        margin-bottom: 30px;
+        font-size: 0.88rem;
+        margin-bottom: 24px;
     }
     .user-greeting {
         background: linear-gradient(to right, #6d0000, #a00000);
         color: white;
-        padding: 25px 35px;
-        border-radius: 12px;
-        margin-bottom: 25px;
+        padding: 20px 28px;
+        border-radius: 9.6px;
+        margin-bottom: 20px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
     .greeting-icon {
-        font-size: 1.5rem;
+        font-size: 1.2rem;
         opacity: 0.9;
     }
     .greeting-text {
-        font-size: 1.2rem;
+        font-size: 0.96rem;
         font-weight: 500;
     }
     .greeting-date {
         text-align: right;
     }
     .date-text {
-        font-size: 1.2rem;
+        font-size: 0.96rem;
         font-weight: bold;
     }
     .day-text {
-        font-size: 0.9rem;
+        font-size: 0.72rem;
         opacity: 0.9;
     }
     .user-name {
@@ -55,18 +55,18 @@
     /* === Cards Row === */
     .stats-row {
         display: flex;
-        gap: 30px;
-        margin-bottom: 40px;
+        gap: 24px;
+        margin-bottom: 32px;
     }
     .stat-card {
         flex: 1;
         background: #fff;
-        border-radius: 12px;
+        border-radius: 9.6px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 25px 30px;
+        padding: 20px 24px;
         position: relative;
         overflow: hidden;
     }
@@ -76,10 +76,10 @@
         left: 0;
         top: 0;
         bottom: 0;
-        width: 12px;
+        width: 9.6px;
         background: #8B0000;
-        border-top-left-radius: 12px;
-        border-bottom-left-radius: 12px;
+        border-top-left-radius: 9.6px;
+        border-bottom-left-radius: 9.6px;
     }
     .stat-content {
         display: flex;
@@ -87,20 +87,97 @@
         z-index: 1;
     }
     .stat-label-main {
-        font-size: 1.1rem;
+        font-size: 0.88rem;
         font-weight: bold;
         color: #8B0000;
         margin-bottom: 2px;
     }
     .stat-label-sub {
-        font-size: 0.9rem;
+        font-size: 0.72rem;
         color: #8B0000;
     }
     .stat-number {
-        font-size: 2.5rem;
+        font-size: 2rem;
         font-weight: bold;
         color: #8B0000;
         z-index: 1;
+    }
+
+    /* Mobile Responsive Design - 430px */
+    @media (max-width: 430px) {
+        /* Remove excessive top spacing */
+        .main-content {
+            padding-top: 68px !important;
+        }
+
+        .dashboard-title {
+            font-size: 1.8rem;
+            margin-bottom: 0.3em;
+        }
+        
+        .dashboard-subtitle {
+            font-size: 0.8rem;
+            margin-bottom: 16px;
+        }
+
+        .user-greeting {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+        }
+
+        .greeting-text {
+            font-size: 0.85rem;
+            width: 100%;
+        }
+
+        .greeting-icon {
+            font-size: 1rem;
+        }
+
+        .greeting-text small {
+            font-size: 0.8rem !important;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .greeting-date {
+            text-align: left;
+            width: 100%;
+        }
+
+        .date-text {
+            font-size: 0.85rem;
+        }
+
+        .day-text {
+            font-size: 0.7rem;
+        }
+
+        .stats-row {
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            padding: 16px 20px;
+            width: 100%;
+        }
+
+        .stat-label-main {
+            font-size: 0.8rem;
+        }
+
+        .stat-label-sub {
+            font-size: 0.7rem;
+        }
+
+        .stat-number {
+            font-size: 1.6rem;
+        }
     }
 </style>
 @endsection

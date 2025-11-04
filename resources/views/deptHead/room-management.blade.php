@@ -10,7 +10,7 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: flex-end;
-                margin-bottom: 40px;
+                margin-bottom: 32px;
             }
 
             .faculty-title-group {
@@ -19,41 +19,41 @@
             }
 
             .faculty-title {
-                font-size: 2.3rem;
+                font-size: 1.84rem;
                 font-weight: bold;
                 color: #6d0000;
             }
 
             .faculty-subtitle {
-                font-size: 1rem;
+                font-size: 0.8rem;
                 color: #666;
-                margin-bottom: 30px;
+                margin-bottom: 24px;
             }
 
             .faculty-actions-row {
                 display: flex;
-                gap: 10px;
+                gap: 8px;
                 position: absolute;
-                top: 130px;
-                right: 40px;
+                top: 104px;
+                right: 32px;
                 z-index: 100;
             }
 
             .search-input {
-                padding: 8px;
-                font-size: 14px;
+                padding: 6.4px;
+                font-size: 11.2px;
                 border: 1px solid #ccc;
-                border-radius: 4px;
-                width: 400px;
+                border-radius: 3.2px;
+                width: 320px;
             }
 
         
 
             .add-btn {
-                padding: 8px 24px;
-                font-size: 14px;
+                padding: 6px 19px;
+                font-size: 11.2px;
                 border: none;
-                border-radius: 4px;
+                border-radius: 3.2px;
                 background-color: #2ecc71;
                 color: #fff;
                 cursor: pointer;
@@ -62,7 +62,7 @@
 
             .faculty-table-container {
                 background: #fff;
-                border-radius: 10px;
+                border-radius: 8px;
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
                 overflow: hidden;
             }
@@ -75,8 +75,8 @@
             .faculty-table th {
                 background: #8B0000;
                 color: #fff;
-                padding: 16px 0;
-                font-size: 1.1rem;
+                padding: 12.8px 0;
+                font-size: 0.88rem;
                 font-weight: bold;
                 border: none;
             }
@@ -89,9 +89,9 @@
             }
 
             .faculty-table td {
-                padding: 12px 0;
+                padding: 9.6px 0;
                 text-align: center;
-                font-size: 1rem;
+                font-size: 0.8rem;
                 border: none;
             }
 
@@ -109,28 +109,28 @@
 
             /* Make only the table area scroll vertically */
             .faculty-table-scroll {
-                max-height: 670px;
+                max-height: 536px;
                 overflow-y: auto;
                 width: 100%;
             }
 
             .action-btns {
                 display: flex;
-                gap: 8px;
+                gap: 6.4px;
                 justify-content: center;
                 align-items: center;
             }
 
             .edit-btn,
             .delete-btn {
-                width: 40px;
-                height: 32px;
-                border-radius: 6px;
+                width: 32px;
+                height: 25.6px;
+                border-radius: 4.8px;
                 border: 2px solid #111;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 1.1rem;
+                font-size: 0.88rem;
                 font-weight: bold;
                 background: #fff;
                 transition: box-shadow 0.2s;
@@ -173,26 +173,26 @@
             
 
             .modal-header {
-                font-size: 2rem;
+                font-size: 1.6rem;
                 font-weight: bold;
                 color: #8B0000;
                 text-align: center;
-                margin-bottom: 28px;
+                margin-bottom: 22.4px;
             }
 
             .modal-img-box {
                 border: 2px dashed #222;
-                border-radius: 10px;
-                width: 220px;
-                height: 180px;
+                border-radius: 8px;
+                width: 176px;
+                height: 144px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                margin-bottom: 18px;
+                margin-bottom: 14.4px;
             }
 
             .modal-plus {
-                font-size: 3.5rem;
+                font-size: 2.8rem;
                 color: #111;
                 font-weight: bold;
             }
@@ -207,38 +207,38 @@
             .modal-form-group {
                 display: flex;
                 flex-direction: column;
-                gap: 8px;
+                gap: 6.4px;
                 position: relative;
-                padding-bottom: 18px;
+                padding-bottom: 14.4px;
             }
 
             .modal-form-group label {
-                margin-bottom: 6px;
-                font-size: 1rem;
+                margin-bottom: 4.8px;
+                font-size: 0.8rem;
             }
 
             .modal-form-group input,
             .modal-form-group select {
                 width: 100%;
-                padding: 10px 12px;
-                font-size: 1rem;
+                padding: 8px 9.6px;
+                font-size: 0.8rem;
                 border: 1px solid #bbb;
-                border-radius: 5px;
+                border-radius: 4px;
             }
             .modal-form-group input.valid,
             .modal-form-group select.valid { border-color:#2ecc71; box-shadow:0 0 0 2px rgba(46,204,113,0.1); }
             .modal-form-group input.invalid,
             .modal-form-group select.invalid { border-color:#ff3636; box-shadow:0 0 0 2px rgba(255,54,54,0.1); }
-            .validation-message { position:absolute; left:0; right:12px; bottom:0; font-size:0.85rem; color:#ff3636; pointer-events:none; padding-left:12px; }
+            .validation-message { position:absolute; left:0; right:9.6px; bottom:0; font-size:0.68rem; color:#ff3636; pointer-events:none; padding-left:9.6px; }
 
             .modal-btn {
                 width: 100%;
-                padding: 14px 0;
-                font-size: 1.1rem;
+                padding: 11.2px 0;
+                font-size: 0.88rem;
                 font-weight: bold;
                 border: none;
-                border-radius: 6px;
-                margin-top: 14px;
+                border-radius: 4.8px;
+                margin-top: 11.2px;
                 cursor: pointer;
             }
 
@@ -255,9 +255,9 @@
             .modal-btn.cancel {
                 background: #fff;
                 color: #800000;
-                border: 2px solid #800000;
-                border-radius: 8px;
-                padding: 10px 20px;
+                border: 1.6px solid #800000;
+                border-radius: 6.4px;
+                padding: 8px 16px;
                 cursor: pointer;
                 transition: all 0.3s ease;
             }
@@ -281,7 +281,7 @@
 
             .modal-row {
                 display: flex;
-                gap: 18px;
+                gap: 14.4px;
                 width: 100%;
             }
 
@@ -304,13 +304,13 @@
 
             .modal-buttons {
                 display: flex;
-                gap: 12px;
+                gap: 9.6px;
                 justify-content: center;
             }
 
             .modal-box {
                 align-items: center;
-                width: 400px;
+                width: 320px;
                 max-width: 95vw;
                 background: #fff;
                 padding: 0;
@@ -335,35 +335,35 @@
 
 
             .modal-form-group label {
-                min-width: 130px;
+                min-width: 104px;
                 text-align: left;
-                font-size: 1rem;
+                font-size: 0.8rem;
                 color: #222;
             }
 
             .modal-form-group input {
                 flex: 1;
                 width: 100%;
-                padding: 10px 12px;
-                font-size: 1rem;
+                padding: 8px 9.6px;
+                font-size: 0.8rem;
                 border: 1px solid #bbb;
-                border-radius: 5px;
+                border-radius: 4px;
             }
 
             .modal-buttons {
                 display: flex;
-                gap: 12px;
+                gap: 9.6px;
                 justify-content: center;
-                margin-top: 10px;
+                margin-top: 8px;
             }
 
             .modal-btn {
                 width: 50%;
-                padding: 14px 0;
-                font-size: 1.1rem;
+                padding: 11.2px 0;
+                font-size: 0.88rem;
                 font-weight: bold;
                 border: none;
-                border-radius: 6px;
+                border-radius: 4.8px;
                 cursor: pointer;
             }
 

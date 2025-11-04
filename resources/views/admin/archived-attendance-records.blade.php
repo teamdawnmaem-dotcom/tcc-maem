@@ -1,8 +1,7 @@
 @extends('layouts.appAdmin')
 
 @section('title', 'Archived Attendance Records - Tagoloan Community College')
-@section('reports-active', 'active')
-@section('attendance-records-active', 'active')
+@section('archived-attendance-active', 'active')
 
 @section('styles')
     <style>
@@ -10,7 +9,7 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            margin-bottom: 40px;
+            margin-bottom: 32px;
         }
 
         .faculty-title-group {
@@ -19,33 +18,33 @@
         }
 
         .faculty-title {
-            font-size: 2.3rem;
+            font-size: 1.84rem;
             font-weight: bold;
             color: #6d0000;
         }
 
         .faculty-subtitle {
-            font-size: 1rem;
+            font-size: 0.8rem;
             color: #666;
-            margin-bottom: 30px;
+            margin-bottom: 24px;
         }
 
         .faculty-actions-row {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             position: absolute;
-            top: 130px;
-            right: 40px;
+            top: 104px;
+            right: 32px;
             z-index: 100;
         }
 
         .view-archive-btn {
             background-color: #6c757d;
             color: white;
-            padding: 8px 24px;
-            font-size: 14px;
+            padding: 6px 19px;
+            font-size: 11.2px;
             border: none;
-            border-radius: 4px;
+            border-radius: 3.2px;
             cursor: pointer;
             font-weight: bold;
             text-decoration: none;
@@ -54,7 +53,7 @@
 
         .teaching-load-table-container {
             background: #fff;
-            border-radius: 10px;
+            border-radius: 8px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
             overflow: hidden;
             overflow-x: auto;
@@ -70,8 +69,8 @@
         .teaching-load-table th {
             background: #8B0000;
             color: #fff;
-            padding: 12px 8px;
-            font-size: 0.9rem;
+            padding: 9.6px 6.4px;
+            font-size: 0.72rem;
             font-weight: bold;
             border: none;
             text-align: center;
@@ -81,9 +80,9 @@
         }
 
         .teaching-load-table td {
-            padding: 12px 8px;
+            padding: 9.6px 6.4px;
             text-align: center;
-            font-size: 0.85rem;
+            font-size: 0.68rem;
             border: none;
             white-space: nowrap;
             overflow: hidden;
@@ -104,7 +103,7 @@
         }
 
         .teaching-load-table-scroll {
-            max-height: 670px;
+            max-height: 536px;
             overflow-y: auto;
             width: 100%;
         }
@@ -131,10 +130,10 @@
         /* Search functionality */
         .search-section {
             display: flex;
-            gap: 20px;
+            gap: 16px;
             align-items: end;
-            margin-top: 20px;
-            padding-top: 20px;
+            margin-top: 16px;
+            padding-top: 16px;
             border-top: 2px solid #f1f3f4;
         }
 
@@ -145,10 +144,10 @@
 
         .search-input {
             width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            font-size: 0.95rem;
+            padding: 9.6px 12.8px;
+            border: 1.6px solid #e9ecef;
+            border-radius: 6.4px;
+            font-size: 0.76rem;
             background: #ffffff;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             color: #495057;
@@ -182,10 +181,10 @@
         .filter-section {
             background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
             border: 1px solid #e9ecef;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-            padding: 30px;
-            margin-bottom: 25px;
+            border-radius: 12px;
+            box-shadow: 0 6.4px 20px rgba(0, 0, 0, 0.08);
+            padding: 24px;
+            margin-bottom: 20px;
             position: relative;
             overflow: hidden;
         }
@@ -203,8 +202,8 @@
         .filter-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
+            gap: 12px;
+            margin-bottom: 20px;
             align-items: end;
         }
 
@@ -216,20 +215,20 @@
         }
 
         .filter-label {
-            font-size: 0.9rem;
+            font-size: 0.72rem;
             color: #495057;
-            margin-bottom: 8px;
+            margin-bottom: 6.4px;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
         }
 
         .filter-input,
         .filter-select {
-            padding: 12px 16px;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            font-size: 0.95rem;
+            padding: 9.6px 12.8px;
+            border: 1.6px solid #e9ecef;
+            border-radius: 6.4px;
+            font-size: 0.76rem;
             background: #ffffff;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             color: #495057;
@@ -246,19 +245,19 @@
 
         .filter-btn,
         .clear-btn {
-            padding: 12px 24px;
+            padding: 9.6px 19px;
             border: none;
-            border-radius: 8px;
-            font-size: 0.9rem;
+            border-radius: 6.4px;
+            font-size: 0.72rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
             position: relative;
             overflow: hidden;
             white-space: nowrap;
-            min-width: 150px;
+            min-width: 120px;
             width: auto;
         }
 
@@ -293,18 +292,18 @@
         .archive-info h4 {
             margin: 0 0 5px 0;
             color: #8B0000;
-            font-size: 1.1rem;
+            font-size: 0.88rem;
         }
 
         .archive-info p {
             margin: 0 0 5px 0;
             color: #666;
-            font-size: 0.9rem;
+            font-size: 0.72rem;
         }
 
         .archive-info small {
             color: #999;
-            font-size: 0.8rem;
+            font-size: 0.64rem;
         }
 
         /* Remarks color coding */
@@ -327,11 +326,7 @@
         <div class="faculty-title-group">
             <div class="faculty-title">Archived Attendance Records</div>
             <div class="faculty-subtitle"></div>
-        </div>
-        <div class="faculty-actions-row">
-            <a href="{{ route('admin.attendance.records') }}" class="view-archive-btn">Back to Current</a>
-        </div>
-    </div>
+
 
     @if($errors->any())
         <div style="background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
@@ -387,6 +382,11 @@
         <div class="search-section">
             <div class="search-group">
                 <input type="text" class="search-input" id="searchInput" placeholder="Search by faculty name, course code, subject, room, building, department...">
+            </div>
+            <div class="search-group" style="flex: 0 0 auto;">
+                <a href="{{ route('admin.attendance.records.archived.print') }}" class="filter-btn" style="text-decoration: none; display: inline-block;">
+                    Print PDF
+                </a>
             </div>
         </div>
     </div>
@@ -526,6 +526,8 @@
             </table>
         </div>
     </div>
+
+    
 
 @endsection
 

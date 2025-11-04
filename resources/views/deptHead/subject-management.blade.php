@@ -7,10 +7,7 @@
 @section('styles')
     <style>
         .faculty-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-bottom: 40px;
+            margin-bottom: 0;
         }
 
         .faculty-title-group {
@@ -19,36 +16,39 @@
         }
 
         .faculty-title {
-            font-size: 2.3rem;
+            font-size: 1.84rem;
             font-weight: bold;
             color: #6d0000;
         }
 
         .faculty-subtitle {
-            font-size: 1rem;
+            font-size: 0.8rem;
             color: #666;
-            margin-bottom: 30px;
+            margin-bottom: 0;
         }
 
         .faculty-actions-row {
             display: flex;
-            gap: 10px;
-            position: absolute;
-            top: 130px;
-            right: 40px;
-            z-index: 100;
+            gap: 8px;
+            margin-top: 16px;
+            margin-bottom: 32px;
+            width: 100%;
+            align-items: stretch;
         }
 
         .search-input {
-            padding: 8px;
+            padding: 10px 12px;
             font-size: 14px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            width: 400px;
+            width: 75%;
+            flex: 0 0 75%;
+            min-width: 0;
+            box-sizing: border-box;
         }
 
         .add-btn {
-            padding: 8px 24px;
+            padding: 10px 24px;
             font-size: 14px;
             border: none;
             border-radius: 4px;
@@ -56,11 +56,14 @@
             color: #fff;
             cursor: pointer;
             font-weight: bold;
+            width: 25%;
+            flex: 0 0 25%;
+            white-space: nowrap;
         }
 
         .subject-table-container {
             background: #fff;
-            border-radius: 10px;
+            border-radius: 8px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
             overflow: hidden;
         }
@@ -73,8 +76,8 @@
         .subject-table th {
             background: #8B0000;
             color: #fff;
-            padding: 16px 0;
-            font-size: 1.1rem;
+            padding: 12.8px 0;
+            font-size: 0.88rem;
             font-weight: bold;
             border: none;
         }
@@ -86,9 +89,9 @@
         }
 
         .subject-table td {
-            padding: 12px 0;
+            padding: 9.6px 0;
             text-align: center;
-            font-size: 1rem;
+            font-size: 0.8rem;
             border: none;
         }
 
@@ -105,7 +108,7 @@
         }
 
         .subject-table-scroll {
-            max-height: 670px;
+            max-height: 536px;
             overflow-y: auto;
             width: 100%;
         }
@@ -113,21 +116,21 @@
         /* Match action buttons style from teaching load */
         .action-btns {
             display: flex;
-            gap: 8px;
+            gap: 6.4px;
             justify-content: center;
             align-items: center;
         }
 
         .edit-btn,
         .delete-btn {
-            width: 40px;
-            height: 32px;
-            border-radius: 6px;
+            width: 32px;
+            height: 25.6px;
+            border-radius: 4.8px;
             border: 2px solid #111;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.1rem;
+            font-size: 0.88rem;
             font-weight: bold;
             background: #fff;
             transition: box-shadow 0.2s;
@@ -153,6 +156,309 @@
         .delete-btn:active {
             box-shadow: 0 0 0 2px #2222;
         }
+
+        /* Mobile responsive design for 430px width */
+        @media (max-width: 430px) {
+            /* Faculty Header */
+            .faculty-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+                margin-top: -40px;
+                margin-bottom: 24px;
+                position: relative;
+            }
+
+            .faculty-title-group {
+                width: 100%;
+            }
+
+            .faculty-title {
+                font-size: 1.4rem;
+                margin-bottom: 4px;
+            }
+
+            .faculty-subtitle {
+                font-size: 0.75rem;
+                margin-bottom: 0;
+            }
+
+            /* Actions Row - Side by side on mobile */
+            .faculty-actions-row {
+                position: relative;
+                top: 0;
+                right: 0;
+                width: 100%;
+                flex-direction: row;
+                gap: 8px;
+                z-index: 1;
+                margin: 0;
+                padding: 0;
+            }
+
+            .search-input {
+                width: 75% !important;
+                flex: 0 0 calc(75% - 4px);
+                padding: 10px 12px;
+                margin-top: -50px;
+                margin-bottom: 60px;
+                font-size: 0.9rem;
+                border-radius: 6px;
+                margin: 0;
+            }
+
+            .add-btn {
+                width: 25%;
+                flex: 0 0 calc(25% - 4px);
+                padding: 10px 8px;
+                font-size: 0.85rem;
+                border-radius: 6px;
+                font-weight: bold;
+                white-space: nowrap;
+                margin: 0;
+            }
+
+            /* Table Container - Ensure alignment with actions row */
+            .subject-table-container {
+                border-radius: 8px;
+                overflow: hidden;
+                margin-top: 1000px;
+                width: 100%;
+                margin: 0;
+            }
+
+            .subject-table-scroll {
+                max-height: 50vh;
+                overflow-x: auto;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .subject-table {
+                min-width: 650px; /* Minimum width to maintain readability */
+            }
+
+            .subject-table th {
+                padding: 10px 8px;
+                font-size: 0.75rem;
+                white-space: nowrap;
+            }
+
+            .subject-table td {
+                padding: 8px 6px;
+                font-size: 0.75rem;
+                white-space: nowrap;
+            }
+
+            /* Empty state message */
+            .subject-table td[colspan] {
+                font-size: 0.75rem;
+                padding: 20px 12px;
+            }
+
+            /* Action Buttons */
+            .action-btns {
+                gap: 6px;
+            }
+
+            .edit-btn,
+            .delete-btn {
+                width: 36px;
+                height: 30px;
+                font-size: 1rem;
+            }
+
+            /* Modals - Mobile Optimized */
+            .modal-overlay {
+                padding: 10px;
+            }
+
+            .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+                padding: 20px 16px !important;
+                margin: 0;
+            }
+
+            /* Add Subject Modal - Mobile */
+            #addSubjectModal .modal-box {
+                width: 95vw !important;
+                max-width: 75vw !important;
+                height: 50vh !important;
+                max-height: 50vh !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+            }
+
+            #addSubjectModal .modal-header {
+                font-size: 1.1rem !important;
+                padding: 12px 16px !important;
+                flex-shrink: 0 !important;
+                position: sticky !important;
+                top: 0 !important;
+                z-index: 10 !important;
+            }
+
+            #addSubjectModal .modal-form {
+                flex: 1 !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                -webkit-overflow-scrolling: touch !important;
+                padding: 16px 16px !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            #addSubjectModal .modal-form-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+                margin-bottom: 16px;
+                padding-bottom: 20px;
+            }
+
+            #addSubjectModal .modal-form-group label {
+                min-width: auto;
+                width: 100%;
+                margin-bottom: 4px;
+                font-size: 0.75rem;
+            }
+
+            #addSubjectModal .modal-form-group input,
+            #addSubjectModal .modal-form-group select {
+                width: 100%;
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+
+            #addSubjectModal .validation-message {
+                position: relative;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding-left: 0;
+                margin-top: 4px;
+            }
+
+            #addSubjectModal .modal-buttons {
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 16px;
+            }
+
+            #addSubjectModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 0.9rem !important;
+            }
+
+            /* Update Subject Modal */
+            #updateSubjectModal .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+                transform: scale(1) !important;
+                padding: 0 !important;
+            }
+
+            #updateSubjectModal .modal-header {
+                font-size: 1.1rem !important;
+                padding: 12px 16px !important;
+            }
+
+            #updateSubjectModal .modal-form {
+                padding: 16px !important;
+            }
+
+            #updateSubjectModal .modal-form-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+                margin-bottom: 16px;
+                padding-bottom: 20px;
+            }
+
+            #updateSubjectModal .modal-form-group label {
+                min-width: auto;
+                width: 100%;
+                margin-bottom: 4px;
+                font-size: 0.75rem;
+            }
+
+            #updateSubjectModal .modal-form-group input,
+            #updateSubjectModal .modal-form-group select {
+                width: 100%;
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+
+            #updateSubjectModal .validation-message {
+                position: relative;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding-left: 0;
+                margin-top: 4px;
+            }
+
+            #updateSubjectModal .modal-buttons {
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 16px;
+            }
+
+            #updateSubjectModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 0.9rem !important;
+            }
+
+            /* Delete Subject Modal */
+            #deleteSubjectModal .modal-box {
+                width: 90vw !important;
+                max-width: 90vw !important;
+                padding: 24px 20px !important;
+                transform: scale(1) !important;
+            }
+
+            #deleteSubjectModal .modal-header {
+                font-size: 1.1rem !important;
+                margin-bottom: 16px !important;
+            }
+
+            #deleteSubjectModal .modal-buttons {
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 20px !important;
+            }
+
+            #deleteSubjectModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 0.9rem !important;
+            }
+
+            /* General Modal Styles */
+            .modal-header {
+                font-size: 1.1rem !important;
+            }
+
+            .modal-form-group {
+                flex-direction: column;
+            }
+
+            .modal-form-group label {
+                min-width: auto;
+                width: 100%;
+            }
+
+            .modal-form-group input,
+            .modal-form-group select,
+            .modal-form-group textarea {
+                width: 100%;
+            }
+        }
     </style>
 @endsection
 
@@ -166,10 +472,10 @@
             <div class="faculty-title">Subject Management</div>
             <div class="faculty-subtitle"></div>
         </div>
-        <div class="faculty-actions-row">
-            <input type="text" class="search-input" id="subjectSearch" placeholder="Search...">
-            <button class="add-btn" onclick="openModal && openModal('addSubjectModal')">Add</button>
-        </div>
+    </div>
+    <div class="faculty-actions-row">
+        <input type="text" class="search-input" id="subjectSearch" placeholder="Search...">
+        <button class="add-btn" onclick="openModal && openModal('addSubjectModal')">Add</button>
     </div>
 
     <div class="subject-table-container">
@@ -188,11 +494,11 @@
                     @php($__subjects = $subjects ?? [])
                     @forelse($__subjects as $idx => $subject)
                         <tr data-id="{{ data_get($subject, 'subject_id', data_get($subject, 'id')) }}">
-                            <td>{{ $idx + 1 }}</td>
-                            <td class="subject-code">{{ data_get($subject, 'subject_code', '') }}</td>
-                            <td class="subject-desc">{{ data_get($subject, 'subject_description', '') }}</td>
-                            <td class="subject-dept">{{ data_get($subject, 'department', '') }}</td>
-                            <td>
+                            <td data-label="No">{{ $idx + 1 }}</td>
+                            <td data-label="Subject Code" class="subject-code">{{ data_get($subject, 'subject_code', '') }}</td>
+                            <td data-label="Subject Description" class="subject-desc">{{ data_get($subject, 'subject_description', '') }}</td>
+                            <td data-label="Department" class="subject-dept">{{ data_get($subject, 'department', '') }}</td>
+                            <td data-label="Action">
                                 <div class="action-btns">
                                     <button class="edit-btn"
                                         onclick="openUpdateModal('{{ data_get($subject, 'subject_id', data_get($subject, 'id')) }}')">&#9998;</button>
@@ -219,7 +525,7 @@
             <form method="POST" action="{{ route('deptHead.subjects.store') }}" style="padding: 0;">
                 @csrf
                 <div class="modal-header"
-                    style="background-color: #8B0000; color: white; padding: 18px 24px; font-size: 24px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.5px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                    style="background-color: #8B0000; color: white; padding: 14.4px 19.2px; font-size: 19.2px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.4px; border-top-left-radius: 6.4px; border-top-right-radius: 6.4px;">
                     ADD SUBJECT</div>
                 <div class="modal-form" style="padding: 24px 24px 24px;">
                     <style>
@@ -235,10 +541,10 @@
                         }
 
                         #addSubjectModal .modal-form-group label {
-                            min-width: 130px;
+                            min-width: 104px;
                             text-align: left;
                             margin-bottom: 0;
-                            font-size: 1rem;
+                            font-size: 0.8rem;
                             color: #222;
                         }
 
@@ -246,18 +552,18 @@
                         #addSubjectModal .modal-form-group select {
                             flex: 1;
                             width: 100%;
-                            padding: 10px 12px;
-                            font-size: 1rem;
+                            padding: 8px 9.6px;
+                            font-size: 0.8rem;
                             border: 1px solid #bbb;
-                            border-radius: 5px;
+                            border-radius: 4px;
                         }
 
                         #addSubjectModal .validation-message {
-                            font-size: 0.8rem;
-                            left: 130px;
-                            right: 10px;
-                            bottom: -10px;
-                            padding-left: 10px;
+                            font-size: 0.64rem;
+                            left: 104px;
+                            right: 8px;
+                            bottom: -8px;
+                            padding-left: 8px;
                             line-height: 1.1;
                             position: absolute;
                             color: #ff3636;
@@ -266,9 +572,9 @@
 
                         #addSubjectModal .modal-buttons {
                             display: flex;
-                            gap: 12px;
+                            gap: 9.6px;
                             justify-content: center;
-                            margin-top: 12px;
+                            margin-top: 9.6px;
                         }
 
                         #addSubjectModal .modal-btn.add {
@@ -286,8 +592,8 @@
                         #addSubjectModal .modal-btn.cancel {
                             background: #fff;
                             color: #800000;
-                            border: 2px solid #800000;
-                            border-radius: 8px;
+                            border: 1.6px solid #800000;
+                            border-radius: 6.4px;
                         }
 
                         #addSubjectModal .modal-btn.cancel:hover {
@@ -343,7 +649,7 @@
                 @csrf
                 @method('PUT')
                 <div class="modal-header"
-                    style="background-color: #8B0000; color: white; padding: 18px 24px; font-size: 24px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.5px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                    style="background-color: #8B0000; color: white; padding: 14.4px 19.2px; font-size: 19.2px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.4px; border-top-left-radius: 6.4px; border-top-right-radius: 6.4px;">
                     UPDATE SUBJECT</div>
                 <div class="modal-form" style="padding: 24px 24px 24px;">
                     <style>
@@ -359,10 +665,10 @@
                         }
 
                         #updateSubjectModal .modal-form-group label {
-                            min-width: 130px;
+                            min-width: 104px;
                             text-align: left;
                             margin-bottom: 0;
-                            font-size: 1rem;
+                            font-size: 0.8rem;
                             color: #222;
                         }
 
@@ -370,18 +676,18 @@
                         #updateSubjectModal .modal-form-group select {
                             flex: 1;
                             width: 100%;
-                            padding: 10px 12px;
-                            font-size: 1rem;
+                            padding: 8px 9.6px;
+                            font-size: 0.8rem;
                             border: 1px solid #bbb;
-                            border-radius: 5px;
+                            border-radius: 4px;
                         }
 
                         #updateSubjectModal .validation-message {
-                            font-size: 0.8rem;
-                            left: 130px;
-                            right: 10px;
-                            bottom: -10px;
-                            padding-left: 10px;
+                            font-size: 0.64rem;
+                            left: 104px;
+                            right: 8px;
+                            bottom: -8px;
+                            padding-left: 8px;
                             line-height: 1.1;
                             position: absolute;
                             color: #ff3636;
@@ -390,9 +696,9 @@
 
                         #updateSubjectModal .modal-buttons {
                             display: flex;
-                            gap: 12px;
+                            gap: 9.6px;
                             justify-content: center;
-                            margin-top: 12px;
+                            margin-top: 9.6px;
                         }
 
                         #updateSubjectModal .modal-btn.add {
@@ -410,8 +716,8 @@
                         #updateSubjectModal .modal-btn.cancel {
                             background: #fff;
                             color: #800000;
-                            border: 2px solid #800000;
-                            border-radius: 8px;
+                            border: 1.6px solid #800000;
+                            border-radius: 6.4px;
                         }
 
                         #updateSubjectModal .modal-btn.cancel:hover {
@@ -491,12 +797,12 @@
             </div>
 
             <!-- Action Buttons -->
-            <div class="modal-buttons" style="display: flex; gap: 12px; justify-content: center; margin-top: 12px;">
+            <div class="modal-buttons" style="display: flex; gap: 9.6px; justify-content: center; margin-top: 9.6px;">
                 <button type="submit" class="modal-btn delete"
-                    style="min-width: 160px; background: transparent; color: #ff3636; border: 2px solid #ff3636; border-radius: 10px; transition: background-color 0.15s ease, color 0.15s ease;">Delete
+                    style="min-width: 128px; background: transparent; color: #ff3636; border: 1.6px solid #ff3636; border-radius: 8px; transition: background-color 0.15s ease, color 0.15s ease;">Delete
                     Subject</button>
                 <button type="button" class="modal-btn cancel"
-                    style="min-width: 160px; background: #fff; color: #800000; border: 2px solid #800000; border-radius: 8px;"
+                    style="min-width: 128px; background: #fff; color: #800000; border: 1.6px solid #800000; border-radius: 6.4px;"
                     onclick="closeModal('deleteSubjectModal')">Cancel</button>
             </div>
         </form>
@@ -531,7 +837,7 @@
                         noRow = document.createElement('tr');
                         noRow.classList.add('no-results');
                         noRow.innerHTML =
-                            `<td colspan="4" style="text-align:center; padding:20px; color:#999; font-style:italic;">No results found</td>`;
+                            `<td colspan="5" style="text-align:center; padding:20px; color:#999; font-style:italic;">No results found</td>`;
                         tbody.appendChild(noRow);
                     }
                 } else {

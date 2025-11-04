@@ -111,6 +111,82 @@ class StreamRecordingController extends Controller
     }
     
     /**
+     * Stream/download a video file
+     */
+    public function stream($id)
+    {
+        try {
+            $recording = StreamRecording::findOrFail($id);
+            
+            // Build full path to video file
+            $fullPath = storage_path('app/public/' . $recording->filepath);
+            
+            // Alternative: try direct filename path
+            if (!file_exists($fullPath)) {
+                $fullPath = storage_path('app/public/stream_recordings/' . $recording->filename);
+            }
+            
+            if (!file_exists($fullPath)) {
+                return response()->json([
+                    'error' => 'Video file not found',
+                    'filepath' => $recording->filepath,
+                    'filename' => $recording->filename
+                ], 404);
+            }
+            
+            // Get file size
+            $fileSize = filesize($fullPath);
+            
+            // Determine MIME type
+            $mimeType = 'video/mp4';
+            
+            // Set headers for video streaming
+            $headers = [
+                'Content-Type' => $mimeType,
+                'Content-Length' => $fileSize,
+                'Accept-Ranges' => 'bytes',
+            ];
+            
+            // Handle range requests for video seeking
+            if (request()->hasHeader('Range')) {
+                $range = request()->header('Range');
+                $range = str_replace('bytes=', '', $range);
+                [$start, $end] = explode('-', $range);
+                $start = intval($start);
+                $end = $end ? intval($end) : $fileSize - 1;
+                $length = $end - $start + 1;
+                
+                $headers['Content-Range'] = sprintf('bytes %d-%d/%d', $start, $end, $fileSize);
+                $headers['Content-Length'] = $length;
+                
+                return response()->stream(function() use ($fullPath, $start, $length) {
+                    $fp = fopen($fullPath, 'rb');
+                    fseek($fp, $start);
+                    echo fread($fp, $length);
+                    fclose($fp);
+                }, 206, $headers);
+            }
+            
+            // Stream the entire file
+            return response()->stream(function() use ($fullPath) {
+                $fp = fopen($fullPath, 'rb');
+                while (!feof($fp)) {
+                    echo fread($fp, 8192); // 8KB chunks
+                    flush();
+                }
+                fclose($fp);
+            }, 200, $headers);
+            
+        } catch (\Exception $e) {
+            \Log::error("Error streaming video: " . $e->getMessage());
+            return response()->json([
+                'error' => 'Failed to stream video',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
      * Delete a recording
      */
     public function destroy($id)

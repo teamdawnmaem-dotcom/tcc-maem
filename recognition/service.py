@@ -11,7 +11,7 @@ aiohttp + aiortc service for:
 """
 from aiohttp import web
 import aiohttp_cors
-import os, json, datetime, threading, asyncio
+import os, json, datetime, threading, asyncio, subprocess
 from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
 import cv2
 import numpy as np
@@ -36,6 +36,19 @@ ATTENDANCE_ENDPOINT = f"{API_BASE}/attendance"
 ATTENDANCE_CHECK_ENDPOINT = f"{API_BASE}/attendance/check"
 STREAM_RECORDING_ENDPOINT = f"{API_BASE}/stream-recordings"
 
+# Optional API key for authenticated endpoints
+API_KEY = os.getenv("API_KEY", None)
+
+# Request headers - include API key if configured
+def get_request_headers():
+    """Get headers for API requests, including optional API key."""
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
+    if API_KEY:
+        headers['Authorization'] = f'Bearer {API_KEY}'
+    return headers
 
 MATCH_THRESHOLD = float(os.getenv("MATCH_THRESHOLD", "0.6"))
 
@@ -112,7 +125,13 @@ os.environ.setdefault(
 # -------------------
 def fetch_cameras():
     try:
-        r = requests.get(CAMERAS_ENDPOINT, timeout=8)
+        headers = get_request_headers()
+        r = requests.get(CAMERAS_ENDPOINT, headers=headers, timeout=8)
+        
+        # Log response details for debugging
+        if r.status_code != 200:
+            print(f"fetch_cameras HTTP {r.status_code}: {r.text}")
+        
         r.raise_for_status()
         cams = r.json()
         _cameras_cache.clear()
@@ -126,13 +145,19 @@ def fetch_cameras():
                 "camera_live_feed": c.get("camera_live_feed")
             }
         return cams
+    except requests.exceptions.HTTPError as e:
+        print(f"fetch_cameras HTTP error: {e}")
+        if hasattr(e.response, 'text'):
+            print(f"Response: {e.response.text}")
+        return []
     except Exception as e:
-        print("fetch_cameras error:", e)
+        print(f"fetch_cameras error: {e}")
         return []
 
 def fetch_today_schedule():
     try:
-        r = requests.get(SCHEDULE_ENDPOINT, timeout=8)
+        headers = get_request_headers()
+        r = requests.get(SCHEDULE_ENDPOINT, headers=headers, timeout=8)
         r.raise_for_status()
         schedules = r.json()
         _schedules_cache.clear()
@@ -148,7 +173,7 @@ def fetch_today_schedule():
             _schedules_cache.setdefault(room, []).append(entry)
         return schedules
     except Exception as e:
-        print("fetch_today_schedule error:", e)
+        print(f"fetch_today_schedule error: {e}")
         return []
 
 # -------------------
@@ -186,6 +211,7 @@ def check_faculty_status(faculty_id: int, date: str, time_in: str, time_out: str
     """Check if faculty is on leave or has pass slip for the given date and time range."""
     try:
         # Check leave status
+        headers = get_request_headers()
         leave_url = f"{API_BASE}/faculty-leave-status"
         leave_payload = {
             "faculty_id": faculty_id,
@@ -193,7 +219,7 @@ def check_faculty_status(faculty_id: int, date: str, time_in: str, time_out: str
             "time_in": time_in,
             "time_out": time_out
         }
-        leave_response = requests.post(leave_url, json=leave_payload, timeout=5)
+        leave_response = requests.post(leave_url, json=leave_payload, headers=headers, timeout=5)
         if leave_response.status_code == 200:
             leave_data = leave_response.json()
             if leave_data.get("on_leave", False):
@@ -207,7 +233,7 @@ def check_faculty_status(faculty_id: int, date: str, time_in: str, time_out: str
             "time_in": time_in,
             "time_out": time_out
         }
-        pass_response = requests.post(pass_url, json=pass_payload, timeout=5)
+        pass_response = requests.post(pass_url, json=pass_payload, headers=headers, timeout=5)
         if pass_response.status_code == 200:
             pass_data = pass_response.json()
             if pass_data.get("has_pass", False):
@@ -508,7 +534,8 @@ def check_schedule_end_and_mark_absent():
 
 def fetch_faculty_embeddings():
     try:
-        r = requests.get(FACULTY_EMBEDDINGS_ENDPOINT, timeout=10)
+        headers = get_request_headers()
+        r = requests.get(FACULTY_EMBEDDINGS_ENDPOINT, headers=headers, timeout=10)
         r.raise_for_status()
         data = r.json()
         _faculty_embeddings.clear()
@@ -1424,7 +1451,8 @@ def log_recognition_event(camera_id, faculty_id, faculty_name, status, distance,
 					}
 					
 					# Try to get detailed information
-					details_response = requests.post(teaching_load_url, json=payload, timeout=3)
+					headers = get_request_headers()
+					details_response = requests.post(teaching_load_url, json=payload, headers=headers, timeout=3)
 					if details_response.status_code == 200:
 						details = details_response.json()
 						room_name = details.get("room_name", cam.get("room_name", f"Room {cam.get('room_no')}"))
@@ -1470,10 +1498,14 @@ def log_recognition_event(camera_id, faculty_id, faculty_name, status, distance,
 					"teaching_load_id": teaching_load_id
 				}
 				
-				# Post recognition log
-				response = requests.post(f"{API_BASE}/recognition-logs", json=log_data, timeout=5)
+				# Post recognition log (use public endpoint, no API key needed)
+				headers = {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json'
+				}
+				response = requests.post(f"{API_BASE}/recognition-logs", json=log_data, headers=headers, timeout=5)
 				if response.status_code not in [200, 201]:
-					print(f"Failed to log recognition event: {response.status_code}")
+					print(f"Failed to log recognition event: {response.status_code} - {response.text[:200] if hasattr(response, 'text') else 'No response'}")
 			except Exception as e:
 				print(f"Error posting recognition log: {e}")
 		
@@ -1809,10 +1841,11 @@ def _post_attendance_dedup(payload):
         print(f"DEBUG: Final payload validation - record_remarks='{payload.get('record_remarks', 'MISSING')}'")
         
         # Check if attendance already exists
+        headers = get_request_headers()
         check_response = requests.post(ATTENDANCE_CHECK_ENDPOINT, json={
             "faculty_id": payload["faculty_id"],
             "teaching_load_id": payload["teaching_load_id"]
-        }, timeout=5)
+        }, headers=headers, timeout=5)
         
         print(f"Check response status: {check_response.status_code}")
         if check_response.status_code == 200:
@@ -1826,7 +1859,8 @@ def _post_attendance_dedup(payload):
         print(f"Posting attendance with payload: {payload}")
         
         # Post attendance
-        post_response = requests.post(ATTENDANCE_ENDPOINT, json=payload, timeout=6)
+        headers = get_request_headers()
+        post_response = requests.post(ATTENDANCE_ENDPOINT, json=payload, headers=headers, timeout=6)
         print(f"Attendance posted with status: {post_response.status_code}")
         
         if post_response.status_code not in [200, 201]:
@@ -2000,38 +2034,383 @@ def record_stream_segment(camera_id, camera_feed, duration=180):
         height, width = frame.shape[:2]
         fps = 15  # Standard FPS for recordings
         
-        # Create video writer
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(filepath, fourcc, fps, (width, height))
+        # Always prefer FFmpeg for encoding (best media player compatibility)
+        # Check if FFmpeg is available
+        use_ffmpeg = False
+        ffmpeg_process = None
+        temp_file = None
+        ffmpeg_path = None
+        
+        # Function to find FFmpeg in common locations
+        def find_ffmpeg():
+            """Find FFmpeg executable in common installation paths."""
+            possible_paths = [
+                'ffmpeg',  # Check PATH first (works after PATH refresh)
+                'C:\\ProgramData\\chocolatey\\lib\\ffmpeg\\tools\\ffmpeg\\bin\\ffmpeg.exe',  # Chocolatey installation path
+                'C:\\ffmpeg\\bin\\ffmpeg.exe',
+                f'{os.environ.get("ProgramFiles", "C:\\Program Files")}\\ffmpeg\\bin\\ffmpeg.exe',
+                f'{os.environ.get("ProgramFiles(x86)", "C:\\Program Files (x86)")}\\ffmpeg\\bin\\ffmpeg.exe',
+                os.path.join(os.path.expanduser('~'), 'ffmpeg', 'bin', 'ffmpeg.exe'),
+                'C:\\tools\\ffmpeg\\bin\\ffmpeg.exe',
+            ]
+            
+            for path in possible_paths:
+                try:
+                    if path == 'ffmpeg':
+                        # Try running from PATH
+                        result = subprocess.run(
+                            ['ffmpeg', '-version'],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            timeout=2
+                        )
+                        if result.returncode == 0:
+                            return 'ffmpeg'
+                    else:
+                        # Check if file exists
+                        if os.path.exists(path):
+                            # Verify it's actually FFmpeg
+                            result = subprocess.run(
+                                [path, '-version'],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                timeout=2
+                            )
+                            if result.returncode == 0:
+                                return path
+                except:
+                    continue
+            return None
+        
+        try:
+            # Try to find FFmpeg
+            ffmpeg_path = find_ffmpeg()
+            if ffmpeg_path:
+                use_ffmpeg = True
+                print(f"✅ FFmpeg found at: {ffmpeg_path}")
+                print("✅ Using FFmpeg for direct H.264 encoding (maximum compatibility)")
+            else:
+                print("⚠️  FFmpeg not found - videos will be encoded with OpenCV (may not work in all players)")
+                print("💡 Tip: Install FFmpeg and add it to PATH for better video compatibility")
+                print("   Download from: https://ffmpeg.org/download.html")
+        except Exception as e:
+            print(f"⚠️  Error checking FFmpeg: {e}, falling back to OpenCV")
+        
+        if use_ffmpeg:
+            # Use FFmpeg for direct H.264 encoding with maximum media player compatibility
+            temp_file = filepath + '.tmp.mp4'
+            
+            # Simplified FFmpeg command for maximum compatibility
+            # Using baseline profile instead of high for broader player support
+            ffmpeg_cmd = [
+                ffmpeg_path if ffmpeg_path else 'ffmpeg',
+                '-y',  # Overwrite output file
+                '-f', 'rawvideo',
+                '-vcodec', 'rawvideo',
+                '-s', f'{width}x{height}',
+                '-pix_fmt', 'bgr24',
+                '-r', str(fps),
+                '-i', '-',  # Read from stdin
+                '-c:v', 'libx264',  # H.264 codec
+                '-preset', 'medium',  # Balance between speed and quality
+                '-crf', '23',  # Quality setting (18-28 is reasonable)
+                '-profile:v', 'baseline',  # Baseline profile for maximum compatibility
+                '-level', '3.1',  # H.264 level 3.1 for broader compatibility
+                '-pix_fmt', 'yuv420p',  # Required pixel format for all players
+                '-movflags', '+faststart',  # Move metadata to beginning for streaming
+                '-f', 'mp4',  # Force MP4 container
+                '-threads', '0',  # Use all available CPU threads
+                '-strict', '-2',  # Allow experimental codecs (sometimes needed)
+                temp_file
+            ]
+            
+            try:
+                # Start FFmpeg process with better error handling
+                ffmpeg_process = subprocess.Popen(
+                    ffmpeg_cmd,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    bufsize=width * height * 3  # Buffer size for one frame
+                )
+                print(f"✅ Started FFmpeg process for H.264 encoding (Baseline profile, Level 3.1)")
+            except Exception as e:
+                print(f"⚠️  Failed to start FFmpeg: {e}, falling back to OpenCV")
+                use_ffmpeg = False
+                ffmpeg_process = None
+        
+        # Fallback to OpenCV if FFmpeg not available or failed
+        out = None
+        fourcc = None
+        if not use_ffmpeg:
+            # Try to create video writer with compatible codec
+            # Use XVID or MJPG which are more widely supported than H.264 in OpenCV
+            compatible_codecs = ['XVID', 'MJPG', 'mp4v']
+            for codec_name in compatible_codecs:
+                try:
+                    fourcc = cv2.VideoWriter_fourcc(*codec_name)
+                    out = cv2.VideoWriter(filepath, fourcc, fps, (width, height))
+                    if out.isOpened():
+                        print(f"✅ Using {codec_name} codec for recording (will re-encode to H.264)")
+                        break
+                    else:
+                        out.release()
+                        out = None
+                except Exception as e:
+                    print(f"⚠️  Codec {codec_name} not available: {e}")
+                    if out: 
+                        out.release()
+                        out = None
+                    continue
+            
+            if not out or not out.isOpened():
+                print(f"❌ Failed to create video writer for camera {camera_id}")
+                if ffmpeg_process:
+                    ffmpeg_process.terminate()
+                return None
         
         start_time = time.time()
         frames_recorded = 0
         last_frame = frame
+        target_end_time = start_time + duration
         
         print(f"🎥 Starting recording for camera {camera_id}: {filename}")
+        print(f"📊 Target duration: {duration} seconds ({duration/60:.1f} minutes)")
         
-        while (time.time() - start_time) < duration:
-            # Get frame from shared frame buffer (non-blocking)
-            frame = get_shared_frame(camera_id)
-            if frame is None:
-                # Use last valid frame if shared frame is temporarily unavailable
-                frame = last_frame
-            else:
-                last_frame = frame
-            
-            out.write(frame)
-            frames_recorded += 1
-            
-            # Sleep to achieve target FPS
-            time.sleep(1.0 / fps)
+        # Calculate target number of frames for the duration
+        # Ensure we get exactly the right number of frames for the duration
+        target_frames = int(duration * fps)  # 180 * 15 = 2700 frames
+        expected_frames = target_frames
+        next_frame_time = start_time
         
-        # Release video writer
-        out.release()
+        print(f"📊 Target: {target_frames} frames at {fps} fps = {duration} seconds ({duration/60:.2f} minutes)")
         
-        # Get file size
-        file_size = os.path.getsize(filepath) if os.path.exists(filepath) else 0
+        try:
+            # Record exactly the target number of frames
+            while frames_recorded < target_frames:
+                current_time = time.time()
+                
+                # Wait until it's time for the next frame (maintains proper timing)
+                if current_time < next_frame_time:
+                    sleep_duration = next_frame_time - current_time
+                    if sleep_duration > 0:
+                        time.sleep(sleep_duration)
+                
+                # Safety check: don't exceed maximum duration by too much
+                if current_time >= target_end_time + 1.0:  # 1 second safety buffer
+                    remaining = target_frames - frames_recorded
+                    if remaining > 0:
+                        print(f"⚠️  Time limit exceeded ({current_time - start_time:.1f}s) but {remaining} frames still needed")
+                    break
+                
+                loop_start = time.time()
+                
+                # Get frame from shared frame buffer (non-blocking)
+                frame = get_shared_frame(camera_id)
+                if frame is None:
+                    # Use last valid frame if shared frame is temporarily unavailable
+                    frame = last_frame
+                else:
+                    last_frame = frame
+                
+                # Write frame to video
+                if use_ffmpeg and ffmpeg_process:
+                    # Write frame to FFmpeg stdin
+                    try:
+                        # Ensure frame is contiguous in memory
+                        frame_bytes = frame.tobytes()
+                        ffmpeg_process.stdin.write(frame_bytes)
+                        # Flush occasionally to prevent buffer buildup
+                        if frames_recorded % 30 == 0:  # Every ~2 seconds at 15fps
+                            ffmpeg_process.stdin.flush()
+                    except (BrokenPipeError, OSError, ValueError) as e:
+                        print(f"⚠️  FFmpeg pipe error (frame {frames_recorded}): {e}")
+                        # Check if FFmpeg process is still running
+                        if ffmpeg_process.poll() is not None:
+                            print(f"⚠️  FFmpeg process exited unexpectedly")
+                            # Set flag to exit loop
+                            use_ffmpeg = False
+                            break
+                else:
+                    # Write frame using OpenCV
+                    if out:
+                        out.write(frame)
+                
+                frames_recorded += 1
+                
+                # Calculate when the next frame should be recorded (maintain exact FPS timing)
+                frame_time = 1.0 / fps  # Time between frames: 1/15 = 0.0667 seconds
+                next_frame_time = start_time + (frames_recorded * frame_time)
+                
+                # Calculate elapsed time for this iteration
+                elapsed = time.time() - loop_start
+                
+                # The sleep at the start of the loop will handle timing, so we can exit here
+                # but we'll also do a small sleep here to prevent CPU spinning
+                remaining_sleep = max(0, frame_time - elapsed)
+                if remaining_sleep > 0.001:  # Only sleep if more than 1ms needed
+                    time.sleep(min(remaining_sleep, frame_time * 0.5))  # Sleep up to half frame time
+        finally:
+            # Properly close video writer or FFmpeg process
+            if use_ffmpeg and ffmpeg_process:
+                try:
+                    ffmpeg_process.stdin.close()
+                    # Wait for FFmpeg to finish and capture stderr
+                    stdout, stderr = ffmpeg_process.communicate(timeout=30)
+                    
+                    # Check if FFmpeg completed successfully
+                    if ffmpeg_process.returncode != 0:
+                        error_msg = stderr.decode('utf-8', errors='ignore')[:500] if stderr else "Unknown error"
+                        print(f"⚠️  FFmpeg encoding failed (code {ffmpeg_process.returncode}): {error_msg}")
+                        # Don't rename temp file if encoding failed
+                        if temp_file and os.path.exists(temp_file):
+                            os.remove(temp_file)
+                        return None
+                    
+                    # Rename temp file to final file if encoding succeeded
+                    if temp_file and os.path.exists(temp_file):
+                        if os.path.exists(filepath):
+                            os.remove(filepath)
+                        os.rename(temp_file, filepath)
+                        print(f"✅ FFmpeg encoding completed successfully")
+                    else:
+                        print(f"⚠️  FFmpeg temp file not found, encoding may have failed")
+                        return None
+                        
+                except subprocess.TimeoutExpired:
+                    print(f"⚠️  FFmpeg timeout, terminating process")
+                    ffmpeg_process.terminate()
+                    try:
+                        ffmpeg_process.wait(timeout=5)
+                    except:
+                        ffmpeg_process.kill()
+                    if temp_file and os.path.exists(temp_file):
+                        os.remove(temp_file)
+                    return None
+                except Exception as e:
+                    print(f"⚠️  Error closing FFmpeg: {e}")
+                    if temp_file and os.path.exists(temp_file):
+                        if os.path.exists(filepath):
+                            os.remove(filepath)
+                        try:
+                            os.rename(temp_file, filepath)
+                        except:
+                            os.remove(temp_file)
+            elif out:
+                out.release()
+                # Give the system a moment to finalize the file
+                time.sleep(0.5)
+        
+        # Verify file was created and get size
+        if not os.path.exists(filepath):
+            print(f"❌ Video file was not created: {filepath}")
+            return None
+        
+        file_size = os.path.getsize(filepath)
+        
+        # Validate video file if FFmpeg is available
+        if file_size > 0 and use_ffmpeg:
+            try:
+                # Quick validation using FFprobe
+                ffprobe_cmd = [
+                    'ffprobe', '-v', 'error', '-show_entries',
+                    'format=duration,size,bit_rate', '-of', 'json',
+                    filepath
+                ]
+                validation = subprocess.run(
+                    ffprobe_cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=5
+                )
+                if validation.returncode == 0:
+                    print(f"✅ Video file validated successfully")
+                else:
+                    print(f"⚠️  Video file validation warning (but file exists)")
+            except:
+                # FFprobe not available, skip validation
+                pass
+        
+        # If not using FFmpeg directly, re-encode with FFmpeg for browser compatibility
+        # This converts XVID/MJPG/mp4v to H.264 and ensures proper moov atom placement
+        if not use_ffmpeg and file_size > 0:
+            try:
+                # Check if FFmpeg is available for re-encoding
+                ffmpeg_check = subprocess.run(
+                    ['ffmpeg', '-version'],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=2
+                )
+                
+                if ffmpeg_check.returncode == 0:
+                    # Re-encode with FFmpeg to H.264 for browser compatibility
+                    temp_reencode_file = filepath + '.reencode.tmp'
+                    os.rename(filepath, temp_reencode_file)
+                    
+                    # Find FFmpeg path for re-encoding
+                    reencode_ffmpeg_path = find_ffmpeg() if 'find_ffmpeg' in locals() else None
+                    if not reencode_ffmpeg_path:
+                        # Try simple PATH check
+                        try:
+                            subprocess.run(['ffmpeg', '-version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=2)
+                            reencode_ffmpeg_path = 'ffmpeg'
+                        except:
+                            reencode_ffmpeg_path = 'ffmpeg'  # Fallback, may fail but worth trying
+                    
+                    # Re-encode with FFmpeg to ensure maximum media player compatibility
+                    ffmpeg_cmd = [
+                        reencode_ffmpeg_path if reencode_ffmpeg_path else 'ffmpeg', '-y', '-i', temp_reencode_file,
+                        '-c:v', 'libx264', 
+                        '-preset', 'medium',  # Better compatibility than 'fast'
+                        '-crf', '23',
+                        '-profile:v', 'baseline',  # Baseline profile for maximum compatibility
+                        '-level', '3.1',  # H.264 level 3.1 for broader compatibility
+                        '-pix_fmt', 'yuv420p',  # Ensure pixel format compatibility (required for most players)
+                        '-movflags', '+faststart',  # Moves metadata to beginning for streaming
+                        '-f', 'mp4',  # Force MP4 container format
+                        '-an',  # No audio track (video-only)
+                        filepath
+                    ]
+                    
+                    result = subprocess.run(
+                        ffmpeg_cmd,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        timeout=60
+                    )
+                    
+                    if result.returncode == 0:
+                        # Remove temp file if re-encoding succeeded
+                        if os.path.exists(temp_reencode_file):
+                            os.remove(temp_reencode_file)
+                        print(f"✅ Video re-encoded to H.264 for browser compatibility")
+                        file_size = os.path.getsize(filepath)
+                    else:
+                        # If FFmpeg fails, restore original file
+                        print(f"⚠️  FFmpeg re-encoding failed: {result.stderr.decode()[:200]}")
+                        if os.path.exists(temp_reencode_file):
+                            if os.path.exists(filepath):
+                                os.remove(filepath)
+                            os.rename(temp_reencode_file, filepath)
+                else:
+                    print(f"⚠️  FFmpeg not available for re-encoding, using original codec")
+            except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
+                # FFmpeg not available or failed, use original file
+                print(f"⚠️  FFmpeg re-encoding failed (this is okay): {e}")
+                if 'temp_reencode_file' in locals() and os.path.exists(temp_reencode_file):
+                    if os.path.exists(filepath):
+                        os.remove(filepath)
+                    os.rename(temp_reencode_file, filepath)
+        
+        # Calculate actual recording duration
+        actual_duration = time.time() - start_time
+        expected_frames = int(fps * duration)
         
         print(f"✅ Recording completed for camera {camera_id}: {frames_recorded} frames, {file_size} bytes")
+        print(f"📊 Actual duration: {actual_duration:.1f} seconds ({actual_duration/60:.2f} minutes)")
+        print(f"📊 Expected duration: {duration} seconds ({duration/60:.2f} minutes)")
+        print(f"📊 Frames recorded: {frames_recorded} / Expected: ~{expected_frames}")
         
         # Return recording info
         return {
@@ -2040,7 +2419,7 @@ def record_stream_segment(camera_id, camera_feed, duration=180):
             "filepath": filepath,
             "relative_path": f"stream_recordings/{filename}",
             "start_time": now.strftime("%Y-%m-%d %H:%M:%S"),
-            "duration": int(time.time() - start_time),
+            "duration": int(actual_duration),
             "frames": frames_recorded,
             "file_size": file_size
         }
@@ -2065,17 +2444,42 @@ def save_recording_to_database(recording_info):
             "file_size": recording_info["file_size"]
         }
         
-        response = requests.post(STREAM_RECORDING_ENDPOINT, json=payload, timeout=5)
+        # Use headers WITHOUT API key for public stream-recordings endpoint
+        # The public route is for creating new recordings (no recording_id needed)
+        # The protected route is for syncing existing records (requires recording_id)
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+        # Don't include API_KEY in headers - use the public endpoint
+        
+        print(f"📤 Sending recording to database: {payload['filename']}")
+        print(f"📤 Payload: {payload}")
+        
+        response = requests.post(STREAM_RECORDING_ENDPOINT, json=payload, headers=headers, timeout=10)
+        
+        print(f"📥 Response status: {response.status_code}")
+        print(f"📥 Response body: {response.text}")
         
         if response.status_code in [200, 201]:
             print(f"✅ Recording saved to database: {recording_info['filename']}")
             return True
         else:
             print(f"❌ Failed to save recording to database: {response.status_code} - {response.text}")
+            # Try to parse error details
+            try:
+                error_data = response.json()
+                if isinstance(error_data, dict):
+                    error_msg = error_data.get('error', error_data.get('message', response.text))
+                    print(f"❌ Error details: {error_msg}")
+            except:
+                pass
             return False
             
     except Exception as e:
-        print(f"Error saving recording to database: {e}")
+        print(f"❌ Error saving recording to database: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def continuous_stream_recording(camera_id, camera_feed):
@@ -2356,6 +2760,13 @@ async def init_background_tasks(app):
 
 def main():
     print("🚀 Starting TCC-MAEM Recognition Service...")
+    
+    # Log API configuration
+    print(f"📡 API Base URL: {API_BASE}")
+    if API_KEY:
+        print(f"🔑 API Key: Configured (length: {len(API_KEY)})")
+    else:
+        print("⚠️  API Key: Not configured (using public routes)")
     
     # Fetch initial data
     print("📡 Fetching cameras...")

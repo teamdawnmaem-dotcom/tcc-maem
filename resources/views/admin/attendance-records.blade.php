@@ -10,44 +10,36 @@
         display: flex;
         justify-content: space-between;
         align-items: flex-end;
-        margin-bottom: 40px;
+        margin-bottom: 32px;
     }
     .faculty-title-group {
         display: flex;
         flex-direction: column;
     }
     .faculty-title {
-        font-size: 2.3rem;
+        font-size: 1.84rem;
         font-weight: bold;
         color: #6d0000;
     }
     .faculty-subtitle {
-        font-size: 1rem;
+        font-size: 0.8rem;
         color: #666;
-        margin-bottom: 30px;
+        margin-bottom: 24px;
     }
     .faculty-actions-row {
         display: flex;
-        gap: 10px;
+        gap: 8px;
         position: fixed;
-        top: 130px;
-        right: 40px;
+        top: 104px;
+        right: 32px;
         z-index: 100;
-    }
-    .search-input {
-        width: 700px;
-        padding: 8px;
-        font-size: 14px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-      
     }
 
     .add-btn {
-        padding: 8px 24px;
-        font-size: 14px;
+        padding: 6px 19px;
+        font-size: 11.2px;
         border: none;
-        border-radius: 4px;
+        border-radius: 3.2px;
         background-color: #2ecc71;
         color: #fff;
         cursor: pointer;
@@ -55,40 +47,40 @@
     }
     .teaching-load-table-container {
         background: #fff;
-        border-radius: 10px;
+        border-radius: 8px;
         box-shadow: 0 8px 32px rgba(0,0,0,0.22), 0 1.5px 8px rgba(0,0,0,0.12);
         overflow: hidden;
         overflow-x: auto;
     }
     .teaching-load-table {
         width: 100%;
-        min-width: 1400px;
+        min-width: 1120px;
         border-collapse: collapse;
         table-layout: fixed;
     }
     .teaching-load-table th {
         background: #8B0000;
         color: #fff;
-        padding: 16px 8px;
-        font-size: 0.9rem;
+        padding: 12.8px 6.4px;
+        font-size: 0.72rem;
         font-weight: bold;
         border: none;
         text-align: center;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        min-height: 50px;
+        min-height: 40px;
     }
     .teaching-load-table td {
-        padding: 16px 8px;
+        padding: 12.8px 6.4px;
         text-align: center;
-        font-size: 0.85rem;
+        font-size: 0.68rem;
         border: none;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         vertical-align: middle;
-        min-height: 45px;
+        min-height: 36px;
     }
     .teaching-load-table tr:nth-child(even) { background: #fff; }
     .teaching-load-table tr:nth-child(odd) { background: #fbeeee; }
@@ -120,10 +112,10 @@
     .filter-section {
         background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
         border: 1px solid #e9ecef;
-        border-radius: 15px;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-        padding: 30px;
-        margin-bottom: 25px;
+        border-radius: 12px;
+        box-shadow: 0 6.4px 20px rgba(0,0,0,0.08);
+        padding: 24px;
+        margin-bottom: 20px;
         position: relative;
         overflow: hidden;
     }
@@ -141,13 +133,13 @@
     .filter-header {
         display: flex;
         align-items: center;
-        margin-bottom: 25px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #f1f3f4;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 1.6px solid #f1f3f4;
     }
 
     .filter-title {
-        font-size: 1.2rem;
+        font-size: 0.96rem;
         font-weight: 600;
         color: #2c3e50;
         margin: 0;
@@ -156,15 +148,15 @@
     }
 
     .filter-title::before {
-        margin-right: 10px;
-        font-size: 1.1rem;
+        margin-right: 8px;
+        font-size: 0.88rem;
     }
 
     .filter-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-        margin-bottom: 25px;
+        gap: 12px;
+        margin-bottom: 20px;
         align-items: end;
     }
 
@@ -176,19 +168,19 @@
     }
 
     .filter-label {
-        font-size: 0.9rem;
+        font-size: 0.72rem;
         color: #495057;
-        margin-bottom: 8px;
+        margin-bottom: 6.4px;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.4px;
     }
 
     .filter-input, .filter-select {
-        padding: 12px 16px;
-        border: 2px solid #e9ecef;
-        border-radius: 8px;
-        font-size: 0.95rem;
+        padding: 9.6px 12.8px;
+        border: 1.6px solid #e9ecef;
+        border-radius: 6.4px;
+        font-size: 0.76rem;
         background: #ffffff;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         color: #495057;
@@ -209,28 +201,28 @@
 
     .filter-actions {
         display: flex;
-        gap: 15px;
+        gap: 12px;
         flex-wrap: nowrap;
         align-items: center;
         justify-content: flex-end;
-        margin-top: 20px;
+        margin-top: 16px;
         flex: 0 0 auto;
     }
 
     .filter-btn, .clear-btn, .print-btn, .old-report-btn, .archive-btn {
-        padding: 15px 24px;
+        padding: 12px 19px;
         border: none;
-        border-radius: 8px;
-        font-size: 0.9rem;
+        border-radius: 6.4px;
+        font-size: 0.72rem;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.4px;
         position: relative;
         overflow: hidden;
         white-space: nowrap;
-        min-width: 150px;
+        min-width: 120px;
         width: auto;
     }
 
@@ -301,11 +293,11 @@
 
     .search-section {
         display: flex;
-        gap: 20px;
-        align-items: end;
-        margin-top: 20px;
-        padding-top: 20px;
-        border-top: 2px solid #f1f3f4;
+        gap: 16px;
+        align-items: center;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1.6px solid #f1f3f4;
     }
 
     .search-group {
@@ -313,11 +305,41 @@
         min-width: 0;
     }
 
+    .search-input {
+        width: 100%;
+        padding: 9.6px 12.8px;
+        border: 1.6px solid #e9ecef;
+        border-radius: 6.4px;
+        font-size: 0.76rem;
+        background: #ffffff;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        color: #495057;
+        font-weight: 500;
+        box-sizing: border-box;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: #8B0000;
+        box-shadow: 0 0 0 2.4px rgba(139, 0, 0, 0.1);
+        transform: translateY(-1px);
+    }
+
     .search-actions {
         display: flex;
-        gap: 15px;
-        align-items: end;
+        gap: 12px;
+        align-items: center;
         flex-shrink: 0;
+    }
+
+    /* Search button alignment */
+    .search-actions .print-btn,
+    .search-actions .old-report-btn {
+        padding: 9.6px 19px;
+        height: auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     @media (max-width: 768px) {
@@ -345,6 +367,243 @@
             flex-direction: row;
             justify-content: center;
             margin-top: 15px;
+        }
+    }
+
+    /* Mobile Responsive Design for phones (max-width: 430px) */
+    @media (max-width: 430px) {
+        /* Faculty Header */
+        .faculty-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .faculty-title-group {
+            width: 100%;
+        }
+
+        .faculty-title {
+            font-size: 1.4rem;
+            margin-bottom: 4px;
+        }
+
+        .faculty-subtitle {
+            font-size: 0.75rem;
+            margin-bottom: 0;
+        }
+
+        /* Faculty Actions Row */
+        .faculty-actions-row {
+            position: relative;
+            top: 0;
+            right: 0;
+            width: 100%;
+            z-index: 1;
+        }
+
+        /* Filter Section */
+        .filter-section {
+            padding: 16px 12px;
+            margin-bottom: 16px;
+            border-radius: 8px;
+        }
+
+        .filter-header {
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+        }
+
+        .filter-title {
+            font-size: 0.9rem;
+        }
+
+        .filter-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .filter-group {
+            width: 100%;
+        }
+
+        .filter-label {
+            font-size: 0.7rem;
+            margin-bottom: 6px;
+        }
+
+        .filter-input,
+        .filter-select {
+            padding: 10px 12px;
+            font-size: 0.85rem;
+            border-radius: 6px;
+        }
+
+        .filter-actions {
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 12px;
+            justify-content: stretch;
+        }
+
+        .filter-btn,
+        .clear-btn,
+        .print-btn,
+        .old-report-btn,
+        .archive-btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 0.8rem;
+            min-width: auto;
+        }
+
+        /* Search Section */
+        .search-section {
+            flex-direction: column;
+            gap: 12px;
+            align-items: stretch;
+            margin-top: 12px;
+            padding-top: 12px;
+        }
+
+        .search-group {
+            width: 100%;
+            min-width: auto;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        .search-actions {
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            margin-top: 0;
+        }
+
+        .search-actions form {
+            width: 100%;
+        }
+
+        .search-actions .print-btn,
+        .search-actions .old-report-btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 0.8rem;
+        }
+
+        /* Table Container */
+        .teaching-load-table-container {
+            border-radius: 8px;
+            overflow-x: auto;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            max-height: 50vh;
+        }
+
+        .teaching-load-table {
+            min-width: 1200px;
+            font-size: 0.7rem;
+        }
+
+        .teaching-load-table th {
+            padding: 10px 6px;
+            font-size: 0.65rem;
+        }
+
+        .teaching-load-table td {
+            padding: 10px 6px;
+            font-size: 0.65rem;
+        }
+
+        /* Empty state message */
+        .teaching-load-table td[colspan] {
+            font-size: 0.75rem;
+            padding: 20px 12px;
+        }
+
+        /* Adjust column widths for mobile - make them slightly wider for readability */
+        .teaching-load-table th:nth-child(1),
+        .teaching-load-table td:nth-child(1) {
+            width: 7%;
+        }
+
+        .teaching-load-table th:nth-child(2),
+        .teaching-load-table td:nth-child(2) {
+            width: 9%;
+        }
+
+        .teaching-load-table th:nth-child(3),
+        .teaching-load-table td:nth-child(3) {
+            width: 9%;
+        }
+
+        .teaching-load-table th:nth-child(4),
+        .teaching-load-table td:nth-child(4) {
+            width: 6%;
+        }
+
+        .teaching-load-table th:nth-child(5),
+        .teaching-load-table td:nth-child(5) {
+            width: 9%;
+        }
+
+        .teaching-load-table th:nth-child(6),
+        .teaching-load-table td:nth-child(6) {
+            width: 6%;
+        }
+
+        .teaching-load-table th:nth-child(7),
+        .teaching-load-table td:nth-child(7) {
+            width: 5%;
+        }
+
+        .teaching-load-table th:nth-child(8),
+        .teaching-load-table td:nth-child(8) {
+            width: 11%;
+        }
+
+        .teaching-load-table th:nth-child(9),
+        .teaching-load-table td:nth-child(9) {
+            width: 5%;
+        }
+
+        .teaching-load-table th:nth-child(10),
+        .teaching-load-table td:nth-child(10) {
+            width: 5%;
+        }
+
+        .teaching-load-table th:nth-child(11),
+        .teaching-load-table td:nth-child(11) {
+            width: 7%;
+        }
+
+        .teaching-load-table th:nth-child(12),
+        .teaching-load-table td:nth-child(12) {
+            width: 6%;
+        }
+
+        .teaching-load-table th:nth-child(13),
+        .teaching-load-table td:nth-child(13) {
+            width: 5%;
+        }
+
+        .teaching-load-table th:nth-child(14),
+        .teaching-load-table td:nth-child(14) {
+            width: 5%;
+        }
+
+        .teaching-load-table th:nth-child(15),
+        .teaching-load-table td:nth-child(15) {
+            width: 7%;
         }
     }
 
@@ -504,7 +763,7 @@
                 <input type="hidden" name="search" id="sheetSearch">
                 <button type="submit" class="old-report-btn">OLD report Format</button>
             </form>
-            <a href="{{ route('admin.attendance.records.archived') }}" class="archive-btn">View Archive</a>
+            
         </div>
     </div>
 </div>
