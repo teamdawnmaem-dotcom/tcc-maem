@@ -913,5 +913,701 @@ class CloudSyncService
             return ['status' => 'error', 'message' => $e->getMessage()];
         }
     }
+    
+    /**
+     * Sync all data FROM cloud TO local
+     */
+    public function syncAllFromCloud()
+    {
+        $results = [
+            'success' => true,
+            'synced' => [],
+            'errors' => [],
+            'summary' => []
+        ];
+        
+        try {
+            Log::info('Starting cloud to local sync...');
+            
+            // Sync in order of dependencies - users first
+            $results['synced']['users'] = $this->syncUsersFromCloud();
+            $results['synced']['subjects'] = $this->syncSubjectsFromCloud();
+            $results['synced']['rooms'] = $this->syncRoomsFromCloud();
+            $results['synced']['cameras'] = $this->syncCamerasFromCloud();
+            $results['synced']['faculties'] = $this->syncFacultiesFromCloud();
+            $results['synced']['teaching_loads'] = $this->syncTeachingLoadsFromCloud();
+            $results['synced']['attendance_records'] = $this->syncAttendanceRecordsFromCloud();
+            $results['synced']['leaves'] = $this->syncLeavesFromCloud();
+            $results['synced']['passes'] = $this->syncPassesFromCloud();
+            $results['synced']['recognition_logs'] = $this->syncRecognitionLogsFromCloud();
+            $results['synced']['stream_recordings'] = $this->syncStreamRecordingsFromCloud();
+            $results['synced']['activity_logs'] = $this->syncActivityLogsFromCloud();
+            $results['synced']['teaching_load_archives'] = $this->syncTeachingLoadArchivesFromCloud();
+            $results['synced']['attendance_record_archives'] = $this->syncAttendanceRecordArchivesFromCloud();
+            
+            // Calculate summary
+            foreach ($results['synced'] as $key => $value) {
+                $results['summary'][$key] = count($value);
+            }
+            
+            Log::info('Cloud to local sync completed successfully', $results['summary']);
+            
+        } catch (\Exception $e) {
+            Log::error('Cloud to local sync failed: ' . $e->getMessage());
+            $results['success'] = false;
+            $results['errors'][] = $e->getMessage();
+        }
+        
+        return $results;
+    }
+    
+    /**
+     * Fetch bulk data from cloud
+     */
+    protected function fetchBulkFromCloud(string $endpoint, array $params = [])
+    {
+        try {
+            $response = Http::timeout(120)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->cloudApiKey,
+                    'Accept' => 'application/json',
+                ])
+                ->get("{$this->cloudApiUrl}/sync/{$endpoint}", $params);
+            
+            if ($response->successful()) {
+                $data = $response->json();
+                // Handle both array and object responses
+                if (isset($data['data']) && is_array($data['data'])) {
+                    return $data['data'];
+                } elseif (is_array($data)) {
+                    return $data;
+                }
+                return [];
+            }
+            
+            Log::error("Failed to fetch from cloud {$endpoint}: " . $response->body());
+            return [];
+        } catch (\Exception $e) {
+            Log::error("Error fetching from cloud {$endpoint}: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Sync users from cloud to local
+     */
+    protected function syncUsersFromCloud()
+    {
+        $synced = [];
+        
+        try {
+            $cloudUsers = $this->fetchBulkFromCloud('users');
+            
+            if (empty($cloudUsers)) {
+                Log::info('No users found in cloud');
+                return $synced;
+            }
+            
+            foreach ($cloudUsers as $cloudUser) {
+                try {
+                    DB::table('tbl_user')->upsert([
+                        [
+                            'user_id' => $cloudUser['user_id'],
+                            'user_fname' => $cloudUser['user_fname'] ?? null,
+                            'user_lname' => $cloudUser['user_lname'] ?? null,
+                            'user_email' => $cloudUser['user_email'] ?? null,
+                            'user_password' => $cloudUser['user_password'] ?? null,
+                            'user_role' => $cloudUser['user_role'] ?? null,
+                            'created_at' => $this->formatDateTime($cloudUser['created_at'] ?? null),
+                            'updated_at' => $this->formatDateTime($cloudUser['updated_at'] ?? null),
+                        ]
+                    ], ['user_id'], ['user_fname', 'user_lname', 'user_email', 'user_password', 'user_role', 'updated_at']);
+                    
+                    $synced[] = $cloudUser['user_id'];
+                } catch (\Exception $e) {
+                    Log::error("Error syncing user {$cloudUser['user_id']} from cloud: " . $e->getMessage());
+                }
+            }
+            
+            Log::info("Synced " . count($synced) . " users from cloud to local");
+        } catch (\Exception $e) {
+            Log::error("Error syncing users from cloud: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync subjects from cloud to local
+     */
+    protected function syncSubjectsFromCloud()
+    {
+        $synced = [];
+        
+        try {
+            $cloudSubjects = $this->fetchBulkFromCloud('subjects');
+            
+            if (empty($cloudSubjects)) {
+                return $synced;
+            }
+            
+            foreach ($cloudSubjects as $cloudSubject) {
+                try {
+                    DB::table('tbl_subject')->upsert([
+                        [
+                            'subject_id' => $cloudSubject['subject_id'],
+                            'subject_code' => $cloudSubject['subject_code'] ?? null,
+                            'subject_name' => $cloudSubject['subject_name'] ?? null,
+                            'created_at' => $this->formatDateTime($cloudSubject['created_at'] ?? null),
+                            'updated_at' => $this->formatDateTime($cloudSubject['updated_at'] ?? null),
+                        ]
+                    ], ['subject_id'], ['subject_code', 'subject_name', 'updated_at']);
+                    
+                    $synced[] = $cloudSubject['subject_id'];
+                } catch (\Exception $e) {
+                    Log::error("Error syncing subject {$cloudSubject['subject_id']} from cloud: " . $e->getMessage());
+                }
+            }
+            
+            Log::info("Synced " . count($synced) . " subjects from cloud to local");
+        } catch (\Exception $e) {
+            Log::error("Error syncing subjects from cloud: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync rooms from cloud to local
+     */
+    protected function syncRoomsFromCloud()
+    {
+        $synced = [];
+        
+        try {
+            $cloudRooms = $this->fetchBulkFromCloud('rooms');
+            
+            if (empty($cloudRooms)) {
+                return $synced;
+            }
+            
+            foreach ($cloudRooms as $cloudRoom) {
+                try {
+                    DB::table('tbl_room')->upsert([
+                        [
+                            'room_no' => $cloudRoom['room_no'],
+                            'room_name' => $cloudRoom['room_name'] ?? null,
+                            'room_building_no' => $cloudRoom['room_building_no'] ?? null,
+                        ]
+                    ], ['room_no'], ['room_name', 'room_building_no']);
+                    
+                    $synced[] = $cloudRoom['room_no'];
+                } catch (\Exception $e) {
+                    Log::error("Error syncing room {$cloudRoom['room_no']} from cloud: " . $e->getMessage());
+                }
+            }
+            
+            Log::info("Synced " . count($synced) . " rooms from cloud to local");
+        } catch (\Exception $e) {
+            Log::error("Error syncing rooms from cloud: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync cameras from cloud to local
+     */
+    protected function syncCamerasFromCloud()
+    {
+        $synced = [];
+        
+        try {
+            $cloudCameras = $this->fetchBulkFromCloud('cameras');
+            
+            if (empty($cloudCameras)) {
+                return $synced;
+            }
+            
+            foreach ($cloudCameras as $cloudCamera) {
+                try {
+                    DB::table('tbl_camera')->upsert([
+                        [
+                            'camera_id' => $cloudCamera['camera_id'],
+                            'camera_name' => $cloudCamera['camera_name'] ?? null,
+                            'camera_ip_address' => $cloudCamera['camera_ip_address'] ?? null,
+                            'camera_username' => $cloudCamera['camera_username'] ?? null,
+                            'camera_password' => $cloudCamera['camera_password'] ?? null,
+                            'camera_live_feed' => $cloudCamera['camera_live_feed'] ?? null,
+                            'room_no' => $cloudCamera['room_no'] ?? null,
+                        ]
+                    ], ['camera_id'], ['camera_name', 'camera_ip_address', 'camera_username', 'camera_password', 'camera_live_feed', 'room_no']);
+                    
+                    $synced[] = $cloudCamera['camera_id'];
+                } catch (\Exception $e) {
+                    Log::error("Error syncing camera {$cloudCamera['camera_id']} from cloud: " . $e->getMessage());
+                }
+            }
+            
+            Log::info("Synced " . count($synced) . " cameras from cloud to local");
+        } catch (\Exception $e) {
+            Log::error("Error syncing cameras from cloud: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync faculties from cloud to local
+     */
+    protected function syncFacultiesFromCloud()
+    {
+        $synced = [];
+        
+        try {
+            $cloudFaculties = $this->fetchBulkFromCloud('faculties');
+            
+            if (empty($cloudFaculties)) {
+                return $synced;
+            }
+            
+            foreach ($cloudFaculties as $cloudFaculty) {
+                try {
+                    DB::table('tbl_faculty')->upsert([
+                        [
+                            'faculty_id' => $cloudFaculty['faculty_id'],
+                            'faculty_fname' => $cloudFaculty['faculty_fname'] ?? null,
+                            'faculty_lname' => $cloudFaculty['faculty_lname'] ?? null,
+                            'faculty_department' => $cloudFaculty['faculty_department'] ?? null,
+                            'faculty_images' => $cloudFaculty['faculty_images'] ?? null,
+                            'faculty_face_embedding' => $cloudFaculty['faculty_face_embedding'] ?? null,
+                            'created_at' => $this->formatDateTime($cloudFaculty['created_at'] ?? null),
+                            'updated_at' => $this->formatDateTime($cloudFaculty['updated_at'] ?? null),
+                        ]
+                    ], ['faculty_id'], ['faculty_fname', 'faculty_lname', 'faculty_department', 'faculty_images', 'faculty_face_embedding', 'updated_at']);
+                    
+                    $synced[] = $cloudFaculty['faculty_id'];
+                } catch (\Exception $e) {
+                    Log::error("Error syncing faculty {$cloudFaculty['faculty_id']} from cloud: " . $e->getMessage());
+                }
+            }
+            
+            Log::info("Synced " . count($synced) . " faculties from cloud to local");
+        } catch (\Exception $e) {
+            Log::error("Error syncing faculties from cloud: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync teaching loads from cloud to local
+     */
+    protected function syncTeachingLoadsFromCloud()
+    {
+        $synced = [];
+        
+        try {
+            $cloudLoads = $this->fetchBulkFromCloud('teaching-loads');
+            
+            if (empty($cloudLoads)) {
+                return $synced;
+            }
+            
+            foreach ($cloudLoads as $cloudLoad) {
+                try {
+                    DB::table('tbl_teaching_load')->upsert([
+                        [
+                            'teaching_load_id' => $cloudLoad['teaching_load_id'],
+                            'faculty_id' => $cloudLoad['faculty_id'] ?? null,
+                            'teaching_load_course_code' => $cloudLoad['teaching_load_course_code'] ?? null,
+                            'teaching_load_subject' => $cloudLoad['teaching_load_subject'] ?? null,
+                            'teaching_load_day_of_week' => $cloudLoad['teaching_load_day_of_week'] ?? null,
+                            'teaching_load_class_section' => $cloudLoad['teaching_load_class_section'] ?? null,
+                            'teaching_load_time_in' => $cloudLoad['teaching_load_time_in'] ?? null,
+                            'teaching_load_time_out' => $cloudLoad['teaching_load_time_out'] ?? null,
+                            'room_no' => $cloudLoad['room_no'] ?? null,
+                            'created_at' => $this->formatDateTime($cloudLoad['created_at'] ?? null),
+                            'updated_at' => $this->formatDateTime($cloudLoad['updated_at'] ?? null),
+                        ]
+                    ], ['teaching_load_id'], ['faculty_id', 'teaching_load_course_code', 'teaching_load_subject', 'teaching_load_day_of_week', 'teaching_load_class_section', 'teaching_load_time_in', 'teaching_load_time_out', 'room_no', 'updated_at']);
+                    
+                    $synced[] = $cloudLoad['teaching_load_id'];
+                } catch (\Exception $e) {
+                    Log::error("Error syncing teaching load {$cloudLoad['teaching_load_id']} from cloud: " . $e->getMessage());
+                }
+            }
+            
+            Log::info("Synced " . count($synced) . " teaching loads from cloud to local");
+        } catch (\Exception $e) {
+            Log::error("Error syncing teaching loads from cloud: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync attendance records from cloud to local
+     */
+    protected function syncAttendanceRecordsFromCloud()
+    {
+        $synced = [];
+        
+        try {
+            $cloudRecords = $this->fetchBulkFromCloud('attendance-records', ['days' => 30]);
+            
+            if (empty($cloudRecords)) {
+                return $synced;
+            }
+            
+            foreach ($cloudRecords as $cloudRecord) {
+                try {
+                    DB::table('tbl_attendance_record')->upsert([
+                        [
+                            'record_id' => $cloudRecord['record_id'],
+                            'record_date' => $this->formatDateTime($cloudRecord['record_date'] ?? null),
+                            'faculty_id' => $cloudRecord['faculty_id'] ?? null,
+                            'teaching_load_id' => $cloudRecord['teaching_load_id'] ?? null,
+                            'record_time_in' => $cloudRecord['record_time_in'] ?? null,
+                            'record_time_out' => $cloudRecord['record_time_out'] ?? null,
+                            'time_duration_seconds' => $cloudRecord['time_duration_seconds'] ?? null,
+                            'record_status' => $cloudRecord['record_status'] ?? null,
+                            'record_remarks' => $cloudRecord['record_remarks'] ?? null,
+                            'camera_id' => $cloudRecord['camera_id'] ?? null,
+                        ]
+                    ], ['record_id'], ['record_date', 'faculty_id', 'teaching_load_id', 'record_time_in', 'record_time_out', 'time_duration_seconds', 'record_status', 'record_remarks', 'camera_id']);
+                    
+                    $synced[] = $cloudRecord['record_id'];
+                } catch (\Exception $e) {
+                    Log::error("Error syncing attendance record {$cloudRecord['record_id']} from cloud: " . $e->getMessage());
+                }
+            }
+            
+            Log::info("Synced " . count($synced) . " attendance records from cloud to local");
+        } catch (\Exception $e) {
+            Log::error("Error syncing attendance records from cloud: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync leaves from cloud to local
+     */
+    protected function syncLeavesFromCloud()
+    {
+        $synced = [];
+        
+        try {
+            $cloudLeaves = $this->fetchBulkFromCloud('leaves', ['days' => 90]);
+            
+            if (empty($cloudLeaves)) {
+                return $synced;
+            }
+            
+            foreach ($cloudLeaves as $cloudLeave) {
+                try {
+                    DB::table('tbl_leave_pass')->upsert([
+                        [
+                            'lp_id' => $cloudLeave['lp_id'],
+                            'faculty_id' => $cloudLeave['faculty_id'] ?? null,
+                            'lp_type' => $cloudLeave['lp_type'] ?? 'Leave',
+                            'lp_reason' => $cloudLeave['lp_reason'] ?? null,
+                            'lp_start_date' => $this->formatDateTime($cloudLeave['lp_start_date'] ?? null),
+                            'lp_end_date' => $this->formatDateTime($cloudLeave['lp_end_date'] ?? null),
+                            'lp_status' => $cloudLeave['lp_status'] ?? null,
+                            'lp_image' => $cloudLeave['lp_image'] ?? null,
+                            'lp_remarks' => $cloudLeave['lp_remarks'] ?? null,
+                            'created_at' => $this->formatDateTime($cloudLeave['created_at'] ?? null),
+                            'updated_at' => $this->formatDateTime($cloudLeave['updated_at'] ?? null),
+                        ]
+                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_reason', 'lp_start_date', 'lp_end_date', 'lp_status', 'lp_image', 'lp_remarks', 'updated_at']);
+                    
+                    $synced[] = $cloudLeave['lp_id'];
+                } catch (\Exception $e) {
+                    Log::error("Error syncing leave {$cloudLeave['lp_id']} from cloud: " . $e->getMessage());
+                }
+            }
+            
+            Log::info("Synced " . count($synced) . " leaves from cloud to local");
+        } catch (\Exception $e) {
+            Log::error("Error syncing leaves from cloud: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync passes from cloud to local
+     */
+    protected function syncPassesFromCloud()
+    {
+        $synced = [];
+        
+        try {
+            $cloudPasses = $this->fetchBulkFromCloud('passes', ['days' => 90]);
+            
+            if (empty($cloudPasses)) {
+                return $synced;
+            }
+            
+            foreach ($cloudPasses as $cloudPass) {
+                try {
+                    DB::table('tbl_leave_pass')->upsert([
+                        [
+                            'lp_id' => $cloudPass['lp_id'],
+                            'faculty_id' => $cloudPass['faculty_id'] ?? null,
+                            'lp_type' => $cloudPass['lp_type'] ?? 'Pass',
+                            'lp_reason' => $cloudPass['lp_reason'] ?? null,
+                            'lp_start_date' => $this->formatDateTime($cloudPass['lp_start_date'] ?? null),
+                            'lp_end_date' => $this->formatDateTime($cloudPass['lp_end_date'] ?? null),
+                            'lp_status' => $cloudPass['lp_status'] ?? null,
+                            'lp_image' => $cloudPass['lp_image'] ?? null,
+                            'lp_remarks' => $cloudPass['lp_remarks'] ?? null,
+                            'created_at' => $this->formatDateTime($cloudPass['created_at'] ?? null),
+                            'updated_at' => $this->formatDateTime($cloudPass['updated_at'] ?? null),
+                        ]
+                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_reason', 'lp_start_date', 'lp_end_date', 'lp_status', 'lp_image', 'lp_remarks', 'updated_at']);
+                    
+                    $synced[] = $cloudPass['lp_id'];
+                } catch (\Exception $e) {
+                    Log::error("Error syncing pass {$cloudPass['lp_id']} from cloud: " . $e->getMessage());
+                }
+            }
+            
+            Log::info("Synced " . count($synced) . " passes from cloud to local");
+        } catch (\Exception $e) {
+            Log::error("Error syncing passes from cloud: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync recognition logs from cloud to local
+     */
+    protected function syncRecognitionLogsFromCloud()
+    {
+        $synced = [];
+        
+        try {
+            $cloudLogs = $this->fetchBulkFromCloud('recognition-logs', ['days' => 7]);
+            
+            if (empty($cloudLogs)) {
+                return $synced;
+            }
+            
+            foreach ($cloudLogs as $cloudLog) {
+                try {
+                    DB::table('tbl_recognition_logs')->upsert([
+                        [
+                            'log_id' => $cloudLog['log_id'],
+                            'faculty_id' => $cloudLog['faculty_id'] ?? null,
+                            'camera_id' => $cloudLog['camera_id'] ?? null,
+                            'recognition_time' => $this->formatDateTime($cloudLog['recognition_time'] ?? null),
+                            'status' => $cloudLog['status'] ?? null,
+                            'distance' => $cloudLog['distance'] ?? null,
+                            'faculty_name' => $cloudLog['faculty_name'] ?? null,
+                        ]
+                    ], ['log_id'], ['faculty_id', 'camera_id', 'recognition_time', 'status', 'distance', 'faculty_name']);
+                    
+                    $synced[] = $cloudLog['log_id'];
+                } catch (\Exception $e) {
+                    Log::error("Error syncing recognition log {$cloudLog['log_id']} from cloud: " . $e->getMessage());
+                }
+            }
+            
+            Log::info("Synced " . count($synced) . " recognition logs from cloud to local");
+        } catch (\Exception $e) {
+            Log::error("Error syncing recognition logs from cloud: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync stream recordings from cloud to local
+     */
+    protected function syncStreamRecordingsFromCloud()
+    {
+        $synced = [];
+        
+        try {
+            $cloudRecordings = $this->fetchBulkFromCloud('stream-recordings', ['days' => 7]);
+            
+            if (empty($cloudRecordings)) {
+                return $synced;
+            }
+            
+            foreach ($cloudRecordings as $cloudRecording) {
+                try {
+                    DB::table('tbl_stream_recordings')->upsert([
+                        [
+                            'recording_id' => $cloudRecording['recording_id'],
+                            'camera_id' => $cloudRecording['camera_id'] ?? null,
+                            'start_time' => $this->formatDateTime($cloudRecording['start_time'] ?? null),
+                            'end_time' => $this->formatDateTime($cloudRecording['end_time'] ?? null),
+                            'duration' => $cloudRecording['duration'] ?? null,
+                            'filepath' => $cloudRecording['filepath'] ?? null,
+                            'filename' => $cloudRecording['filename'] ?? null,
+                            'file_size' => $cloudRecording['file_size'] ?? null,
+                            'created_at' => $this->formatDateTime($cloudRecording['created_at'] ?? null),
+                            'updated_at' => $this->formatDateTime($cloudRecording['updated_at'] ?? null),
+                        ]
+                    ], ['recording_id'], ['camera_id', 'start_time', 'end_time', 'duration', 'filepath', 'filename', 'file_size', 'updated_at']);
+                    
+                    $synced[] = $cloudRecording['recording_id'];
+                } catch (\Exception $e) {
+                    Log::error("Error syncing stream recording {$cloudRecording['recording_id']} from cloud: " . $e->getMessage());
+                }
+            }
+            
+            Log::info("Synced " . count($synced) . " stream recordings from cloud to local");
+        } catch (\Exception $e) {
+            Log::error("Error syncing stream recordings from cloud: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync activity logs from cloud to local
+     */
+    protected function syncActivityLogsFromCloud()
+    {
+        $synced = [];
+        
+        try {
+            $cloudLogs = $this->fetchBulkFromCloud('activity-logs');
+            
+            if (empty($cloudLogs)) {
+                return $synced;
+            }
+            
+            foreach ($cloudLogs as $cloudLog) {
+                try {
+                    DB::table('tbl_activity_logs')->upsert([
+                        [
+                            'logs_id' => $cloudLog['logs_id'],
+                            'user_id' => $cloudLog['user_id'] ?? null,
+                            'activity' => $cloudLog['activity'] ?? null,
+                            'ip_address' => $cloudLog['ip_address'] ?? null,
+                            'user_agent' => $cloudLog['user_agent'] ?? null,
+                            'created_at' => $this->formatDateTime($cloudLog['created_at'] ?? null),
+                        ]
+                    ], ['logs_id'], ['user_id', 'activity', 'ip_address', 'user_agent']);
+                    
+                    $synced[] = $cloudLog['logs_id'];
+                } catch (\Exception $e) {
+                    Log::error("Error syncing activity log {$cloudLog['logs_id']} from cloud: " . $e->getMessage());
+                }
+            }
+            
+            Log::info("Synced " . count($synced) . " activity logs from cloud to local");
+        } catch (\Exception $e) {
+            Log::error("Error syncing activity logs from cloud: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync teaching load archives from cloud to local
+     */
+    protected function syncTeachingLoadArchivesFromCloud()
+    {
+        $synced = [];
+        
+        try {
+            $cloudArchives = $this->fetchBulkFromCloud('teaching-load-archives');
+            
+            if (empty($cloudArchives)) {
+                return $synced;
+            }
+            
+            foreach ($cloudArchives as $cloudArchive) {
+                try {
+                    DB::table('tbl_teaching_load_archive')->upsert([
+                        [
+                            'archive_id' => $cloudArchive['archive_id'],
+                            'teaching_load_id' => $cloudArchive['teaching_load_id'] ?? null,
+                            'faculty_id' => $cloudArchive['faculty_id'] ?? null,
+                            'teaching_load_course_code' => $cloudArchive['teaching_load_course_code'] ?? null,
+                            'teaching_load_subject' => $cloudArchive['teaching_load_subject'] ?? null,
+                            'teaching_load_day_of_week' => $cloudArchive['teaching_load_day_of_week'] ?? null,
+                            'teaching_load_class_section' => $cloudArchive['teaching_load_class_section'] ?? null,
+                            'teaching_load_time_in' => $cloudArchive['teaching_load_time_in'] ?? null,
+                            'teaching_load_time_out' => $cloudArchive['teaching_load_time_out'] ?? null,
+                            'room_no' => $cloudArchive['room_no'] ?? null,
+                            'archived_at' => $this->formatDateTime($cloudArchive['archived_at'] ?? null),
+                        ]
+                    ], ['archive_id'], ['teaching_load_id', 'faculty_id', 'teaching_load_course_code', 'teaching_load_subject', 'teaching_load_day_of_week', 'teaching_load_class_section', 'teaching_load_time_in', 'teaching_load_time_out', 'room_no', 'archived_at']);
+                    
+                    $synced[] = $cloudArchive['archive_id'];
+                } catch (\Exception $e) {
+                    Log::error("Error syncing teaching load archive {$cloudArchive['archive_id']} from cloud: " . $e->getMessage());
+                }
+            }
+            
+            Log::info("Synced " . count($synced) . " teaching load archives from cloud to local");
+        } catch (\Exception $e) {
+            Log::error("Error syncing teaching load archives from cloud: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync attendance record archives from cloud to local
+     */
+    protected function syncAttendanceRecordArchivesFromCloud()
+    {
+        $synced = [];
+        
+        try {
+            $cloudArchives = $this->fetchBulkFromCloud('attendance-record-archives');
+            
+            if (empty($cloudArchives)) {
+                return $synced;
+            }
+            
+            foreach ($cloudArchives as $cloudArchive) {
+                try {
+                    DB::table('tbl_attendance_record_archive')->upsert([
+                        [
+                            'archive_id' => $cloudArchive['archive_id'],
+                            'record_id' => $cloudArchive['record_id'] ?? null,
+                            'record_date' => $this->formatDateTime($cloudArchive['record_date'] ?? null),
+                            'faculty_id' => $cloudArchive['faculty_id'] ?? null,
+                            'teaching_load_id' => $cloudArchive['teaching_load_id'] ?? null,
+                            'record_time_in' => $cloudArchive['record_time_in'] ?? null,
+                            'record_time_out' => $cloudArchive['record_time_out'] ?? null,
+                            'time_duration_seconds' => $cloudArchive['time_duration_seconds'] ?? null,
+                            'record_status' => $cloudArchive['record_status'] ?? null,
+                            'record_remarks' => $cloudArchive['record_remarks'] ?? null,
+                            'camera_id' => $cloudArchive['camera_id'] ?? null,
+                            'school_year' => $cloudArchive['school_year'] ?? null,
+                            'semester' => $cloudArchive['semester'] ?? null,
+                            'archived_at' => $this->formatDateTime($cloudArchive['archived_at'] ?? null),
+                            'archived_by' => $cloudArchive['archived_by'] ?? null,
+                            'archive_notes' => $cloudArchive['archive_notes'] ?? null,
+                            'created_at' => $this->formatDateTime($cloudArchive['created_at'] ?? null),
+                            'updated_at' => $this->formatDateTime($cloudArchive['updated_at'] ?? null),
+                        ]
+                    ], ['archive_id'], ['record_id', 'record_date', 'faculty_id', 'teaching_load_id', 'record_time_in', 'record_time_out', 'time_duration_seconds', 'record_status', 'record_remarks', 'camera_id', 'school_year', 'semester', 'archived_at', 'archived_by', 'archive_notes', 'updated_at']);
+                    
+                    $synced[] = $cloudArchive['archive_id'];
+                } catch (\Exception $e) {
+                    Log::error("Error syncing attendance record archive {$cloudArchive['archive_id']} from cloud: " . $e->getMessage());
+                }
+            }
+            
+            Log::info("Synced " . count($synced) . " attendance record archives from cloud to local");
+        } catch (\Exception $e) {
+            Log::error("Error syncing attendance record archives from cloud: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
 }
 
