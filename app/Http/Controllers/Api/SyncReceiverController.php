@@ -38,8 +38,16 @@ class SyncReceiverController extends Controller
     public function receiveRoom(Request $request)
     {
         try {
+            // Primary key is required for sync
+            if (!$request->has('room_no') || !$request->input('room_no')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'room_no (primary key) is required for sync operations'
+                ], 400);
+            }
+            
             $validated = $request->validate([
-                'room_no' => 'required|integer',
+                'room_no' => 'required|integer|min:1', // Primary key required (BIGINT)
                 'room_name' => 'required|string|max:50',
                 'room_building_no' => 'required|string|max:50',
             ]);
@@ -84,8 +92,16 @@ class SyncReceiverController extends Controller
     public function receiveCamera(Request $request)
     {
         try {
+            // Primary key is required for sync
+            if (!$request->has('camera_id') || !$request->input('camera_id')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'camera_id (primary key) is required for sync operations'
+                ], 400);
+            }
+            
             $validated = $request->validate([
-                'camera_id' => 'required|integer',
+                'camera_id' => 'required|integer|min:1', // Primary key required (BIGINT)
                 'camera_name' => 'required|string|max:50',
                 'camera_ip_address' => 'required|string|max:50',
                 'camera_username' => 'required|string|max:50',
@@ -134,8 +150,16 @@ class SyncReceiverController extends Controller
     public function receiveFaculty(Request $request)
     {
         try {
+            // Primary key is required for sync
+            if (!$request->has('faculty_id') || !$request->input('faculty_id')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'faculty_id (primary key) is required for sync operations'
+                ], 400);
+            }
+            
             $validated = $request->validate([
-                'faculty_id' => 'required|integer',
+                'faculty_id' => 'required|integer|min:1', // Primary key required (BIGINT)
                 'faculty_fname' => 'required|string|max:50',
                 'faculty_lname' => 'required|string|max:50',
                 'faculty_department' => 'required|string|max:50',
@@ -185,8 +209,16 @@ class SyncReceiverController extends Controller
     public function receiveTeachingLoad(Request $request)
     {
         try {
+            // Primary key is required for sync
+            if (!$request->has('teaching_load_id') || !$request->input('teaching_load_id')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'teaching_load_id (primary key) is required for sync operations'
+                ], 400);
+            }
+            
             $validated = $request->validate([
-                'teaching_load_id' => 'required|integer',
+                'teaching_load_id' => 'required|integer|min:1', // Primary key required (BIGINT)
                 'faculty_id' => 'required|integer',
                 'teaching_load_course_code' => 'required|string|max:50',
                 'teaching_load_subject' => 'required|string|max:50',
@@ -243,8 +275,16 @@ class SyncReceiverController extends Controller
     public function receiveAttendanceRecord(Request $request)
     {
         try {
+            // Primary key is required for sync
+            if (!$request->has('record_id') || !$request->input('record_id')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'record_id (primary key) is required for sync operations'
+                ], 400);
+            }
+            
             $validated = $request->validate([
-                'record_id' => 'required|integer',
+                'record_id' => 'required|integer|min:1', // Primary key required (BIGINT)
                 'faculty_id' => 'required|integer',
                 'teaching_load_id' => 'required|integer',
                 'camera_id' => 'required|integer',
@@ -300,8 +340,16 @@ class SyncReceiverController extends Controller
     public function receiveLeave(Request $request)
     {
         try {
+            // Primary key is required for sync
+            if (!$request->has('lp_id') || !$request->input('lp_id')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'lp_id (primary key) is required for sync operations'
+                ], 400);
+            }
+            
             $validated = $request->validate([
-                'lp_id' => 'required|integer',
+                'lp_id' => 'required|integer|min:1', // Primary key required (BIGINT)
                 'faculty_id' => 'required|integer',
                 'lp_type' => 'required|string|max:50',
                 'lp_purpose' => 'required|string|max:255',
@@ -376,8 +424,16 @@ class SyncReceiverController extends Controller
     public function receiveRecognitionLog(Request $request)
     {
         try {
+            // Primary key is required for sync
+            if (!$request->has('log_id') || !$request->input('log_id')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'log_id (primary key) is required for sync operations. For creating new recognition logs, use the public endpoint (POST /api/recognition-logs without API key).'
+                ], 400);
+            }
+            
             $validated = $request->validate([
-                'log_id' => 'required|integer',
+                'log_id' => 'required|integer|min:1', // Primary key required (BIGINT)
                 'recognition_time' => 'required',
                 'camera_name' => 'required|string|max:100',
                 'room_name' => 'required|string|max:100',
@@ -432,8 +488,16 @@ class SyncReceiverController extends Controller
     public function receiveStreamRecording(Request $request)
     {
         try {
+            // Primary key is required for sync
+            if (!$request->has('recording_id') || !$request->input('recording_id')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'recording_id (primary key) is required for sync operations. For creating new recordings, use the public endpoint (POST /api/stream-recordings without API key).'
+                ], 400);
+            }
+            
             $validated = $request->validate([
-                'recording_id' => 'required|integer',
+                'recording_id' => 'required|integer|min:1', // Primary key required (BIGINT(20))
                 'camera_id' => 'required|integer',
                 'filename' => 'required|string|max:255',
                 'filepath' => 'required|string|max:500',
@@ -592,15 +656,36 @@ class SyncReceiverController extends Controller
 
             $cfg = $map[$resource];
             // Filter columns to allowed list to prevent mass assignment of unknown fields
+            // Also ensure primary key is present for each record
             $rows = [];
             foreach ($payload as $row) {
                 if (!is_array($row)) { continue; }
+                
+                // Check if primary key(s) are present
+                $missingPrimaryKey = false;
+                foreach ($cfg['unique'] as $pk) {
+                    if (!isset($row[$pk]) || empty($row[$pk])) {
+                        $missingPrimaryKey = true;
+                        break;
+                    }
+                }
+                
+                if ($missingPrimaryKey) {
+                    // Skip records without primary keys
+                    Log::warning("Bulk sync: Skipping record without primary key for resource {$resource}");
+                    continue;
+                }
+                
                 $filtered = array_intersect_key($row, array_flip($cfg['columns']));
                 if (!empty($filtered)) { $rows[] = $filtered; }
             }
 
             if (empty($rows)) {
-                return response()->json(['success' => true, 'message' => 'No records to upsert', 'upserted' => 0]);
+                return response()->json([
+                    'success' => true, 
+                    'message' => 'No records to upsert (all records must have primary keys)', 
+                    'upserted' => 0
+                ]);
             }
 
             // Use DB::table()->upsert for bulk idempotent insert/update
@@ -667,8 +752,16 @@ class SyncReceiverController extends Controller
     public function receiveSubject(Request $request)
     {
         try {
+            // Primary key is required for sync
+            if (!$request->has('subject_id') || !$request->input('subject_id')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'subject_id (primary key) is required for sync operations'
+                ], 400);
+            }
+            
             $validated = $request->validate([
-                'subject_id' => 'required|integer',
+                'subject_id' => 'required|integer|min:1', // Primary key required (BIGINT)
                 'subject_code' => 'required|string|max:100',
                 'subject_description' => 'required|string|max:255',
                 'department' => 'required|string|max:255',
@@ -718,8 +811,16 @@ class SyncReceiverController extends Controller
     public function receiveUser(Request $request)
     {
         try {
+            // Primary key is required for sync
+            if (!$request->has('user_id') || !$request->input('user_id')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'user_id (primary key) is required for sync operations'
+                ], 400);
+            }
+            
             $validated = $request->validate([
-                'user_id' => 'required|integer',
+                'user_id' => 'required|integer|min:1', // Primary key required (BIGINT)
                 'user_role' => 'required|string|max:50',
                 'user_department' => 'required|string|max:50',
                 'user_fname' => 'required|string|max:50',
@@ -776,8 +877,16 @@ class SyncReceiverController extends Controller
     public function receiveActivityLog(Request $request)
     {
         try {
+            // Primary key is required for sync
+            if (!$request->has('logs_id') || !$request->input('logs_id')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'logs_id (primary key) is required for sync operations'
+                ], 400);
+            }
+            
             $validated = $request->validate([
-                'logs_id' => 'required|integer',
+                'logs_id' => 'required|integer|min:1', // Primary key required (BIGINT)
                 'user_id' => 'required|integer',
                 'logs_action' => 'required|string|max:50',
                 'logs_description' => 'required|string',
@@ -827,8 +936,16 @@ class SyncReceiverController extends Controller
     public function receiveTeachingLoadArchive(Request $request)
     {
         try {
+            // Primary key is required for sync
+            if (!$request->has('archive_id') || !$request->input('archive_id')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'archive_id (primary key) is required for sync operations'
+                ], 400);
+            }
+            
             $validated = $request->validate([
-                'archive_id' => 'required|integer',
+                'archive_id' => 'required|integer|min:1', // Primary key required (BIGINT)
                 'original_teaching_load_id' => 'required|integer',
                 'faculty_id' => 'required|integer',
                 'teaching_load_course_code' => 'required|string|max:50',
@@ -887,8 +1004,16 @@ class SyncReceiverController extends Controller
     public function receiveAttendanceRecordArchive(Request $request)
     {
         try {
+            // Primary key is required for sync
+            if (!$request->has('archive_id') || !$request->input('archive_id')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'archive_id (primary key) is required for sync operations'
+                ], 400);
+            }
+            
             $validated = $request->validate([
-                'archive_id' => 'required|integer',
+                'archive_id' => 'required|integer|min:1', // Primary key required (BIGINT)
                 'original_record_id' => 'nullable|integer',
                 'faculty_id' => 'required|integer',
                 'teaching_load_id' => 'required|integer',

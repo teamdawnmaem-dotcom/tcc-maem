@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('tbl_stream_recordings', function (Blueprint $table) {
-            $table->id('recording_id');
+            $table->bigIncrements('recording_id'); // BIGINT(20) UNSIGNED AUTO_INCREMENT PRIMARY KEY
             $table->unsignedBigInteger('camera_id');
             $table->string('filename');
             $table->string('filepath');

@@ -62,6 +62,7 @@ Route::post('/stream-recordings', [StreamRecordingController::class, 'store']);
 Route::get('/stream-recordings', [StreamRecordingController::class, 'index']);
 Route::get('/stream-recordings/statistics', [StreamRecordingController::class, 'statistics']);
 Route::get('/stream-recordings/camera/{camera_id}', [StreamRecordingController::class, 'getByCamera']);
+Route::get('/stream-recordings/{id}/stream', [StreamRecordingController::class, 'stream']); // Video streaming endpoint
 Route::get('/stream-recordings/{id}', [StreamRecordingController::class, 'show']);
 Route::delete('/stream-recordings/{id}', [StreamRecordingController::class, 'destroy']);
 
@@ -77,9 +78,16 @@ Route::get('/cloud-sync/status', [CloudSyncController::class, 'status']);
 // The API_KEY in .env must match the CLOUD_API_KEY from local server
 // ============================================================================
 
-Route::middleware('api.key')->group(function () {
-    // Sync status endpoint (public - for testing connection)
-    Route::get('/sync-status', [SyncReceiverController::class, 'getSyncStatus']);
+// ============================================================================
+// SYNC ROUTES - Separate routes with /sync/ prefix to avoid conflicts
+// ============================================================================
+// All sync routes use /api/sync/ prefix and require API key authentication
+// These are for syncing data FROM local server TO cloud server
+// ============================================================================
+
+Route::middleware('api.key')->prefix('sync')->group(function () {
+    // Sync status endpoint
+    Route::get('/status', [SyncReceiverController::class, 'getSyncStatus']);
     
     // Subjects
     Route::get('/subjects', [SyncReceiverController::class, 'getSubjects']);

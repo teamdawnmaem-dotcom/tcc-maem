@@ -196,6 +196,7 @@ class CloudSyncService
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('teaching-loads', $payload);
+            Log::info('Bulk teaching-loads result', ['upserted' => $resp['data']['upserted'] ?? null, 'success' => $resp['success'] ?? null]);
             if ($resp['success']) {
                 $synced = $localLoads->pluck('teaching_load_id')->all();
             }
@@ -338,6 +339,7 @@ class CloudSyncService
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('recognition-logs', $payload);
+            Log::info('Bulk recognition-logs result', ['upserted' => $resp['data']['upserted'] ?? null, 'success' => $resp['success'] ?? null]);
             if ($resp['success']) {
                 $synced = $localLogs->pluck('log_id')->all();
             }
@@ -389,12 +391,13 @@ class CloudSyncService
     protected function getCloudData($endpoint, $params = [])
     {
         try {
+            // Use sync routes with /sync/ prefix
             $response = Http::timeout(30)
                 ->withHeaders([
                     'Authorization' => 'Bearer ' . $this->cloudApiKey,
                     'Accept' => 'application/json',
                 ])
-                ->get("{$this->cloudApiUrl}/{$endpoint}", $params);
+                ->get("{$this->cloudApiUrl}/sync/{$endpoint}", $params);
             
             if ($response->successful()) {
                 return $response->json();
@@ -413,12 +416,13 @@ class CloudSyncService
     protected function pushToCloud($endpoint, $data)
     {
         try {
+            // Use sync routes with /sync/ prefix
             $response = Http::timeout(30)
                 ->withHeaders([
                     'Authorization' => 'Bearer ' . $this->cloudApiKey,
                     'Accept' => 'application/json',
                 ])
-                ->post("{$this->cloudApiUrl}/{$endpoint}", $data);
+                ->post("{$this->cloudApiUrl}/sync/{$endpoint}", $data);
             
             if ($response->successful()) {
                 return ['success' => true, 'data' => $response->json()];
@@ -444,13 +448,13 @@ class CloudSyncService
         try {
             // Chunk large payloads
             $total = 0;
-            foreach (array_chunk($records, 500) as $chunk) {
+            foreach (array_chunk($records, 100) as $chunk) {
                 $response = Http::timeout(60)
                     ->withHeaders([
                         'Authorization' => 'Bearer ' . $this->cloudApiKey,
                         'Accept' => 'application/json',
                     ])
-                    ->post("{$this->cloudApiUrl}/bulk/{$endpoint}", ['records' => $chunk]);
+                    ->post("{$this->cloudApiUrl}/sync/bulk/{$endpoint}", ['records' => $chunk]);
                 if (!$response->successful()) {
                     Log::error("Bulk push failed for {$endpoint}: " . $response->body());
                     return ['success' => false, 'error' => $response->body()];
@@ -485,6 +489,7 @@ class CloudSyncService
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('subjects', $payload);
+            Log::info('Bulk subjects result', ['upserted' => $resp['data']['upserted'] ?? null, 'success' => $resp['success'] ?? null]);
             if ($resp['success']) {
                 $synced = $localSubjects->pluck('subject_id')->all();
             }
@@ -518,6 +523,7 @@ class CloudSyncService
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('users', $payload);
+            Log::info('Bulk users result', ['upserted' => $resp['data']['upserted'] ?? null, 'success' => $resp['success'] ?? null]);
             if ($resp['success']) {
                 $synced = $localUsers->pluck('user_id')->all();
             }
@@ -653,7 +659,7 @@ class CloudSyncService
                     'Authorization' => 'Bearer ' . $this->cloudApiKey,
                 ])
                 ->attach('file', file_get_contents($filePath), $filename)
-                ->post("{$this->cloudApiUrl}/upload/{$directory}");
+                ->post("{$this->cloudApiUrl}/sync/upload/{$directory}");
             
             if ($response->successful()) {
                 $result = $response->json();
@@ -679,7 +685,7 @@ class CloudSyncService
                     'Authorization' => 'Bearer ' . $this->cloudApiKey,
                     'Accept' => 'application/json',
                 ])
-                ->get("{$this->cloudApiUrl}/sync-status");
+                ->get("{$this->cloudApiUrl}/sync/status");
             
             if ($response->successful()) {
                 return $response->json();

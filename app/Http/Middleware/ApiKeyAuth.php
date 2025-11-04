@@ -26,6 +26,12 @@ class ApiKeyAuth
         $apiKey = $request->header('Authorization');
         $expectedKey = 'Bearer ' . env('API_KEY');
         
+        // If API_KEY is not configured in .env, allow requests through (for development/local)
+        // This is okay for development, but in production API_KEY should always be set
+        if (!env('API_KEY')) {
+            return $next($request);
+        }
+        
         // Check if API key is provided and matches
         if (!$apiKey || $apiKey !== $expectedKey) {
             return response()->json([
