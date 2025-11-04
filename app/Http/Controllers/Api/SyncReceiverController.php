@@ -19,12 +19,12 @@ use Illuminate\Support\Facades\Storage;
 class SyncReceiverController extends Controller
 {
     /**
-     * Get all existing room IDs
+     * Get all existing rooms (full data)
      */
     public function getRooms()
     {
         try {
-            $rooms = DB::table('tbl_room')->select('room_no')->get();
+            $rooms = DB::table('tbl_room')->get();
             return response()->json($rooms);
         } catch (\Exception $e) {
             Log::error('Error getting rooms: ' . $e->getMessage());
@@ -73,12 +73,12 @@ class SyncReceiverController extends Controller
     }
     
     /**
-     * Get all existing camera IDs
+     * Get all existing cameras (full data)
      */
     public function getCameras()
     {
         try {
-            $cameras = DB::table('tbl_camera')->select('camera_id')->get();
+            $cameras = DB::table('tbl_camera')->get();
             return response()->json($cameras);
         } catch (\Exception $e) {
             Log::error('Error getting cameras: ' . $e->getMessage());
@@ -131,12 +131,12 @@ class SyncReceiverController extends Controller
     }
     
     /**
-     * Get all existing faculty IDs
+     * Get all existing faculties (full data)
      */
     public function getFaculties()
     {
         try {
-            $faculties = DB::table('tbl_faculty')->select('faculty_id')->get();
+            $faculties = DB::table('tbl_faculty')->get();
             return response()->json($faculties);
         } catch (\Exception $e) {
             Log::error('Error getting faculties: ' . $e->getMessage());
@@ -190,12 +190,12 @@ class SyncReceiverController extends Controller
     }
     
     /**
-     * Get all existing teaching load IDs
+     * Get all existing teaching loads (full data)
      */
     public function getTeachingLoads()
     {
         try {
-            $loads = DB::table('tbl_teaching_load')->select('teaching_load_id')->get();
+            $loads = DB::table('tbl_teaching_load')->get();
             return response()->json($loads);
         } catch (\Exception $e) {
             Log::error('Error getting teaching loads: ' . $e->getMessage());
@@ -252,16 +252,20 @@ class SyncReceiverController extends Controller
     }
     
     /**
-     * Get existing attendance record IDs (filtered by days)
+     * Get existing attendance records (full data, filtered by days if provided)
      */
     public function getAttendanceRecords(Request $request)
     {
         try {
-            // Return ALL attendance record IDs
-            $records = DB::table('tbl_attendance_record')
-                ->select('record_id')
-                ->get();
+            $query = DB::table('tbl_attendance_record');
             
+            // Filter by days if provided
+            $days = $request->input('days');
+            if ($days && is_numeric($days)) {
+                $query->where('record_date', '>=', now()->subDays($days)->toDateString());
+            }
+            
+            $records = $query->get();
             return response()->json($records);
         } catch (\Exception $e) {
             Log::error('Error getting attendance records: ' . $e->getMessage());
@@ -315,17 +319,25 @@ class SyncReceiverController extends Controller
     }
     
     /**
-     * Get existing leave/pass IDs (filtered by days)
+     * Get existing leaves (full data, filtered by days if provided)
      * Note: Leaves and passes are in the same table (tbl_leave_pass)
      */
     public function getLeaves(Request $request)
     {
         try {
-            // Return ALL leave IDs
-            $leaves = DB::table('tbl_leave_pass')
-                ->select('lp_id')
-                ->get();
+            $query = DB::table('tbl_leave_pass')
+                ->where('lp_type', 'Leave');
             
+            // Filter by days if provided
+            $days = $request->input('days');
+            if ($days && is_numeric($days)) {
+                $query->where(function($q) use ($days) {
+                    $q->where('lp_start_date', '>=', now()->subDays($days)->toDateString())
+                      ->orWhere('lp_end_date', '>=', now()->subDays($days)->toDateString());
+                });
+            }
+            
+            $leaves = $query->get();
             return response()->json($leaves);
         } catch (\Exception $e) {
             Log::error('Error getting leaves: ' . $e->getMessage());
@@ -383,12 +395,30 @@ class SyncReceiverController extends Controller
     }
     
     /**
-     * Get existing pass IDs (same as getLeaves since they share table)
+     * Get existing passes (full data, filtered by days if provided)
      */
     public function getPasses(Request $request)
     {
-        // Passes and leaves are in the same table
-        return $this->getLeaves($request);
+        try {
+            $query = DB::table('tbl_leave_pass')
+                ->where('lp_type', 'Pass');
+            
+            // Filter by days if provided
+            $days = $request->input('days');
+            if ($days && is_numeric($days)) {
+                $query->where(function($q) use ($days) {
+                    $q->where('lp_start_date', '>=', now()->subDays($days)->toDateString())
+                      ->orWhere('lp_end_date', '>=', now()->subDays($days)->toDateString())
+                      ->orWhere('pass_slip_date', '>=', now()->subDays($days)->toDateString());
+                });
+            }
+            
+            $passes = $query->get();
+            return response()->json($passes);
+        } catch (\Exception $e) {
+            Log::error('Error getting passes: ' . $e->getMessage());
+            return response()->json([], 500);
+        }
     }
     
     /**
@@ -401,16 +431,20 @@ class SyncReceiverController extends Controller
     }
     
     /**
-     * Get existing recognition log IDs (filtered by days)
+     * Get existing recognition logs (full data, filtered by days if provided)
      */
     public function getRecognitionLogs(Request $request)
     {
         try {
-            // Return ALL recognition log IDs
-            $logs = DB::table('tbl_recognition_logs')
-                ->select('log_id')
-                ->get();
+            $query = DB::table('tbl_recognition_logs');
             
+            // Filter by days if provided
+            $days = $request->input('days');
+            if ($days && is_numeric($days)) {
+                $query->where('recognition_time', '>=', now()->subDays($days)->toDateTimeString());
+            }
+            
+            $logs = $query->get();
             return response()->json($logs);
         } catch (\Exception $e) {
             Log::error('Error getting recognition logs: ' . $e->getMessage());
@@ -465,16 +499,20 @@ class SyncReceiverController extends Controller
     }
     
     /**
-     * Get existing stream recording IDs (filtered by days)
+     * Get existing stream recordings (full data, filtered by days if provided)
      */
     public function getStreamRecordings(Request $request)
     {
         try {
-            // Return ALL stream recording IDs
-            $recordings = DB::table('tbl_stream_recordings')
-                ->select('recording_id')
-                ->get();
+            $query = DB::table('tbl_stream_recordings');
             
+            // Filter by days if provided
+            $days = $request->input('days');
+            if ($days && is_numeric($days)) {
+                $query->where('start_time', '>=', now()->subDays($days)->toDateTimeString());
+            }
+            
+            $recordings = $query->get();
             return response()->json($recordings);
         } catch (\Exception $e) {
             Log::error('Error getting stream recordings: ' . $e->getMessage());
@@ -733,12 +771,12 @@ class SyncReceiverController extends Controller
     // ============================================================================
     
     /**
-     * Get existing subject IDs
+     * Get existing subjects (full data)
      */
     public function getSubjects(Request $request)
     {
         try {
-            $subjects = DB::table('tbl_subject')->select('subject_id')->get();
+            $subjects = DB::table('tbl_subject')->get();
             return response()->json($subjects);
         } catch (\Exception $e) {
             Log::error('Error getting subjects: ' . $e->getMessage());
@@ -792,12 +830,12 @@ class SyncReceiverController extends Controller
     // ============================================================================
     
     /**
-     * Get existing user IDs
+     * Get existing users (full data)
      */
     public function getUsers(Request $request)
     {
         try {
-            $users = DB::table('tbl_user')->select('user_id')->get();
+            $users = DB::table('tbl_user')->get();
             return response()->json($users);
         } catch (\Exception $e) {
             Log::error('Error getting users: ' . $e->getMessage());
@@ -854,16 +892,20 @@ class SyncReceiverController extends Controller
     // ============================================================================
     
     /**
-     * Get existing activity log IDs (filtered by days)
+     * Get existing activity logs (full data, filtered by days if provided)
      */
     public function getActivityLogs(Request $request)
     {
         try {
-            // Return ALL activity log IDs
-            $logs = DB::table('tbl_activity_logs')
-                ->select('logs_id')
-                ->get();
+            $query = DB::table('tbl_activity_logs');
             
+            // Filter by days if provided
+            $days = $request->input('days');
+            if ($days && is_numeric($days)) {
+                $query->where('logs_timestamp', '>=', now()->subDays($days)->toDateTimeString());
+            }
+            
+            $logs = $query->get();
             return response()->json($logs);
         } catch (\Exception $e) {
             Log::error('Error getting activity logs: ' . $e->getMessage());
@@ -917,12 +959,12 @@ class SyncReceiverController extends Controller
     // ============================================================================
     
     /**
-     * Get existing teaching load archive IDs
+     * Get existing teaching load archives (full data)
      */
     public function getTeachingLoadArchives(Request $request)
     {
         try {
-            $archives = DB::table('tbl_teaching_load_archive')->select('archive_id')->get();
+            $archives = DB::table('tbl_teaching_load_archive')->get();
             return response()->json($archives);
         } catch (\Exception $e) {
             Log::error('Error getting teaching load archives: ' . $e->getMessage());
@@ -985,12 +1027,12 @@ class SyncReceiverController extends Controller
     // ============================================================================
     
     /**
-     * Get existing attendance record archive IDs
+     * Get existing attendance record archives (full data)
      */
     public function getAttendanceRecordArchives(Request $request)
     {
         try {
-            $archives = DB::table('tbl_attendance_record_archive')->select('archive_id')->get();
+            $archives = DB::table('tbl_attendance_record_archive')->get();
             return response()->json($archives);
         } catch (\Exception $e) {
             Log::error('Error getting attendance record archives: ' . $e->getMessage());
