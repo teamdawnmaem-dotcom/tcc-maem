@@ -332,8 +332,8 @@ class SyncReceiverController extends Controller
             $days = $request->input('days');
             if ($days && is_numeric($days)) {
                 $query->where(function($q) use ($days) {
-                    $q->where('lp_start_date', '>=', now()->subDays($days)->toDateString())
-                      ->orWhere('lp_end_date', '>=', now()->subDays($days)->toDateString());
+                    $q->where('leave_start_date', '>=', now()->subDays($days)->toDateString())
+                      ->orWhere('leave_end_date', '>=', now()->subDays($days)->toDateString());
                 });
             }
             
