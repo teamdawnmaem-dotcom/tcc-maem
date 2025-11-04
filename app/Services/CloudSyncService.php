@@ -1501,6 +1501,9 @@ class CloudSyncService
                     if (empty($localImagePath)) {
                         $localImagePath = $cloudLeave['lp_image'] ?? '';
                     }
+                    if (empty($localImagePath)) {
+                        $localImagePath = 'placeholder.jpg'; // Ensure we have a non-empty string
+                    }
                     
                     // Validate required fields
                     if (empty($cloudLeave['lp_id'])) {
@@ -1513,23 +1516,43 @@ class CloudSyncService
                         $cloudLeave['lp_purpose'] = 'N/A';
                     }
                     
+                    // Format dates properly (date fields, not datetime) - matching local-to-cloud sync
+                    $leaveStartDate = null;
+                    if (!empty($cloudLeave['leave_start_date'])) {
+                        try {
+                            $leaveStartDate = \Carbon\Carbon::parse($cloudLeave['leave_start_date'])->format('Y-m-d');
+                        } catch (\Exception $e) {
+                            Log::warning("Invalid leave_start_date for leave {$cloudLeave['lp_id']}: {$cloudLeave['leave_start_date']}");
+                        }
+                    }
+                    
+                    $leaveEndDate = null;
+                    if (!empty($cloudLeave['leave_end_date'])) {
+                        try {
+                            $leaveEndDate = \Carbon\Carbon::parse($cloudLeave['leave_end_date'])->format('Y-m-d');
+                        } catch (\Exception $e) {
+                            Log::warning("Invalid leave_end_date for leave {$cloudLeave['lp_id']}: {$cloudLeave['leave_end_date']}");
+                        }
+                    }
+                    
+                    // Match local-to-cloud sync structure - only update leave-specific fields
                     DB::table('tbl_leave_pass')->upsert([
                         [
                             'lp_id' => $cloudLeave['lp_id'],
                             'faculty_id' => $cloudLeave['faculty_id'] ?? null,
-                            'lp_type' => $cloudLeave['lp_type'] ?? 'Leave',
+                            'lp_type' => 'Leave', // Force Leave type
                             'lp_purpose' => $cloudLeave['lp_purpose'] ?? 'N/A',
-                            'pass_slip_itinerary' => $cloudLeave['pass_slip_itinerary'] ?? null,
-                            'pass_slip_date' => $this->formatDateTime($cloudLeave['pass_slip_date'] ?? null),
-                            'pass_slip_departure_time' => $cloudLeave['pass_slip_departure_time'] ?? null,
-                            'pass_slip_arrival_time' => $cloudLeave['pass_slip_arrival_time'] ?? null,
-                            'leave_start_date' => $this->formatDateTime($cloudLeave['leave_start_date'] ?? null),
-                            'leave_end_date' => $this->formatDateTime($cloudLeave['leave_end_date'] ?? null),
-                            'lp_image' => $localImagePath ?: '',
+                            'pass_slip_itinerary' => null, // Leaves don't use this
+                            'pass_slip_date' => null, // Leaves don't use this
+                            'pass_slip_departure_time' => null, // Leaves don't use this
+                            'pass_slip_arrival_time' => null, // Leaves don't use this
+                            'leave_start_date' => $leaveStartDate,
+                            'leave_end_date' => $leaveEndDate,
+                            'lp_image' => $localImagePath,
                             'created_at' => $this->formatDateTime($cloudLeave['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudLeave['updated_at'] ?? null),
                         ]
-                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'lp_start_date', 'lp_end_date', 'lp_image', 'updated_at']);
+                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'leave_start_date', 'leave_end_date', 'lp_image', 'updated_at']);
                     
                     $synced[] = $cloudLeave['lp_id'];
                     Log::info("Successfully synced leave {$cloudLeave['lp_id']} from cloud");
@@ -1574,6 +1597,9 @@ class CloudSyncService
                     if (empty($localImagePath)) {
                         $localImagePath = $cloudPass['lp_image'] ?? '';
                     }
+                    if (empty($localImagePath)) {
+                        $localImagePath = 'placeholder.jpg'; // Ensure we have a non-empty string
+                    }
                     
                     // Validate required fields
                     if (empty($cloudPass['lp_id'])) {
@@ -1586,23 +1612,34 @@ class CloudSyncService
                         $cloudPass['lp_purpose'] = 'N/A';
                     }
                     
+                    // Format dates properly (date fields, not datetime) - matching local-to-cloud sync
+                    $passSlipDate = null;
+                    if (!empty($cloudPass['pass_slip_date'])) {
+                        try {
+                            $passSlipDate = \Carbon\Carbon::parse($cloudPass['pass_slip_date'])->format('Y-m-d');
+                        } catch (\Exception $e) {
+                            Log::warning("Invalid pass_slip_date for pass {$cloudPass['lp_id']}: {$cloudPass['pass_slip_date']}");
+                        }
+                    }
+                    
+                    // Match local-to-cloud sync structure - only update pass-specific fields
                     DB::table('tbl_leave_pass')->upsert([
                         [
                             'lp_id' => $cloudPass['lp_id'],
                             'faculty_id' => $cloudPass['faculty_id'] ?? null,
-                            'lp_type' => $cloudPass['lp_type'] ?? 'Pass',
+                            'lp_type' => 'Pass', // Force Pass type
                             'lp_purpose' => $cloudPass['lp_purpose'] ?? 'N/A',
                             'pass_slip_itinerary' => $cloudPass['pass_slip_itinerary'] ?? null,
-                            'pass_slip_date' => $this->formatDateTime($cloudPass['pass_slip_date'] ?? null),
+                            'pass_slip_date' => $passSlipDate,
                             'pass_slip_departure_time' => $cloudPass['pass_slip_departure_time'] ?? null,
                             'pass_slip_arrival_time' => $cloudPass['pass_slip_arrival_time'] ?? null,
-                            'lp_start_date' => $this->formatDateTime($cloudPass['lp_start_date'] ?? null),
-                            'lp_end_date' => $this->formatDateTime($cloudPass['lp_end_date'] ?? null),
-                            'lp_image' => $localImagePath ?: '',
+                            'leave_start_date' => null, // Passes don't use this
+                            'leave_end_date' => null, // Passes don't use this
+                            'lp_image' => $localImagePath,
                             'created_at' => $this->formatDateTime($cloudPass['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudPass['updated_at'] ?? null),
                         ]
-                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'lp_start_date', 'lp_end_date', 'lp_image', 'updated_at']);
+                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'leave_start_date', 'leave_end_date', 'lp_image', 'updated_at']);
                     
                     $synced[] = $cloudPass['lp_id'];
                     Log::info("Successfully synced pass {$cloudPass['lp_id']} from cloud");
