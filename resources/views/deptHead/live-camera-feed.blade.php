@@ -328,7 +328,7 @@
         @forelse($cameras as $camera)
             <div class="camera-feed" onclick="showCameraDetail('{{ $camera->camera_id }}')">
                 <div class="camera-label">{{ $camera->room_name }}</div>
-                
+
                 <!-- Grid view recording player -->
                 <div id="video-container-{{ $camera->camera_id }}" style="flex: 1; min-height: 160px; background: #000; position: relative;">
                     <video 
@@ -343,7 +343,7 @@
                     ></video>
                     
                     <div class="no-feed" id="no-recording-message-{{ $camera->camera_id }}">
-                        <div class="no-feed-icon">&#10005;</div>
+                    <div class="no-feed-icon">&#10005;</div>
                         <div>No Recording</div>
                     </div>
                     
@@ -469,13 +469,13 @@
         const teachingLoads = @json($teachingLoads);
         const faculties = @json($faculties);
         const recordings = @json($recordings);
-        
+
         console.log('Faculties data loaded:', faculties);
         console.log('Recordings loaded:', recordings.length);
 
         const scheduleRefreshMs = 30000; // refresh schedule every 30s
         let scheduleIntervalId = null;
-        
+
         // Group recordings by camera_id
         const recordingsByCamera = {};
         const recordingsById = {};
@@ -684,7 +684,7 @@
             
             if (currentDetailIndex > 0) {
                 currentDetailIndex--;
-            } else {
+                        } else {
                 currentDetailIndex = currentDetailPlaylist.length - 1; // Loop to end
             }
             
@@ -743,19 +743,19 @@
 	
 	// Note: Recognition status fetching is now handled in DOMContentLoaded
 
-	// Helpers to pick current schedule by time within Asia/Manila
-	function minutesSinceMidnightAsiaManila(date) {
-		const opts = {
-			timeZone: 'Asia/Manila',
-			hour12: false,
-			hour: '2-digit',
-			minute: '2-digit'
-		};
-		const parts = new Intl.DateTimeFormat('en-GB', opts).formatToParts(date);
-		const h = parseInt(parts.find(p => p.type === 'hour').value, 10);
-		const m = parseInt(parts.find(p => p.type === 'minute').value, 10);
-		return h * 60 + m;
-	}
+        // Helpers to pick current schedule by time within Asia/Manila
+        function minutesSinceMidnightAsiaManila(date) {
+            const opts = {
+                timeZone: 'Asia/Manila',
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            const parts = new Intl.DateTimeFormat('en-GB', opts).formatToParts(date);
+            const h = parseInt(parts.find(p => p.type === 'hour').value, 10);
+            const m = parseInt(parts.find(p => p.type === 'minute').value, 10);
+            return h * 60 + m;
+        }
 
         function toMinutes(timeStr) {
             if (!timeStr) return null;
