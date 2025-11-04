@@ -196,9 +196,14 @@ class CloudSyncService
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('teaching-loads', $payload);
-            Log::info('Bulk teaching-loads result', ['upserted' => $resp['data']['upserted'] ?? null, 'success' => $resp['success'] ?? null]);
-            if ($resp['success']) {
+            $upserted = $resp['data']['upserted'] ?? 0;
+            Log::info('Bulk teaching-loads result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($localLoads)]);
+            
+            if ($resp['success'] && $upserted > 0) {
+                // Only return synced IDs if records were actually upserted
                 $synced = $localLoads->pluck('teaching_load_id')->all();
+            } elseif ($resp['success'] && $upserted == 0) {
+                Log::warning("Teaching loads sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
             }
         } catch (\Exception $e) {
             Log::error("Error syncing teaching loads: " . $e->getMessage());
@@ -339,9 +344,14 @@ class CloudSyncService
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('recognition-logs', $payload);
-            Log::info('Bulk recognition-logs result', ['upserted' => $resp['data']['upserted'] ?? null, 'success' => $resp['success'] ?? null]);
-            if ($resp['success']) {
+            $upserted = $resp['data']['upserted'] ?? 0;
+            Log::info('Bulk recognition-logs result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($localLogs)]);
+            
+            if ($resp['success'] && $upserted > 0) {
+                // Only return synced IDs if records were actually upserted
                 $synced = $localLogs->pluck('log_id')->all();
+            } elseif ($resp['success'] && $upserted == 0) {
+                Log::warning("Recognition logs sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
             }
         } catch (\Exception $e) {
             Log::error("Error syncing recognition logs: " . $e->getMessage());
@@ -448,23 +458,36 @@ class CloudSyncService
         try {
             // Chunk large payloads
             $total = 0;
-            foreach (array_chunk($records, 100) as $chunk) {
+            foreach (array_chunk($records, 100) as $chunkIndex => $chunk) {
                 $response = Http::timeout(60)
                     ->withHeaders([
                         'Authorization' => 'Bearer ' . $this->cloudApiKey,
                         'Accept' => 'application/json',
                     ])
                     ->post("{$this->cloudApiUrl}/sync/bulk/{$endpoint}", ['records' => $chunk]);
+                
                 if (!$response->successful()) {
-                    Log::error("Bulk push failed for {$endpoint}: " . $response->body());
-                    return ['success' => false, 'error' => $response->body()];
+                    $errorBody = $response->body();
+                    Log::error("Bulk push failed for {$endpoint} (chunk {$chunkIndex}): " . $errorBody);
+                    Log::error("Response status: " . $response->status());
+                    return ['success' => false, 'error' => $errorBody];
                 }
+                
                 $json = $response->json();
-                $total += (int)($json['upserted'] ?? count($chunk));
+                $chunkUpserted = (int)($json['upserted'] ?? 0);
+                $total += $chunkUpserted;
+                
+                // Log if chunk had 0 upserted but request was successful
+                if ($chunkUpserted == 0 && count($chunk) > 0) {
+                    Log::warning("Bulk push for {$endpoint} (chunk {$chunkIndex}): Request successful but 0 records upserted. Response: " . json_encode($json));
+                }
             }
+            
+            Log::info("Bulk push completed for {$endpoint}", ['total_upserted' => $total, 'total_sent' => count($records)]);
             return ['success' => true, 'data' => ['upserted' => $total]];
         } catch (\Exception $e) {
             Log::error("Error bulk pushing to cloud {$endpoint}: " . $e->getMessage());
+            Log::error("Stack trace: " . $e->getTraceAsString());
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
@@ -489,9 +512,14 @@ class CloudSyncService
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('subjects', $payload);
-            Log::info('Bulk subjects result', ['upserted' => $resp['data']['upserted'] ?? null, 'success' => $resp['success'] ?? null]);
-            if ($resp['success']) {
+            $upserted = $resp['data']['upserted'] ?? 0;
+            Log::info('Bulk subjects result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($localSubjects)]);
+            
+            if ($resp['success'] && $upserted > 0) {
+                // Only return synced IDs if records were actually upserted
                 $synced = $localSubjects->pluck('subject_id')->all();
+            } elseif ($resp['success'] && $upserted == 0) {
+                Log::warning("Subjects sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
             }
         } catch (\Exception $e) {
             Log::error("Error syncing subjects: " . $e->getMessage());
@@ -523,9 +551,14 @@ class CloudSyncService
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('users', $payload);
-            Log::info('Bulk users result', ['upserted' => $resp['data']['upserted'] ?? null, 'success' => $resp['success'] ?? null]);
-            if ($resp['success']) {
+            $upserted = $resp['data']['upserted'] ?? 0;
+            Log::info('Bulk users result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($localUsers)]);
+            
+            if ($resp['success'] && $upserted > 0) {
+                // Only return synced IDs if records were actually upserted
                 $synced = $localUsers->pluck('user_id')->all();
+            } elseif ($resp['success'] && $upserted == 0) {
+                Log::warning("Users sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
             }
         } catch (\Exception $e) {
             Log::error("Error syncing users: " . $e->getMessage());
@@ -593,8 +626,14 @@ class CloudSyncService
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('teaching-load-archives', $payload);
-            if ($resp['success']) {
+            $upserted = $resp['data']['upserted'] ?? 0;
+            Log::info('Bulk teaching-load-archives result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($localArchives)]);
+            
+            if ($resp['success'] && $upserted > 0) {
+                // Only return synced IDs if records were actually upserted
                 $synced = $localArchives->pluck('archive_id')->all();
+            } elseif ($resp['success'] && $upserted == 0) {
+                Log::warning("Teaching load archives sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
             }
         } catch (\Exception $e) {
             Log::error("Error syncing teaching load archives: " . $e->getMessage());
@@ -635,8 +674,14 @@ class CloudSyncService
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('attendance-record-archives', $payload);
-            if ($resp['success']) {
+            $upserted = $resp['data']['upserted'] ?? 0;
+            Log::info('Bulk attendance-record-archives result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($localArchives)]);
+            
+            if ($resp['success'] && $upserted > 0) {
+                // Only return synced IDs if records were actually upserted
                 $synced = $localArchives->pluck('archive_id')->all();
+            } elseif ($resp['success'] && $upserted == 0) {
+                Log::warning("Attendance record archives sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
             }
         } catch (\Exception $e) {
             Log::error("Error syncing attendance record archives: " . $e->getMessage());
