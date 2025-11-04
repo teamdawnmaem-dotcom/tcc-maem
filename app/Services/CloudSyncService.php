@@ -1013,15 +1013,16 @@ class CloudSyncService
                     DB::table('tbl_user')->upsert([
                         [
                             'user_id' => $cloudUser['user_id'],
+                            'user_role' => $cloudUser['user_role'] ?? null,
+                            'user_department' => $cloudUser['user_department'] ?? null,
                             'user_fname' => $cloudUser['user_fname'] ?? null,
                             'user_lname' => $cloudUser['user_lname'] ?? null,
-                            'user_email' => $cloudUser['user_email'] ?? null,
+                            'username' => $cloudUser['username'] ?? null,
                             'user_password' => $cloudUser['user_password'] ?? null,
-                            'user_role' => $cloudUser['user_role'] ?? null,
                             'created_at' => $this->formatDateTime($cloudUser['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudUser['updated_at'] ?? null),
                         ]
-                    ], ['user_id'], ['user_fname', 'user_lname', 'user_email', 'user_password', 'user_role', 'updated_at']);
+                    ], ['user_id'], ['user_role', 'user_department', 'user_fname', 'user_lname', 'username', 'user_password', 'updated_at']);
                     
                     $synced[] = $cloudUser['user_id'];
                 } catch (\Exception $e) {
@@ -1057,11 +1058,12 @@ class CloudSyncService
                         [
                             'subject_id' => $cloudSubject['subject_id'],
                             'subject_code' => $cloudSubject['subject_code'] ?? null,
-                            'subject_name' => $cloudSubject['subject_name'] ?? null,
+                            'subject_description' => $cloudSubject['subject_description'] ?? null,
+                            'department' => $cloudSubject['department'] ?? null,
                             'created_at' => $this->formatDateTime($cloudSubject['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudSubject['updated_at'] ?? null),
                         ]
-                    ], ['subject_id'], ['subject_code', 'subject_name', 'updated_at']);
+                    ], ['subject_id'], ['subject_code', 'subject_description', 'department', 'updated_at']);
                     
                     $synced[] = $cloudSubject['subject_id'];
                 } catch (\Exception $e) {
@@ -1312,16 +1314,20 @@ class CloudSyncService
                             'lp_id' => $cloudLeave['lp_id'],
                             'faculty_id' => $cloudLeave['faculty_id'] ?? null,
                             'lp_type' => $cloudLeave['lp_type'] ?? 'Leave',
-                            'lp_reason' => $cloudLeave['lp_reason'] ?? null,
+                            'lp_purpose' => $cloudLeave['lp_purpose'] ?? null,
+                            'pass_slip_itinerary' => $cloudLeave['pass_slip_itinerary'] ?? null,
+                            'pass_slip_date' => $this->formatDateTime($cloudLeave['pass_slip_date'] ?? null),
+                            'pass_slip_departure_time' => $cloudLeave['pass_slip_departure_time'] ?? null,
+                            'pass_slip_arrival_time' => $cloudLeave['pass_slip_arrival_time'] ?? null,
                             'lp_start_date' => $this->formatDateTime($cloudLeave['lp_start_date'] ?? null),
                             'lp_end_date' => $this->formatDateTime($cloudLeave['lp_end_date'] ?? null),
-                            'lp_status' => $cloudLeave['lp_status'] ?? null,
                             'lp_image' => $cloudLeave['lp_image'] ?? null,
+                            'lp_status' => $cloudLeave['lp_status'] ?? null,
                             'lp_remarks' => $cloudLeave['lp_remarks'] ?? null,
                             'created_at' => $this->formatDateTime($cloudLeave['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudLeave['updated_at'] ?? null),
                         ]
-                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_reason', 'lp_start_date', 'lp_end_date', 'lp_status', 'lp_image', 'lp_remarks', 'updated_at']);
+                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'lp_start_date', 'lp_end_date', 'lp_image', 'lp_status', 'lp_remarks', 'updated_at']);
                     
                     $synced[] = $cloudLeave['lp_id'];
                 } catch (\Exception $e) {
@@ -1358,16 +1364,20 @@ class CloudSyncService
                             'lp_id' => $cloudPass['lp_id'],
                             'faculty_id' => $cloudPass['faculty_id'] ?? null,
                             'lp_type' => $cloudPass['lp_type'] ?? 'Pass',
-                            'lp_reason' => $cloudPass['lp_reason'] ?? null,
+                            'lp_purpose' => $cloudPass['lp_purpose'] ?? null,
+                            'pass_slip_itinerary' => $cloudPass['pass_slip_itinerary'] ?? null,
+                            'pass_slip_date' => $this->formatDateTime($cloudPass['pass_slip_date'] ?? null),
+                            'pass_slip_departure_time' => $cloudPass['pass_slip_departure_time'] ?? null,
+                            'pass_slip_arrival_time' => $cloudPass['pass_slip_arrival_time'] ?? null,
                             'lp_start_date' => $this->formatDateTime($cloudPass['lp_start_date'] ?? null),
                             'lp_end_date' => $this->formatDateTime($cloudPass['lp_end_date'] ?? null),
-                            'lp_status' => $cloudPass['lp_status'] ?? null,
                             'lp_image' => $cloudPass['lp_image'] ?? null,
+                            'lp_status' => $cloudPass['lp_status'] ?? null,
                             'lp_remarks' => $cloudPass['lp_remarks'] ?? null,
                             'created_at' => $this->formatDateTime($cloudPass['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudPass['updated_at'] ?? null),
                         ]
-                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_reason', 'lp_start_date', 'lp_end_date', 'lp_status', 'lp_image', 'lp_remarks', 'updated_at']);
+                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'lp_start_date', 'lp_end_date', 'lp_image', 'lp_status', 'lp_remarks', 'updated_at']);
                     
                     $synced[] = $cloudPass['lp_id'];
                 } catch (\Exception $e) {
@@ -1404,12 +1414,16 @@ class CloudSyncService
                             'log_id' => $cloudLog['log_id'],
                             'faculty_id' => $cloudLog['faculty_id'] ?? null,
                             'camera_id' => $cloudLog['camera_id'] ?? null,
+                            'teaching_load_id' => $cloudLog['teaching_load_id'] ?? null,
                             'recognition_time' => $this->formatDateTime($cloudLog['recognition_time'] ?? null),
+                            'camera_name' => $cloudLog['camera_name'] ?? null,
+                            'room_name' => $cloudLog['room_name'] ?? null,
+                            'building_no' => $cloudLog['building_no'] ?? null,
+                            'faculty_name' => $cloudLog['faculty_name'] ?? null,
                             'status' => $cloudLog['status'] ?? null,
                             'distance' => $cloudLog['distance'] ?? null,
-                            'faculty_name' => $cloudLog['faculty_name'] ?? null,
                         ]
-                    ], ['log_id'], ['faculty_id', 'camera_id', 'recognition_time', 'status', 'distance', 'faculty_name']);
+                    ], ['log_id'], ['faculty_id', 'camera_id', 'teaching_load_id', 'recognition_time', 'camera_name', 'room_name', 'building_no', 'faculty_name', 'status', 'distance']);
                     
                     $synced[] = $cloudLog['log_id'];
                 } catch (\Exception $e) {
@@ -1446,15 +1460,15 @@ class CloudSyncService
                             'recording_id' => $cloudRecording['recording_id'],
                             'camera_id' => $cloudRecording['camera_id'] ?? null,
                             'start_time' => $this->formatDateTime($cloudRecording['start_time'] ?? null),
-                            'end_time' => $this->formatDateTime($cloudRecording['end_time'] ?? null),
                             'duration' => $cloudRecording['duration'] ?? null,
+                            'frames' => $cloudRecording['frames'] ?? null,
                             'filepath' => $cloudRecording['filepath'] ?? null,
                             'filename' => $cloudRecording['filename'] ?? null,
                             'file_size' => $cloudRecording['file_size'] ?? null,
                             'created_at' => $this->formatDateTime($cloudRecording['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudRecording['updated_at'] ?? null),
                         ]
-                    ], ['recording_id'], ['camera_id', 'start_time', 'end_time', 'duration', 'filepath', 'filename', 'file_size', 'updated_at']);
+                    ], ['recording_id'], ['camera_id', 'start_time', 'duration', 'frames', 'filepath', 'filename', 'file_size', 'updated_at']);
                     
                     $synced[] = $cloudRecording['recording_id'];
                 } catch (\Exception $e) {
@@ -1490,12 +1504,12 @@ class CloudSyncService
                         [
                             'logs_id' => $cloudLog['logs_id'],
                             'user_id' => $cloudLog['user_id'] ?? null,
-                            'activity' => $cloudLog['activity'] ?? null,
-                            'ip_address' => $cloudLog['ip_address'] ?? null,
-                            'user_agent' => $cloudLog['user_agent'] ?? null,
-                            'created_at' => $this->formatDateTime($cloudLog['created_at'] ?? null),
+                            'logs_action' => $cloudLog['logs_action'] ?? null,
+                            'logs_description' => $cloudLog['logs_description'] ?? null,
+                            'logs_timestamp' => $this->formatDateTime($cloudLog['logs_timestamp'] ?? null),
+                            'logs_module' => $cloudLog['logs_module'] ?? null,
                         ]
-                    ], ['logs_id'], ['user_id', 'activity', 'ip_address', 'user_agent']);
+                    ], ['logs_id'], ['user_id', 'logs_action', 'logs_description', 'logs_timestamp', 'logs_module']);
                     
                     $synced[] = $cloudLog['logs_id'];
                 } catch (\Exception $e) {
@@ -1530,18 +1544,22 @@ class CloudSyncService
                     DB::table('tbl_teaching_load_archive')->upsert([
                         [
                             'archive_id' => $cloudArchive['archive_id'],
-                            'teaching_load_id' => $cloudArchive['teaching_load_id'] ?? null,
+                            'original_teaching_load_id' => $cloudArchive['original_teaching_load_id'] ?? null,
                             'faculty_id' => $cloudArchive['faculty_id'] ?? null,
                             'teaching_load_course_code' => $cloudArchive['teaching_load_course_code'] ?? null,
                             'teaching_load_subject' => $cloudArchive['teaching_load_subject'] ?? null,
-                            'teaching_load_day_of_week' => $cloudArchive['teaching_load_day_of_week'] ?? null,
                             'teaching_load_class_section' => $cloudArchive['teaching_load_class_section'] ?? null,
+                            'teaching_load_day_of_week' => $cloudArchive['teaching_load_day_of_week'] ?? null,
                             'teaching_load_time_in' => $cloudArchive['teaching_load_time_in'] ?? null,
                             'teaching_load_time_out' => $cloudArchive['teaching_load_time_out'] ?? null,
                             'room_no' => $cloudArchive['room_no'] ?? null,
+                            'school_year' => $cloudArchive['school_year'] ?? null,
+                            'semester' => $cloudArchive['semester'] ?? null,
                             'archived_at' => $this->formatDateTime($cloudArchive['archived_at'] ?? null),
+                            'archived_by' => $cloudArchive['archived_by'] ?? null,
+                            'archive_notes' => $cloudArchive['archive_notes'] ?? null,
                         ]
-                    ], ['archive_id'], ['teaching_load_id', 'faculty_id', 'teaching_load_course_code', 'teaching_load_subject', 'teaching_load_day_of_week', 'teaching_load_class_section', 'teaching_load_time_in', 'teaching_load_time_out', 'room_no', 'archived_at']);
+                    ], ['archive_id'], ['original_teaching_load_id', 'faculty_id', 'teaching_load_course_code', 'teaching_load_subject', 'teaching_load_class_section', 'teaching_load_day_of_week', 'teaching_load_time_in', 'teaching_load_time_out', 'room_no', 'school_year', 'semester', 'archived_at', 'archived_by', 'archive_notes']);
                     
                     $synced[] = $cloudArchive['archive_id'];
                 } catch (\Exception $e) {
@@ -1576,16 +1594,16 @@ class CloudSyncService
                     DB::table('tbl_attendance_record_archive')->upsert([
                         [
                             'archive_id' => $cloudArchive['archive_id'],
-                            'record_id' => $cloudArchive['record_id'] ?? null,
-                            'record_date' => $this->formatDateTime($cloudArchive['record_date'] ?? null),
+                            'original_record_id' => $cloudArchive['original_record_id'] ?? null,
                             'faculty_id' => $cloudArchive['faculty_id'] ?? null,
                             'teaching_load_id' => $cloudArchive['teaching_load_id'] ?? null,
+                            'camera_id' => $cloudArchive['camera_id'] ?? null,
+                            'record_date' => $this->formatDateTime($cloudArchive['record_date'] ?? null),
                             'record_time_in' => $cloudArchive['record_time_in'] ?? null,
                             'record_time_out' => $cloudArchive['record_time_out'] ?? null,
                             'time_duration_seconds' => $cloudArchive['time_duration_seconds'] ?? null,
                             'record_status' => $cloudArchive['record_status'] ?? null,
                             'record_remarks' => $cloudArchive['record_remarks'] ?? null,
-                            'camera_id' => $cloudArchive['camera_id'] ?? null,
                             'school_year' => $cloudArchive['school_year'] ?? null,
                             'semester' => $cloudArchive['semester'] ?? null,
                             'archived_at' => $this->formatDateTime($cloudArchive['archived_at'] ?? null),
@@ -1594,7 +1612,7 @@ class CloudSyncService
                             'created_at' => $this->formatDateTime($cloudArchive['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudArchive['updated_at'] ?? null),
                         ]
-                    ], ['archive_id'], ['record_id', 'record_date', 'faculty_id', 'teaching_load_id', 'record_time_in', 'record_time_out', 'time_duration_seconds', 'record_status', 'record_remarks', 'camera_id', 'school_year', 'semester', 'archived_at', 'archived_by', 'archive_notes', 'updated_at']);
+                    ], ['archive_id'], ['original_record_id', 'faculty_id', 'teaching_load_id', 'camera_id', 'record_date', 'record_time_in', 'record_time_out', 'time_duration_seconds', 'record_status', 'record_remarks', 'school_year', 'semester', 'archived_at', 'archived_by', 'archive_notes', 'updated_at']);
                     
                     $synced[] = $cloudArchive['archive_id'];
                 } catch (\Exception $e) {
