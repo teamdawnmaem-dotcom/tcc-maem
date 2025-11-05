@@ -86,10 +86,20 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get all local rooms
-            $localRooms = Room::all();
+            // Get existing room IDs from cloud
+            $existingCloudIds = $this->getExistingCloudIds('rooms', 'room_no');
             
-            // Bulk upsert all rooms
+            // Get all local rooms and filter out existing ones
+            $localRooms = Room::all()->filter(function ($room) use ($existingCloudIds) {
+                return !in_array($room->room_no, $existingCloudIds);
+            });
+            
+            if ($localRooms->isEmpty()) {
+                Log::info('No new rooms to sync to cloud');
+                return $synced;
+            }
+            
+            // Bulk upsert only missing rooms
             $payload = $localRooms->map(function ($room) {
                 return [
                     'room_no' => $room->room_no,
@@ -100,6 +110,7 @@ class CloudSyncService
             $resp = $this->pushBulkToCloud('rooms', $payload);
             if ($resp['success']) {
                 $synced = $localRooms->pluck('room_no')->all();
+                Log::info('Synced ' . count($synced) . ' new rooms to cloud');
             }
         } catch (\Exception $e) {
             Log::error("Error syncing rooms: " . $e->getMessage());
@@ -116,7 +127,19 @@ class CloudSyncService
         $synced = [];
         
         try {
-            $localCameras = Camera::all();
+            // Get existing camera IDs from cloud
+            $existingCloudIds = $this->getExistingCloudIds('cameras', 'camera_id');
+            
+            // Get all local cameras and filter out existing ones
+            $localCameras = Camera::all()->filter(function ($camera) use ($existingCloudIds) {
+                return !in_array($camera->camera_id, $existingCloudIds);
+            });
+            
+            if ($localCameras->isEmpty()) {
+                Log::info('No new cameras to sync to cloud');
+                return $synced;
+            }
+            
             $payload = $localCameras->map(function ($camera) {
                 return [
                     'camera_id' => $camera->camera_id,
@@ -131,6 +154,7 @@ class CloudSyncService
             $resp = $this->pushBulkToCloud('cameras', $payload);
             if ($resp['success']) {
                 $synced = $localCameras->pluck('camera_id')->all();
+                Log::info('Synced ' . count($synced) . ' new cameras to cloud');
             }
         } catch (\Exception $e) {
             Log::error("Error syncing cameras: " . $e->getMessage());
@@ -147,7 +171,19 @@ class CloudSyncService
         $synced = [];
         
         try {
-            $localFaculties = Faculty::all();
+            // Get existing faculty IDs from cloud
+            $existingCloudIds = $this->getExistingCloudIds('faculties', 'faculty_id');
+            
+            // Get all local faculties and filter out existing ones
+            $localFaculties = Faculty::all()->filter(function ($faculty) use ($existingCloudIds) {
+                return !in_array($faculty->faculty_id, $existingCloudIds);
+            });
+            
+            if ($localFaculties->isEmpty()) {
+                Log::info('No new faculties to sync to cloud');
+                return $synced;
+            }
+            
             $payload = $localFaculties->map(function ($faculty) {
                 // Sync faculty images to cloud and update paths
                 $cloudImages = $this->syncFacultyImages($faculty->faculty_images);
@@ -166,6 +202,7 @@ class CloudSyncService
             $resp = $this->pushBulkToCloud('faculties', $payload);
             if ($resp['success']) {
                 $synced = $localFaculties->pluck('faculty_id')->all();
+                Log::info('Synced ' . count($synced) . ' new faculties to cloud');
             }
         } catch (\Exception $e) {
             Log::error("Error syncing faculties: " . $e->getMessage());
@@ -182,7 +219,19 @@ class CloudSyncService
         $synced = [];
         
         try {
-            $localLoads = TeachingLoad::all();
+            // Get existing teaching load IDs from cloud
+            $existingCloudIds = $this->getExistingCloudIds('teaching-loads', 'teaching_load_id');
+            
+            // Get all local teaching loads and filter out existing ones
+            $localLoads = TeachingLoad::all()->filter(function ($load) use ($existingCloudIds) {
+                return !in_array($load->teaching_load_id, $existingCloudIds);
+            });
+            
+            if ($localLoads->isEmpty()) {
+                Log::info('No new teaching loads to sync to cloud');
+                return $synced;
+            }
+            
             $payload = $localLoads->map(function ($load) {
                 return [
                     'teaching_load_id' => $load->teaching_load_id,
@@ -205,6 +254,7 @@ class CloudSyncService
             if ($resp['success'] && $upserted > 0) {
                 // Only return synced IDs if records were actually upserted
                 $synced = $localLoads->pluck('teaching_load_id')->all();
+                Log::info('Synced ' . count($synced) . ' new teaching loads to cloud');
             } elseif ($resp['success'] && $upserted == 0) {
                 Log::warning("Teaching loads sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
             }
@@ -223,7 +273,19 @@ class CloudSyncService
         $synced = [];
         
         try {
-            $localRecords = AttendanceRecord::all();
+            // Get existing attendance record IDs from cloud (last 30 days)
+            $existingCloudIds = $this->getExistingCloudIds('attendance-records', 'record_id', ['days' => 30]);
+            
+            // Get all local attendance records and filter out existing ones
+            $localRecords = AttendanceRecord::all()->filter(function ($record) use ($existingCloudIds) {
+                return !in_array($record->record_id, $existingCloudIds);
+            });
+            
+            if ($localRecords->isEmpty()) {
+                Log::info('No new attendance records to sync to cloud');
+                return $synced;
+            }
+            
             $payload = $localRecords->map(function ($record) {
                 return [
                     'record_id' => $record->record_id,
@@ -241,6 +303,7 @@ class CloudSyncService
             $resp = $this->pushBulkToCloud('attendance-records', $payload);
             if ($resp['success']) {
                 $synced = $localRecords->pluck('record_id')->all();
+                Log::info('Synced ' . count($synced) . ' new attendance records to cloud');
             }
         } catch (\Exception $e) {
             Log::error("Error syncing attendance records: " . $e->getMessage());
@@ -258,8 +321,19 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Sync ALL leaves
-            $localLeaves = Leave::all();
+            // Get existing leave IDs from cloud (last 90 days)
+            $existingCloudIds = $this->getExistingCloudIds('leaves', 'lp_id', ['days' => 90]);
+            
+            // Get all local leaves and filter out existing ones
+            $localLeaves = Leave::all()->filter(function ($leave) use ($existingCloudIds) {
+                return !in_array($leave->lp_id, $existingCloudIds);
+            });
+            
+            if ($localLeaves->isEmpty()) {
+                Log::info('No new leaves to sync to cloud');
+                return $synced;
+            }
+            
             $payload = $localLeaves->map(function ($leave) {
                 // Sync leave image to cloud and update path
                 $cloudImagePath = $this->syncLeaveImage($leave->lp_image);
@@ -279,6 +353,7 @@ class CloudSyncService
             $resp = $this->pushBulkToCloud('leaves', $payload);
             if ($resp['success']) {
                 $synced = $localLeaves->pluck('lp_id')->all();
+                Log::info('Synced ' . count($synced) . ' new leaves to cloud');
             }
         } catch (\Exception $e) {
             Log::error("Error syncing leaves: " . $e->getMessage());
@@ -296,8 +371,19 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Sync ALL passes
-            $localPasses = Pass::all();
+            // Get existing pass IDs from cloud (last 90 days)
+            $existingCloudIds = $this->getExistingCloudIds('passes', 'lp_id', ['days' => 90]);
+            
+            // Get all local passes and filter out existing ones
+            $localPasses = Pass::all()->filter(function ($pass) use ($existingCloudIds) {
+                return !in_array($pass->lp_id, $existingCloudIds);
+            });
+            
+            if ($localPasses->isEmpty()) {
+                Log::info('No new passes to sync to cloud');
+                return $synced;
+            }
+            
             $payload = $localPasses->map(function ($pass) {
                 // Sync pass image to cloud and update path
                 $cloudImagePath = $this->syncPassImage($pass->lp_image);
@@ -319,6 +405,7 @@ class CloudSyncService
             $resp = $this->pushBulkToCloud('passes', $payload);
             if ($resp['success']) {
                 $synced = $localPasses->pluck('lp_id')->all();
+                Log::info('Synced ' . count($synced) . ' new passes to cloud');
             }
         } catch (\Exception $e) {
             Log::error("Error syncing passes: " . $e->getMessage());
@@ -377,8 +464,19 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Sync ALL stream recordings
-            $localRecordings = StreamRecording::all();
+            // Get existing stream recording IDs from cloud (last 7 days)
+            $existingCloudIds = $this->getExistingCloudIds('stream-recordings', 'recording_id', ['days' => 7]);
+            
+            // Get all local stream recordings and filter out existing ones
+            $localRecordings = StreamRecording::all()->filter(function ($recording) use ($existingCloudIds) {
+                return !in_array($recording->recording_id, $existingCloudIds);
+            });
+            
+            if ($localRecordings->isEmpty()) {
+                Log::info('No new stream recordings to sync to cloud');
+                return $synced;
+            }
+            
             $payload = $localRecordings->map(function ($recording) {
                 // Sync video file to cloud and update path
                 $cloudVideoPath = $this->syncStreamRecordingVideo($recording->filepath);
@@ -399,6 +497,7 @@ class CloudSyncService
             $resp = $this->pushBulkToCloud('stream-recordings', $payload);
             if ($resp['success']) {
                 $synced = $localRecordings->pluck('recording_id')->all();
+                Log::info('Synced ' . count($synced) . ' new stream recordings to cloud');
             }
         } catch (\Exception $e) {
             Log::error("Error syncing stream recordings: " . $e->getMessage());
@@ -535,7 +634,19 @@ class CloudSyncService
         $synced = [];
         
         try {
-            $localSubjects = Subject::all();
+            // Get existing subject IDs from cloud
+            $existingCloudIds = $this->getExistingCloudIds('subjects', 'subject_id');
+            
+            // Get all local subjects and filter out existing ones
+            $localSubjects = Subject::all()->filter(function ($subject) use ($existingCloudIds) {
+                return !in_array($subject->subject_id, $existingCloudIds);
+            });
+            
+            if ($localSubjects->isEmpty()) {
+                Log::info('No new subjects to sync to cloud');
+                return $synced;
+            }
+            
             $payload = $localSubjects->map(function ($s) {
                 return [
                     'subject_id' => $s->subject_id,
@@ -553,6 +664,7 @@ class CloudSyncService
             if ($resp['success'] && $upserted > 0) {
                 // Only return synced IDs if records were actually upserted
                 $synced = $localSubjects->pluck('subject_id')->all();
+                Log::info('Synced ' . count($synced) . ' new subjects to cloud');
             } elseif ($resp['success'] && $upserted == 0) {
                 Log::warning("Subjects sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
             }
@@ -571,7 +683,19 @@ class CloudSyncService
         $synced = [];
         
         try {
-            $localUsers = User::all();
+            // Get existing user IDs from cloud
+            $existingCloudIds = $this->getExistingCloudIds('users', 'user_id');
+            
+            // Get all local users and filter out existing ones
+            $localUsers = User::all()->filter(function ($user) use ($existingCloudIds) {
+                return !in_array($user->user_id, $existingCloudIds);
+            });
+            
+            if ($localUsers->isEmpty()) {
+                Log::info('No new users to sync to cloud');
+                return $synced;
+            }
+            
             $payload = $localUsers->map(function ($u) {
                 return [
                     'user_id' => $u->user_id,
@@ -592,6 +716,7 @@ class CloudSyncService
             if ($resp['success'] && $upserted > 0) {
                 // Only return synced IDs if records were actually upserted
                 $synced = $localUsers->pluck('user_id')->all();
+                Log::info('Synced ' . count($synced) . ' new users to cloud');
             } elseif ($resp['success'] && $upserted == 0) {
                 Log::warning("Users sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
             }
@@ -640,7 +765,19 @@ class CloudSyncService
         $synced = [];
         
         try {
-            $localArchives = TeachingLoadArchive::all();
+            // Get existing teaching load archive IDs from cloud
+            $existingCloudIds = $this->getExistingCloudIds('teaching-load-archives', 'archive_id');
+            
+            // Get all local teaching load archives and filter out existing ones
+            $localArchives = TeachingLoadArchive::all()->filter(function ($archive) use ($existingCloudIds) {
+                return !in_array($archive->archive_id, $existingCloudIds);
+            });
+            
+            if ($localArchives->isEmpty()) {
+                Log::info('No new teaching load archives to sync to cloud');
+                return $synced;
+            }
+            
             $payload = $localArchives->map(function ($a) {
                 return [
                     'archive_id' => $a->archive_id,
@@ -667,6 +804,7 @@ class CloudSyncService
             if ($resp['success'] && $upserted > 0) {
                 // Only return synced IDs if records were actually upserted
                 $synced = $localArchives->pluck('archive_id')->all();
+                Log::info('Synced ' . count($synced) . ' new teaching load archives to cloud');
             } elseif ($resp['success'] && $upserted == 0) {
                 Log::warning("Teaching load archives sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
             }
@@ -685,7 +823,19 @@ class CloudSyncService
         $synced = [];
         
         try {
-            $localArchives = AttendanceRecordArchive::all();
+            // Get existing attendance record archive IDs from cloud
+            $existingCloudIds = $this->getExistingCloudIds('attendance-record-archives', 'archive_id');
+            
+            // Get all local attendance record archives and filter out existing ones
+            $localArchives = AttendanceRecordArchive::all()->filter(function ($archive) use ($existingCloudIds) {
+                return !in_array($archive->archive_id, $existingCloudIds);
+            });
+            
+            if ($localArchives->isEmpty()) {
+                Log::info('No new attendance record archives to sync to cloud');
+                return $synced;
+            }
+            
             $payload = $localArchives->map(function ($a) {
                 return [
                     'archive_id' => $a->archive_id,
@@ -715,6 +865,7 @@ class CloudSyncService
             if ($resp['success'] && $upserted > 0) {
                 // Only return synced IDs if records were actually upserted
                 $synced = $localArchives->pluck('archive_id')->all();
+                Log::info('Synced ' . count($synced) . ' new attendance record archives to cloud');
             } elseif ($resp['success'] && $upserted == 0) {
                 Log::warning("Attendance record archives sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
             }
@@ -1173,6 +1324,49 @@ class CloudSyncService
     }
     
     /**
+     * Get existing IDs from cloud (for filtering local-to-cloud sync)
+     * @param string $endpoint API endpoint
+     * @param string $idKey The key name for the ID field (e.g., 'user_id', 'room_no')
+     * @param array $params Additional query parameters
+     * @return array Array of existing IDs
+     */
+    protected function getExistingCloudIds(string $endpoint, string $idKey, array $params = [])
+    {
+        try {
+            $cloudData = $this->fetchBulkFromCloud($endpoint, $params);
+            $existingIds = [];
+            
+            foreach ($cloudData as $record) {
+                if (isset($record[$idKey])) {
+                    $existingIds[] = $record[$idKey];
+                }
+            }
+            
+            return $existingIds;
+        } catch (\Exception $e) {
+            Log::error("Error getting existing cloud IDs for {$endpoint}: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Get existing IDs from local database (for filtering cloud-to-local sync)
+     * @param string $table Table name
+     * @param string $idKey The key name for the ID field (e.g., 'user_id', 'room_no')
+     * @return array Array of existing IDs
+     */
+    protected function getExistingLocalIds(string $table, string $idKey)
+    {
+        try {
+            $existingIds = DB::table($table)->pluck($idKey)->toArray();
+            return $existingIds;
+        } catch (\Exception $e) {
+            Log::error("Error getting existing local IDs for {$table}: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
      * Sync users from cloud to local
      */
     protected function syncUsersFromCloud()
@@ -1180,6 +1374,9 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // Get existing user IDs from local database
+            $existingLocalIds = $this->getExistingLocalIds('tbl_user', 'user_id');
+            
             $cloudUsers = $this->fetchBulkFromCloud('users');
             
             if (empty($cloudUsers)) {
@@ -1187,7 +1384,17 @@ class CloudSyncService
                 return $synced;
             }
             
-            foreach ($cloudUsers as $cloudUser) {
+            // Filter out users that already exist locally
+            $newUsers = array_filter($cloudUsers, function ($cloudUser) use ($existingLocalIds) {
+                return !in_array($cloudUser['user_id'] ?? null, $existingLocalIds);
+            });
+            
+            if (empty($newUsers)) {
+                Log::info('No new users to sync from cloud to local');
+                return $synced;
+            }
+            
+            foreach ($newUsers as $cloudUser) {
                 try {
                     DB::table('tbl_user')->upsert([
                         [
@@ -1209,7 +1416,7 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " users from cloud to local");
+            Log::info("Synced " . count($synced) . " new users from cloud to local");
         } catch (\Exception $e) {
             Log::error("Error syncing users from cloud: " . $e->getMessage());
         }
@@ -1225,13 +1432,26 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // Get existing subject IDs from local database
+            $existingLocalIds = $this->getExistingLocalIds('tbl_subject', 'subject_id');
+            
             $cloudSubjects = $this->fetchBulkFromCloud('subjects');
             
             if (empty($cloudSubjects)) {
                 return $synced;
             }
             
-            foreach ($cloudSubjects as $cloudSubject) {
+            // Filter out subjects that already exist locally
+            $newSubjects = array_filter($cloudSubjects, function ($cloudSubject) use ($existingLocalIds) {
+                return !in_array($cloudSubject['subject_id'] ?? null, $existingLocalIds);
+            });
+            
+            if (empty($newSubjects)) {
+                Log::info('No new subjects to sync from cloud to local');
+                return $synced;
+            }
+            
+            foreach ($newSubjects as $cloudSubject) {
                 try {
                     DB::table('tbl_subject')->upsert([
                         [
@@ -1250,7 +1470,7 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " subjects from cloud to local");
+            Log::info("Synced " . count($synced) . " new subjects from cloud to local");
         } catch (\Exception $e) {
             Log::error("Error syncing subjects from cloud: " . $e->getMessage());
         }
@@ -1266,13 +1486,26 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // Get existing room IDs from local database
+            $existingLocalIds = $this->getExistingLocalIds('tbl_room', 'room_no');
+            
             $cloudRooms = $this->fetchBulkFromCloud('rooms');
             
             if (empty($cloudRooms)) {
                 return $synced;
             }
             
-            foreach ($cloudRooms as $cloudRoom) {
+            // Filter out rooms that already exist locally
+            $newRooms = array_filter($cloudRooms, function ($cloudRoom) use ($existingLocalIds) {
+                return !in_array($cloudRoom['room_no'] ?? null, $existingLocalIds);
+            });
+            
+            if (empty($newRooms)) {
+                Log::info('No new rooms to sync from cloud to local');
+                return $synced;
+            }
+            
+            foreach ($newRooms as $cloudRoom) {
                 try {
                     DB::table('tbl_room')->upsert([
                         [
@@ -1288,7 +1521,7 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " rooms from cloud to local");
+            Log::info("Synced " . count($synced) . " new rooms from cloud to local");
         } catch (\Exception $e) {
             Log::error("Error syncing rooms from cloud: " . $e->getMessage());
         }
@@ -1304,13 +1537,26 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // Get existing camera IDs from local database
+            $existingLocalIds = $this->getExistingLocalIds('tbl_camera', 'camera_id');
+            
             $cloudCameras = $this->fetchBulkFromCloud('cameras');
             
             if (empty($cloudCameras)) {
                 return $synced;
             }
             
-            foreach ($cloudCameras as $cloudCamera) {
+            // Filter out cameras that already exist locally
+            $newCameras = array_filter($cloudCameras, function ($cloudCamera) use ($existingLocalIds) {
+                return !in_array($cloudCamera['camera_id'] ?? null, $existingLocalIds);
+            });
+            
+            if (empty($newCameras)) {
+                Log::info('No new cameras to sync from cloud to local');
+                return $synced;
+            }
+            
+            foreach ($newCameras as $cloudCamera) {
                 try {
                     DB::table('tbl_camera')->upsert([
                         [
@@ -1330,7 +1576,7 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " cameras from cloud to local");
+            Log::info("Synced " . count($synced) . " new cameras from cloud to local");
         } catch (\Exception $e) {
             Log::error("Error syncing cameras from cloud: " . $e->getMessage());
         }
@@ -1346,13 +1592,26 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // Get existing faculty IDs from local database
+            $existingLocalIds = $this->getExistingLocalIds('tbl_faculty', 'faculty_id');
+            
             $cloudFaculties = $this->fetchBulkFromCloud('faculties');
             
             if (empty($cloudFaculties)) {
                 return $synced;
             }
             
-            foreach ($cloudFaculties as $cloudFaculty) {
+            // Filter out faculties that already exist locally
+            $newFaculties = array_filter($cloudFaculties, function ($cloudFaculty) use ($existingLocalIds) {
+                return !in_array($cloudFaculty['faculty_id'] ?? null, $existingLocalIds);
+            });
+            
+            if (empty($newFaculties)) {
+                Log::info('No new faculties to sync from cloud to local');
+                return $synced;
+            }
+            
+            foreach ($newFaculties as $cloudFaculty) {
                 try {
                     // Download faculty images from cloud
                     $localImages = $this->downloadFacultyImages($cloudFaculty['faculty_images'] ?? null);
@@ -1376,7 +1635,7 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " faculties from cloud to local");
+            Log::info("Synced " . count($synced) . " new faculties from cloud to local");
         } catch (\Exception $e) {
             Log::error("Error syncing faculties from cloud: " . $e->getMessage());
         }
@@ -1392,13 +1651,26 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // Get existing teaching load IDs from local database
+            $existingLocalIds = $this->getExistingLocalIds('tbl_teaching_load', 'teaching_load_id');
+            
             $cloudLoads = $this->fetchBulkFromCloud('teaching-loads');
             
             if (empty($cloudLoads)) {
                 return $synced;
             }
             
-            foreach ($cloudLoads as $cloudLoad) {
+            // Filter out teaching loads that already exist locally
+            $newLoads = array_filter($cloudLoads, function ($cloudLoad) use ($existingLocalIds) {
+                return !in_array($cloudLoad['teaching_load_id'] ?? null, $existingLocalIds);
+            });
+            
+            if (empty($newLoads)) {
+                Log::info('No new teaching loads to sync from cloud to local');
+                return $synced;
+            }
+            
+            foreach ($newLoads as $cloudLoad) {
                 try {
                     DB::table('tbl_teaching_load')->upsert([
                         [
@@ -1422,7 +1694,7 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " teaching loads from cloud to local");
+            Log::info("Synced " . count($synced) . " new teaching loads from cloud to local");
         } catch (\Exception $e) {
             Log::error("Error syncing teaching loads from cloud: " . $e->getMessage());
         }
@@ -1438,13 +1710,26 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // Get existing attendance record IDs from local database
+            $existingLocalIds = $this->getExistingLocalIds('tbl_attendance_record', 'record_id');
+            
             $cloudRecords = $this->fetchBulkFromCloud('attendance-records', ['days' => 30]);
             
             if (empty($cloudRecords)) {
                 return $synced;
             }
             
-            foreach ($cloudRecords as $cloudRecord) {
+            // Filter out attendance records that already exist locally
+            $newRecords = array_filter($cloudRecords, function ($cloudRecord) use ($existingLocalIds) {
+                return !in_array($cloudRecord['record_id'] ?? null, $existingLocalIds);
+            });
+            
+            if (empty($newRecords)) {
+                Log::info('No new attendance records to sync from cloud to local');
+                return $synced;
+            }
+            
+            foreach ($newRecords as $cloudRecord) {
                 try {
                     DB::table('tbl_attendance_record')->upsert([
                         [
@@ -1467,7 +1752,7 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " attendance records from cloud to local");
+            Log::info("Synced " . count($synced) . " new attendance records from cloud to local");
         } catch (\Exception $e) {
             Log::error("Error syncing attendance records from cloud: " . $e->getMessage());
         }
@@ -1483,6 +1768,12 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // Get existing leave IDs from local database (filter by lp_type = 'Leave')
+            $existingLocalIds = DB::table('tbl_leave_pass')
+                ->where('lp_type', 'Leave')
+                ->pluck('lp_id')
+                ->toArray();
+            
             $cloudLeaves = $this->fetchBulkFromCloud('leaves', ['days' => 90]);
             
             Log::info("Fetched " . count($cloudLeaves) . " leaves from cloud");
@@ -1492,7 +1783,17 @@ class CloudSyncService
                 return $synced;
             }
             
-            foreach ($cloudLeaves as $cloudLeave) {
+            // Filter out leaves that already exist locally
+            $newLeaves = array_filter($cloudLeaves, function ($cloudLeave) use ($existingLocalIds) {
+                return !in_array($cloudLeave['lp_id'] ?? null, $existingLocalIds);
+            });
+            
+            if (empty($newLeaves)) {
+                Log::info('No new leaves to sync from cloud to local');
+                return $synced;
+            }
+            
+            foreach ($newLeaves as $cloudLeave) {
                 try {
                     // Download leave slip image from cloud
                     $localImagePath = $this->downloadLeaveImage($cloudLeave['lp_image'] ?? null);
@@ -1579,6 +1880,12 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // Get existing pass IDs from local database (filter by lp_type = 'Pass')
+            $existingLocalIds = DB::table('tbl_leave_pass')
+                ->where('lp_type', 'Pass')
+                ->pluck('lp_id')
+                ->toArray();
+            
             $cloudPasses = $this->fetchBulkFromCloud('passes', ['days' => 90]);
             
             Log::info("Fetched " . count($cloudPasses) . " passes from cloud");
@@ -1588,7 +1895,17 @@ class CloudSyncService
                 return $synced;
             }
             
-            foreach ($cloudPasses as $cloudPass) {
+            // Filter out passes that already exist locally
+            $newPasses = array_filter($cloudPasses, function ($cloudPass) use ($existingLocalIds) {
+                return !in_array($cloudPass['lp_id'] ?? null, $existingLocalIds);
+            });
+            
+            if (empty($newPasses)) {
+                Log::info('No new passes to sync from cloud to local');
+                return $synced;
+            }
+            
+            foreach ($newPasses as $cloudPass) {
                 try {
                     // Download pass slip image from cloud
                     $localImagePath = $this->downloadPassImage($cloudPass['lp_image'] ?? null);
@@ -1711,13 +2028,26 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // Get existing stream recording IDs from local database
+            $existingLocalIds = $this->getExistingLocalIds('tbl_stream_recordings', 'recording_id');
+            
             $cloudRecordings = $this->fetchBulkFromCloud('stream-recordings', ['days' => 7]);
             
             if (empty($cloudRecordings)) {
                 return $synced;
             }
             
-            foreach ($cloudRecordings as $cloudRecording) {
+            // Filter out stream recordings that already exist locally
+            $newRecordings = array_filter($cloudRecordings, function ($cloudRecording) use ($existingLocalIds) {
+                return !in_array($cloudRecording['recording_id'] ?? null, $existingLocalIds);
+            });
+            
+            if (empty($newRecordings)) {
+                Log::info('No new stream recordings to sync from cloud to local');
+                return $synced;
+            }
+            
+            foreach ($newRecordings as $cloudRecording) {
                 try {
                     // Download video file from cloud (use filepath or filename)
                     $cloudVideoPath = $cloudRecording['filepath'] ?? $cloudRecording['filename'] ?? null;
@@ -1807,13 +2137,26 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // Get existing teaching load archive IDs from local database
+            $existingLocalIds = $this->getExistingLocalIds('tbl_teaching_load_archive', 'archive_id');
+            
             $cloudArchives = $this->fetchBulkFromCloud('teaching-load-archives');
             
             if (empty($cloudArchives)) {
                 return $synced;
             }
             
-            foreach ($cloudArchives as $cloudArchive) {
+            // Filter out teaching load archives that already exist locally
+            $newArchives = array_filter($cloudArchives, function ($cloudArchive) use ($existingLocalIds) {
+                return !in_array($cloudArchive['archive_id'] ?? null, $existingLocalIds);
+            });
+            
+            if (empty($newArchives)) {
+                Log::info('No new teaching load archives to sync from cloud to local');
+                return $synced;
+            }
+            
+            foreach ($newArchives as $cloudArchive) {
                 try {
                     DB::table('tbl_teaching_load_archive')->upsert([
                         [
@@ -1857,13 +2200,26 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // Get existing attendance record archive IDs from local database
+            $existingLocalIds = $this->getExistingLocalIds('tbl_attendance_record_archive', 'archive_id');
+            
             $cloudArchives = $this->fetchBulkFromCloud('attendance-record-archives');
             
             if (empty($cloudArchives)) {
                 return $synced;
             }
             
-            foreach ($cloudArchives as $cloudArchive) {
+            // Filter out attendance record archives that already exist locally
+            $newArchives = array_filter($cloudArchives, function ($cloudArchive) use ($existingLocalIds) {
+                return !in_array($cloudArchive['archive_id'] ?? null, $existingLocalIds);
+            });
+            
+            if (empty($newArchives)) {
+                Log::info('No new attendance record archives to sync from cloud to local');
+                return $synced;
+            }
+            
+            foreach ($newArchives as $cloudArchive) {
                 try {
                     DB::table('tbl_attendance_record_archive')->upsert([
                         [
