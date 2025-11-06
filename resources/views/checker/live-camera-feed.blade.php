@@ -518,6 +518,9 @@
     // Track last known recording IDs to detect new recordings
     let lastKnownRecordingIds = new Set(recordings.map(r => r.recording_id));
     
+    // Track current schedule for each camera to detect schedule changes
+    const currentScheduleByCamera = {};
+    
     // Group recordings by camera_id
     const recordingsByCamera = {};
     const recordingsById = {};
@@ -616,19 +619,33 @@
             }
             
             // Parse start_time - datetime type from database
+            // IMPORTANT: Python service stores time as "YYYY-MM-DD HH:MM:SS" in Asia/Manila timezone
+            // Laravel serializes it as ISO 8601 UTC (with 'Z'), but the original value is Asia/Manila
             let recordingDate;
             if (typeof recording.start_time === 'string') {
                 // Check if it's ISO format (contains 'T')
                 if (recording.start_time.includes('T')) {
-                    // ISO 8601 format (e.g., 2025-11-05T10:33:37.000000Z or 2025-11-05T10:33:37+08:00)
-                    recordingDate = new Date(recording.start_time);
+                    // ISO 8601 format (e.g., 2025-11-06T15:08:00.000000Z)
+                    // Problem: Python stores "2025-11-06 15:08:00" as Asia/Manila time
+                    // Laravel serializes it as "2025-11-06T15:08:00Z" (treating as UTC)
+                    // JavaScript then converts UTC to local timezone, causing date shifts
+                    // Solution: Extract UTC components and treat them as Asia/Manila time directly
+                    const utcDate = new Date(recording.start_time);
+                    
+                    // Get UTC time components (these represent the original Asia/Manila time)
+                    const utcYear = utcDate.getUTCFullYear();
+                    const utcMonth = utcDate.getUTCMonth();
+                    const utcDay = utcDate.getUTCDate();
+                    
+                    // Create a date object using UTC components but interpret as local (Asia/Manila)
+                    // This effectively treats the UTC time as if it were already in Asia/Manila
+                    recordingDate = new Date(utcYear, utcMonth, utcDay);
                 } else if (recording.start_time.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)) {
-                    // MySQL format (e.g., 2025-11-05 10:33:37) - treat as Asia/Manila timezone
+                    // MySQL format (e.g., 2025-11-05 10:33:37) - already in Asia/Manila timezone
                     const [datePart, timePart] = recording.start_time.split(' ');
                     const [year, month, day] = datePart.split('-').map(Number);
-                    const [hour, minute, second] = timePart.split(':').map(Number);
-                    // Create date treating the time as Asia/Manila timezone
-                    recordingDate = new Date(year, month - 1, day, hour, minute, second || 0);
+                    // Create date treating the time as Asia/Manila timezone (local time)
+                    recordingDate = new Date(year, month - 1, day);
                 } else {
                     recordingDate = new Date(recording.start_time);
                 }
@@ -636,8 +653,9 @@
                 recordingDate = new Date(recording.start_time);
             }
             
-            // Convert to Asia/Manila timezone for comparison (proper method)
-            const recordingDateStr = recordingDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+            // Extract date directly from the date components (treating as Asia/Manila)
+            // Since we've already adjusted for timezone, we can use local date methods
+            const recordingDateStr = `${recordingDate.getFullYear()}-${String(recordingDate.getMonth() + 1).padStart(2, '0')}-${String(recordingDate.getDate()).padStart(2, '0')}`;
             
             // Match recordings from today's date
             const matches = recordingDateStr === todayDateStr;
@@ -660,11 +678,22 @@
                 if (!recording.start_time) return false;
                 
                 // Parse start_time to get the day of week
+                // IMPORTANT: Use same UTC component extraction as date comparison
                 let recordingDate;
                 if (typeof recording.start_time === 'string') {
                     if (recording.start_time.includes('T')) {
-                        recordingDate = new Date(recording.start_time);
+                        // ISO format - extract UTC components and treat as Asia/Manila
+                        const utcDate = new Date(recording.start_time);
+                        const utcYear = utcDate.getUTCFullYear();
+                        const utcMonth = utcDate.getUTCMonth();
+                        const utcDay = utcDate.getUTCDate();
+                        const utcHours = utcDate.getUTCHours();
+                        const utcMinutes = utcDate.getUTCMinutes();
+                        const utcSeconds = utcDate.getUTCSeconds();
+                        // Create date using UTC components but interpret as local (Asia/Manila)
+                        recordingDate = new Date(utcYear, utcMonth, utcDay, utcHours, utcMinutes, utcSeconds || 0);
                     } else if (recording.start_time.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)) {
+                        // MySQL format - already in Asia/Manila timezone
                         const [datePart, timePart] = recording.start_time.split(' ');
                         const [year, month, day] = datePart.split('-').map(Number);
                         const [hour, minute, second] = timePart.split(':').map(Number);
@@ -676,8 +705,8 @@
                     recordingDate = new Date(recording.start_time);
                 }
                 
-                // Get recording's day of week in Asia/Manila timezone
-                const recordingDayOfWeek = recordingDate.toLocaleString('en-US', { weekday: 'long', timeZone: 'Asia/Manila' });
+                // Get recording's day of week using local date methods (already adjusted for timezone)
+                const recordingDayOfWeek = recordingDate.toLocaleString('en-US', { weekday: 'long' });
                 
                 // Match day of week with teaching load's day of week
                 const dayMatches = recordingDayOfWeek === currentLoad.teaching_load_day_of_week;
@@ -1105,11 +1134,65 @@
         }
     }
 
+    // Check for schedule changes and reload recordings if schedule changed
+    function checkScheduleChanges() {
+        let scheduleChanged = false;
+        
+        cameras.forEach(cam => {
+            const currentLoad = getCurrentLoadForRoom(cam.room_no);
+            const currentScheduleId = currentLoad ? currentLoad.teaching_load_id : null;
+            const previousScheduleId = currentScheduleByCamera[cam.camera_id];
+            
+            // Check if schedule changed
+            if (currentScheduleId !== previousScheduleId) {
+                console.log(`[checkScheduleChanges] Schedule changed for camera ${cam.camera_id}: ${previousScheduleId} -> ${currentScheduleId}`);
+                currentScheduleByCamera[cam.camera_id] = currentScheduleId;
+                scheduleChanged = true;
+                
+                // Reload recordings for this camera (don't preserve playback when schedule changes)
+                loadCameraRecordings(cam.camera_id, false);
+            }
+        });
+        
+        // If detail view is open, check its schedule too
+        if (currentDetailCameraId) {
+            const camera = cameras.find(cam => cam.camera_id == currentDetailCameraId);
+            if (camera) {
+                const currentLoad = getCurrentLoadForRoom(camera.room_no);
+                const currentScheduleId = currentLoad ? currentLoad.teaching_load_id : null;
+                const previousScheduleId = currentScheduleByCamera[`detail-${currentDetailCameraId}`];
+                
+                if (currentScheduleId !== previousScheduleId) {
+                    console.log(`[checkScheduleChanges] Schedule changed for detail view camera ${currentDetailCameraId}: ${previousScheduleId} -> ${currentScheduleId}`);
+                    currentScheduleByCamera[`detail-${currentDetailCameraId}`] = currentScheduleId;
+                    scheduleChanged = true;
+                    
+                    // Reload recordings for detail view (don't preserve playback when schedule changes)
+                    loadDetailRecordings(currentDetailCameraId, false);
+                    updateSchedulePanel(camera);
+                }
+            }
+        }
+        
+        return scheduleChanged;
+    }
+
     window.addEventListener("DOMContentLoaded", () => {
+        // Initialize current schedule tracking for all cameras
+        cameras.forEach(cam => {
+            const currentLoad = getCurrentLoadForRoom(cam.room_no);
+            currentScheduleByCamera[cam.camera_id] = currentLoad ? currentLoad.teaching_load_id : null;
+        });
+        
         // Load recordings for all cameras in grid view
         cameras.forEach(cam => {
             loadCameraRecordings(cam.camera_id);
         });
+        
+        // Check for schedule changes every 5 seconds (more frequent than 30s to catch transitions)
+        setInterval(() => {
+            checkScheduleChanges();
+        }, 5000);
         
         // Reload recordings periodically to update with current schedule (preserve playback)
         setInterval(() => {
@@ -1294,13 +1377,29 @@
         document.getElementById('main-camera-label').style.display = 'block';
         document.getElementById('lab-building').textContent = `ROOM: ${camera.room_name} / BUILDING: ${camera.room_building_no}`;
 
+        // Initialize schedule tracking for detail view
+        const currentLoad = getCurrentLoadForRoom(camera.room_no);
+        currentScheduleByCamera[`detail-${cameraId}`] = currentLoad ? currentLoad.teaching_load_id : null;
+
         // initial populate and periodic refresh
         updateSchedulePanel(camera);
         if (scheduleIntervalId) clearInterval(scheduleIntervalId);
         scheduleIntervalId = setInterval(() => {
             updateSchedulePanel(camera);
-            // Reload recordings when schedule updates (in case time range changes) - preserve playback
-            loadDetailRecordings(cameraId, true); // preservePlayback = true
+            // Check for schedule changes and reload if needed
+            const currentLoad = getCurrentLoadForRoom(camera.room_no);
+            const currentScheduleId = currentLoad ? currentLoad.teaching_load_id : null;
+            const previousScheduleId = currentScheduleByCamera[`detail-${cameraId}`];
+            
+            if (currentScheduleId !== previousScheduleId) {
+                console.log(`[showCameraDetail] Schedule changed: ${previousScheduleId} -> ${currentScheduleId}`);
+                currentScheduleByCamera[`detail-${cameraId}`] = currentScheduleId;
+                // Reload recordings when schedule changes (don't preserve playback)
+                loadDetailRecordings(cameraId, false);
+            } else {
+                // Reload recordings when schedule updates (in case time range changes) - preserve playback
+                loadDetailRecordings(cameraId, true); // preservePlayback = true
+            }
         }, scheduleRefreshMs);
 
         // Load recordings for detail view
