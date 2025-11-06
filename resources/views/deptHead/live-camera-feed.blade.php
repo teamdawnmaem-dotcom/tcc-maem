@@ -723,9 +723,9 @@
         }
         
         // Load recordings for a camera (grid view)
-        function loadCameraRecordings(cameraId) {
+        function loadCameraRecordings(cameraId, preservePlayback = false) {
             const cameraRecordings = recordingsByCamera[cameraId] || [];
-            console.log(`[loadCameraRecordings] Loading recordings for camera ${cameraId}, total: ${cameraRecordings.length}`);
+            console.log(`[loadCameraRecordings] Loading recordings for camera ${cameraId}, total: ${cameraRecordings.length}, preservePlayback: ${preservePlayback}`);
             
             // Filter recordings by current date and teaching load time
             const result = filterRecordingsBySchedule(cameraRecordings, cameraId);
@@ -765,15 +765,35 @@
             
             if (!video) return;
             
+            // Check if video is currently playing and we want to preserve playback
+            const isPlaying = !video.paused && !video.ended && video.currentTime > 0;
+            const currentSrc = video.src;
+            const currentIndex = preservePlayback && isPlaying ? parseInt(video.dataset.currentIndex) || 0 : 0;
+            
+            // If preserving playback and video is playing, only update playlist without interrupting
+            if (preservePlayback && isPlaying && currentSrc) {
+                // Check if current video is still in the new playlist
+                const currentSrcInPlaylist = playlist.indexOf(currentSrc);
+                if (currentSrcInPlaylist !== -1) {
+                    // Current video is still valid, just update playlist and counter
+                    video.dataset.playlist = JSON.stringify(playlist);
+                    video.dataset.currentIndex = currentSrcInPlaylist.toString();
+                    if (counter) counter.textContent = `${currentSrcInPlaylist + 1} / ${playlist.length}`;
+                    console.log(`[loadCameraRecordings] Preserved playback for camera ${cameraId}, updated playlist`);
+                    return;
+                }
+            }
+            
+            // Normal load: set new playlist and start from beginning (or preserved index)
             video.dataset.playlist = JSON.stringify(playlist);
-            video.dataset.currentIndex = '0';
-            video.src = playlist[0];
+            video.dataset.currentIndex = currentIndex.toString();
+            video.src = playlist[currentIndex];
             video.load();
             
             if (noFeed) noFeed.style.display = 'none';
             video.style.display = 'block';
             if (info) info.style.display = 'block';
-            if (counter) counter.textContent = `1 / ${playlist.length}`;
+            if (counter) counter.textContent = `${currentIndex + 1} / ${playlist.length}`;
             
             video.muted = true;
             const playPromise = video.play();
@@ -827,7 +847,7 @@
         }
         
         // Load recordings for detail view
-        function loadDetailRecordings(cameraId) {
+        function loadDetailRecordings(cameraId, preservePlayback = false) {
             const cameraRecordings = recordingsByCamera[cameraId] || [];
             
             // Filter recordings by current date and teaching load time
@@ -836,8 +856,7 @@
             const hasActiveSchedule = result.hasActiveSchedule;
             
             currentDetailCameraId = cameraId;
-            currentDetailPlaylist = filteredRecordings.map(r => buildVideoUrl(r)).filter(url => url);
-            currentDetailIndex = 0;
+            const newPlaylist = filteredRecordings.map(r => buildVideoUrl(r)).filter(url => url);
             
             const video = document.getElementById('recording-player-detail');
             const noFeed = document.getElementById('no-recording-message-detail');
@@ -854,7 +873,7 @@
                 return;
             }
             
-            if (currentDetailPlaylist.length === 0) {
+            if (newPlaylist.length === 0) {
                 if (video) video.style.display = 'none';
                 if (noFeed) {
                     noFeed.style.display = 'flex';
@@ -866,13 +885,36 @@
             
             if (!video) return;
             
-            video.src = currentDetailPlaylist[0];
+            // Check if video is currently playing and we want to preserve playback
+            const isPlaying = !video.paused && !video.ended && video.currentTime > 0;
+            const currentSrc = video.src;
+            
+            // If preserving playback and video is playing, only update playlist without interrupting
+            if (preservePlayback && isPlaying && currentSrc && currentDetailPlaylist.length > 0) {
+                // Check if current video is still in the new playlist
+                const currentSrcInPlaylist = newPlaylist.indexOf(currentSrc);
+                if (currentSrcInPlaylist !== -1) {
+                    // Current video is still valid, just update playlist and counter
+                    currentDetailPlaylist = newPlaylist;
+                    currentDetailIndex = currentSrcInPlaylist;
+                    if (counter) counter.textContent = `${currentSrcInPlaylist + 1} / ${currentDetailPlaylist.length}`;
+                    console.log(`[loadDetailRecordings] Preserved playback, updated playlist`);
+                    return;
+                }
+            }
+            
+            // Normal load: set new playlist and start from beginning (or preserved index)
+            currentDetailPlaylist = newPlaylist;
+            currentDetailIndex = preservePlayback && isPlaying && currentSrc ? 
+                Math.max(0, Math.min(currentDetailIndex, newPlaylist.length - 1)) : 0;
+            
+            video.src = currentDetailPlaylist[currentDetailIndex];
             video.load();
             
             if (noFeed) noFeed.style.display = 'none';
             video.style.display = 'block';
             if (info) info.style.display = 'block';
-            if (counter) counter.textContent = `1 / ${currentDetailPlaylist.length}`;
+            if (counter) counter.textContent = `${currentDetailIndex + 1} / ${currentDetailPlaylist.length}`;
             
             video.muted = false; // Audio ON for detail view
             const playPromise = video.play();
@@ -994,14 +1036,14 @@
                     // Update last known IDs
                     lastKnownRecordingIds = currentRecordingIds;
                     
-                    // Reload recordings for all cameras in grid view
+                    // Reload recordings for all cameras in grid view (preserve playback if playing)
                     cameras.forEach(cam => {
-                        loadCameraRecordings(cam.camera_id);
+                        loadCameraRecordings(cam.camera_id, true); // preservePlayback = true
                     });
                     
-                    // If detail view is open, reload its recordings too
+                    // If detail view is open, reload its recordings too (preserve playback if playing)
                     if (currentDetailCameraId) {
-                        loadDetailRecordings(currentDetailCameraId);
+                        loadDetailRecordings(currentDetailCameraId, true); // preservePlayback = true
                     }
                     
                     return true;
@@ -1020,10 +1062,10 @@
                 loadCameraRecordings(cam.camera_id);
             });
             
-            // Reload recordings periodically to update with current schedule
+            // Reload recordings periodically to update with current schedule (preserve playback)
             setInterval(() => {
                 cameras.forEach(cam => {
-                    loadCameraRecordings(cam.camera_id);
+                    loadCameraRecordings(cam.camera_id, true); // preservePlayback = true
                 });
             }, scheduleRefreshMs);
             
@@ -1221,8 +1263,8 @@
             if (scheduleIntervalId) clearInterval(scheduleIntervalId);
             scheduleIntervalId = setInterval(() => {
                 updateSchedulePanel(camera);
-                // Reload recordings when schedule updates (in case time range changes)
-                loadDetailRecordings(cameraId);
+                // Reload recordings when schedule updates (in case time range changes) - preserve playback
+                loadDetailRecordings(cameraId, true); // preservePlayback = true
             }, scheduleRefreshMs);
 
             // Load recordings for detail view
