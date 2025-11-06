@@ -82,6 +82,7 @@ _background_threads = {}
 _late_tracking = {}  # Track late status for each schedule
 _processing_queue = {}  # Queue for async processing
 _recognition_tracking = {}  # Track first and last recognition times for each faculty/schedule
+_snapshot_storage_path = os.getenv("SNAPSHOT_STORAGE_PATH", "../storage/app/public/attendance_snapshots")
 _active_connections = {}  # Track active WebRTC connections per camera
 _shared_captures = {}  # Shared video captures per camera
 _shared_frames = {}  # Latest frames per camera for sharing
@@ -326,8 +327,35 @@ def check_late_threshold():
 # -------------------
 # Recognition time tracking
 # -------------------
-def track_recognition_time(camera_id: int, faculty_id: int, teaching_load_id: int):
-    """Track first and last recognition times for faculty."""
+def save_snapshot(frame, camera_id: int, faculty_id: int, teaching_load_id: int, snapshot_type: str):
+    """Save a snapshot image when faculty is first recognized (time_in) or last seen (time_out)."""
+    try:
+        import pytz
+        from datetime import datetime as dt
+        
+        # Create snapshot storage directory if it doesn't exist
+        os.makedirs(_snapshot_storage_path, exist_ok=True)
+        
+        # Generate filename with timestamp
+        tz = pytz.timezone("Asia/Manila")
+        now = dt.now(tz)
+        timestamp = now.strftime("%Y%m%d_%H%M%S")
+        filename = f"camera_{camera_id}_faculty_{faculty_id}_load_{teaching_load_id}_{snapshot_type}_{timestamp}.jpg"
+        filepath = os.path.join(_snapshot_storage_path, filename)
+        
+        # Save frame as JPEG
+        cv2.imwrite(filepath, frame)
+        
+        # Return relative path for database storage
+        relative_path = f"attendance_snapshots/{filename}"
+        print(f"DEBUG: Saved {snapshot_type} snapshot: {relative_path}")
+        return relative_path
+    except Exception as e:
+        print(f"ERROR: Failed to save snapshot: {e}")
+        return None
+
+def track_recognition_time(camera_id: int, faculty_id: int, teaching_load_id: int, frame=None):
+    """Track first and last recognition times for faculty and capture snapshots."""
     import pytz
     tz = pytz.timezone("Asia/Manila")
     now = datetime.datetime.now(tz)
@@ -343,23 +371,37 @@ def track_recognition_time(camera_id: int, faculty_id: int, teaching_load_id: in
             "time_out": None,
             "last_seen": 0,
             "total_duration": 0,
-            "first_recognition_time": None
+            "first_recognition_time": None,
+            "time_in_snapshot": None,
+            "time_out_snapshot": None
         }
         print(f"DEBUG: Initialized tracking for key {key}")
     
     tracking = _recognition_tracking[key]
     
-    # If this is the first actual recognition (time_in is None), set it
+    # If this is the first actual recognition (time_in is None), set it and capture snapshot
     if tracking["time_in"] is None:
         tracking["time_in"] = now_str
         tracking["first_recognition_time"] = now_str
         print(f"DEBUG: Set first recognition time: {now_str}")
+        
+        # Capture time_in snapshot if frame is available
+        if frame is not None:
+            snapshot_path = save_snapshot(frame, camera_id, faculty_id, teaching_load_id, "time_in")
+            if snapshot_path:
+                tracking["time_in_snapshot"] = snapshot_path
     else:
         print(f"DEBUG: Updating time_out from {tracking['time_out']} to {now_str}")
     
-    # Always update time_out and duration
+    # Always update time_out and duration, and capture snapshot for last seen
     tracking["time_out"] = now_str
     tracking["last_seen"] = now.timestamp()
+    
+    # Capture time_out snapshot if frame is available (always update on each recognition)
+    if frame is not None:
+        snapshot_path = save_snapshot(frame, camera_id, faculty_id, teaching_load_id, "time_out")
+        if snapshot_path:
+            tracking["time_out_snapshot"] = snapshot_path
     
     # Calculate total duration from first recognition
     if tracking["time_in"]:
@@ -375,7 +417,9 @@ def get_recognition_times(camera_id: int, faculty_id: int, teaching_load_id: int
     tracking_data = _recognition_tracking.get(key, {
         "time_in": None,
         "time_out": None,
-        "total_duration": 0
+        "total_duration": 0,
+        "time_in_snapshot": None,
+        "time_out_snapshot": None
     })
     
     print(f"DEBUG: get_recognition_times for key {key}: {tracking_data}")
@@ -402,8 +446,11 @@ def record_presence_tick(camera_id: int, detected_faculty_id: int):
     load_id = int(sched.get("teaching_load_id"))
     key = (room_no, load_id)
     
-    # Track recognition times (first and last seen)
-    track_recognition_time(camera_id, detected_faculty_id, load_id)
+    # Get current frame for snapshot capture
+    current_frame = get_shared_frame(camera_id)
+    
+    # Track recognition times (first and last seen) with frame for snapshot
+    track_recognition_time(camera_id, detected_faculty_id, load_id, frame=current_frame)
     
     acc = _presence_accumulator.get(key)
     # Use Asia/Manila timezone for timestamp
@@ -1815,7 +1862,9 @@ def get_attendance_time_fields(camera_id: int, faculty_id: int, teaching_load_id
         return {
             "record_time_in": recognition_times["time_in"],
             "record_time_out": recognition_times["time_out"] or "N/A",
-            "time_duration_seconds": recognition_times["total_duration"] or 0
+            "time_duration_seconds": recognition_times["total_duration"] or 0,
+            "time_in_snapshot": recognition_times.get("time_in_snapshot"),
+            "time_out_snapshot": recognition_times.get("time_out_snapshot")
         }
     else:
         # No actual recognition data available, use N/A
@@ -1823,7 +1872,9 @@ def get_attendance_time_fields(camera_id: int, faculty_id: int, teaching_load_id
         return {
             "record_time_in": "N/A",
             "record_time_out": "N/A", 
-            "time_duration_seconds": 0
+            "time_duration_seconds": 0,
+            "time_in_snapshot": None,
+            "time_out_snapshot": None
         }
 
 # -------------------

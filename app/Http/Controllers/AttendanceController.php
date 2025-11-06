@@ -50,6 +50,8 @@ class AttendanceController extends Controller
 			'time_duration_seconds' => 'nullable|integer|min:0',
 			'record_remarks'   => 'nullable|string',
 			'teaching_load_class_section' => 'required|string',
+			'time_in_snapshot' => 'nullable|string|max:500',
+			'time_out_snapshot' => 'nullable|string|max:500',
 		]);
 
 		// Handle N/A values for time fields
@@ -89,6 +91,8 @@ class AttendanceController extends Controller
 			'time_duration_seconds' => $timeDuration,
 			'record_status'    => $request->record_status,
 			'record_remarks'   => $request->input('record_remarks', ''),
+			'time_in_snapshot' => $request->input('time_in_snapshot'),
+			'time_out_snapshot' => $request->input('time_out_snapshot'),
 		]);
 
 		// Update remarks based on leave/pass slip records
@@ -117,6 +121,52 @@ class AttendanceController extends Controller
 		return response()->json([
 			'success' => true,
 			'data'    => ['exists' => $exists]
+		]);
+	}
+
+	/**
+	 * Get attendance record details with attachments (pass slip and leave slip)
+	 */
+	public function getRecordDetails($recordId)
+	{
+		$record = AttendanceRecord::with(['faculty', 'teachingLoad', 'camera.room'])
+			->findOrFail($recordId);
+
+		// Get pass slip if exists for the record date
+		$passSlip = \App\Models\Pass::where('faculty_id', $record->faculty_id)
+			->whereDate('pass_slip_date', \Carbon\Carbon::parse($record->record_date)->toDateString())
+			->first();
+
+		// Get leave slip if exists for the record date
+		$leaveSlip = \App\Models\Leave::where('faculty_id', $record->faculty_id)
+			->where(function($query) use ($record) {
+				$recordDate = \Carbon\Carbon::parse($record->record_date)->toDateString();
+				$query->whereDate('leave_start_date', '<=', $recordDate)
+					->whereDate('leave_end_date', '>=', $recordDate);
+			})
+			->first();
+
+		return response()->json([
+			'success' => true,
+			'data' => [
+				'record' => $record,
+				'pass_slip' => $passSlip ? [
+					'lp_id' => $passSlip->lp_id,
+					'pass_slip_date' => $passSlip->pass_slip_date,
+					'pass_slip_departure_time' => $passSlip->pass_slip_departure_time,
+					'pass_slip_arrival_time' => $passSlip->pass_slip_arrival_time,
+					'pass_slip_itinerary' => $passSlip->pass_slip_itinerary,
+					'lp_purpose' => $passSlip->lp_purpose,
+					'lp_image' => $passSlip->lp_image ? asset('storage/' . $passSlip->lp_image) : null,
+				] : null,
+				'leave_slip' => $leaveSlip ? [
+					'lp_id' => $leaveSlip->lp_id,
+					'leave_start_date' => $leaveSlip->leave_start_date,
+					'leave_end_date' => $leaveSlip->leave_end_date,
+					'lp_purpose' => $leaveSlip->lp_purpose,
+					'lp_image' => $leaveSlip->lp_image ? asset('storage/' . $leaveSlip->lp_image) : null,
+				] : null,
+			]
 		]);
 	}
 }

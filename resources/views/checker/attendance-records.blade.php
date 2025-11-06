@@ -101,6 +101,13 @@
 
         .teaching-load-table tr:hover {
             background: #fff2e6;
+            cursor: pointer;
+        }
+        
+        /* Clickable row styling */
+        .teaching-load-table tbody tr {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
         }
         
         /* Column width adjustments */
@@ -405,6 +412,290 @@
             color: #ff8c00 !important;
             font-weight: bold !important;
         }
+        
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+            pointer-events: auto;
+        }
+        
+        .modal-overlay:not(.active) {
+            pointer-events: none;
+        }
+        
+        .modal-box {
+            background: #fff;
+            border-radius: 12px;
+            width: 900px;
+            height: 600px;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            pointer-events: auto;
+        }
+        
+        .modal-header-custom {
+            background-color: #8B0000;
+            color: #fff;
+            font-weight: bold;
+            text-align: center;
+            padding: 20px;
+            font-size: 1.4rem;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: #fff;
+            font-size: 28px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            z-index: 10;
+            line-height: 1;
+        }
+        
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+        
+        .modal-content {
+            padding: 24px;
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .modal-section {
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .modal-section:last-child {
+            border-bottom: none;
+        }
+        
+        .modal-section-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #8B0000;
+            margin-bottom: 16px;
+        }
+        
+        .modal-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        
+        .modal-info-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .modal-info-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        
+        .modal-info-value {
+            font-size: 0.95rem;
+            color: #333;
+        }
+        
+        .snapshot-container {
+            display: flex;
+            flex-direction: row;
+            gap: 16px;
+            align-items: flex-start;
+        }
+        
+        .snapshot-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .snapshot-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #8B0000;
+        }
+        
+        .snapshot-image {
+            width: 100%;
+            max-width: 500px;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        .snapshot-image:hover {
+            transform: scale(1.02);
+            border-color: #8B0000;
+        }
+        
+        .attachment-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .attachment-item {
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #8B0000;
+        }
+        
+        .attachment-header {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #8B0000;
+            margin-bottom: 12px;
+        }
+        
+        .attachment-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .attachment-image {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        .attachment-image:hover {
+            transform: scale(1.02);
+            border-color: #8B0000;
+        }
+        
+        .no-attachment {
+            color: #999;
+            font-style: italic;
+        }
+        
+        .spinner-border {
+            display: inline-block;
+            width: 2rem;
+            height: 2rem;
+            vertical-align: text-bottom;
+            border: 0.25em solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spinner-border 0.75s linear infinite;
+        }
+        
+        @keyframes spinner-border {
+            to { transform: rotate(360deg); }
+        }
+        
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+        
+        .image-viewer-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .image-viewer-modal.active {
+            display: flex;
+        }
+        
+        .image-viewer-content {
+            max-width: 95%;
+            max-height: 95vh;
+            position: relative;
+        }
+        
+        .image-viewer-content img {
+            max-width: 100%;
+            max-height: 95vh;
+            border-radius: 8px;
+        }
+        
+        .image-viewer-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: #fff;
+            font-size: 32px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        @media (max-width: 768px) {
+            .modal-info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .attachment-details {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 @endsection
 
@@ -580,7 +871,7 @@
         </thead>
             <tbody>
                 @forelse ($records as $record)
-                    <tr>
+                    <tr onclick="viewRecordDetails({{ $record->record_id }})" class="record-row" data-record-id="{{ $record->record_id }}">
                         <td>{{ \Carbon\Carbon::parse($record->record_date)->format('F j, Y') }}</td>
                         <td>{{ $record->faculty->faculty_fname }} {{ $record->faculty->faculty_lname }}</td>
                         <td>{{ $record->faculty->faculty_department }}</td>
@@ -632,6 +923,32 @@
                 @endforelse
             </tbody>
         </table>
+    </div>
+    
+    <!-- Record Details Modal -->
+    <div id="recordDetailsModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header-custom">
+                ATTENDANCE RECORD DETAILS
+                <button class="modal-close" onclick="closeRecordModal()">&times;</button>
+            </div>
+            <div class="modal-content" id="recordDetailsContent">
+                <div style="text-align: center; padding: 40px;">
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p style="margin-top: 16px; color: #666;">Loading record details...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Image Viewer Modal -->
+    <div id="imageViewerModal" class="image-viewer-modal">
+        <div class="image-viewer-content">
+            <button class="image-viewer-close" onclick="closeImageViewer()">&times;</button>
+            <img id="viewerImage" src="" alt="Image Viewer">
+        </div>
     </div>
 @endsection
 
@@ -1017,5 +1334,267 @@ document.querySelector('.search-input').addEventListener('keydown', function(e) 
         }
 
         document.getElementById('oldReportForm').addEventListener('submit', syncSheetInputs);
+        
+        // Record Details Modal Functions
+        function viewRecordDetails(recordId) {
+            const modal = document.getElementById('recordDetailsModal');
+            const content = document.getElementById('recordDetailsContent');
+            
+            // Show loading state
+            content.innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p style="margin-top: 16px; color: #666;">Loading record details...</p>
+                </div>
+            `;
+            
+            modal.classList.add('active');
+            
+            // Fetch record details
+            fetch(`/api/attendance/${recordId}/details`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayRecordDetails(data.data);
+                    } else {
+                        content.innerHTML = '<p style="color: #dc3545; text-align: center; padding: 40px;">Failed to load record details.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching record details:', error);
+                    content.innerHTML = '<p style="color: #dc3545; text-align: center; padding: 40px;">Error loading record details.</p>';
+                });
+        }
+        
+        function displayRecordDetails(data) {
+            try {
+                const record = data.record;
+                const passSlip = data.pass_slip;
+                const leaveSlip = data.leave_slip;
+                
+                const content = document.getElementById('recordDetailsContent');
+                
+                // Check if required data exists
+                if (!record) {
+                    content.innerHTML = '<p style="color: #dc3545; text-align: center; padding: 40px;">Record data not found.</p>';
+                    return;
+                }
+                
+                // Format date and times
+                const recordDate = record.record_date ? 
+                    new Date(record.record_date).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    }) : 'N/A';
+                
+                const timeIn = record.record_time_in ? 
+                    new Date(record.record_time_in).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 
+                    'N/A';
+                const timeOut = record.record_time_out ? 
+                    new Date(record.record_time_out).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 
+                    'N/A';
+                
+                const duration = record.time_duration_seconds > 0 ? 
+                    `${Math.floor(record.time_duration_seconds / 60)}m ${record.time_duration_seconds % 60}s` : 
+                    '0';
+                
+                // Get remarks and determine which attachment to show
+                const remarks = (record.record_remarks || '').toUpperCase().trim();
+                const showPassSlip = remarks === 'WITH PASS SLIP' && passSlip;
+                const showLeaveSlip = remarks === 'ON LEAVE' && leaveSlip;
+                
+                // Check if attendance came from recognition (has snapshots)
+                const isFromRecognition = !!(record.time_in_snapshot || record.time_out_snapshot);
+                
+                // Determine what sections to show
+                // Priority: If remarks exist, show attachments only. Otherwise, if from recognition, show recognition data.
+                const showAttachmentsOnly = (remarks === 'ON LEAVE' || remarks === 'WITH PASS SLIP');
+                const showRecognitionOnly = isFromRecognition && !showAttachmentsOnly;
+                
+                // Build HTML
+                let html = '';
+                
+                // Only show Time Information and Snapshots if attendance came from recognition AND no attachments
+                if (showRecognitionOnly) {
+                    html += `
+                        <!-- Time Information -->
+                        <div class="modal-section">
+                            <div class="modal-section-title">Time Information</div>
+                            <div class="modal-info-grid">
+                                <div class="modal-info-item">
+                                    <div class="modal-info-label">Time In</div>
+                                    <div class="modal-info-value">${timeIn}</div>
+                                </div>
+                                <div class="modal-info-item">
+                                    <div class="modal-info-label">Time Out</div>
+                                    <div class="modal-info-value">${timeOut}</div>
+                                </div>
+                                <div class="modal-info-item">
+                                    <div class="modal-info-label">Duration</div>
+                                    <div class="modal-info-value">${duration}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Snapshots -->
+                        <div class="modal-section">
+                            <div class="modal-section-title">Recognition Snapshots</div>
+                            <div class="snapshot-container">
+                                <div class="snapshot-item">
+                                    <div class="snapshot-label">Time In Snapshot</div>
+                                    ${record.time_in_snapshot ? 
+                                        `<img src="/storage/${record.time_in_snapshot}" alt="Time In Snapshot" class="snapshot-image" onclick="viewImage('/storage/${record.time_in_snapshot}')">` : 
+                                        '<p class="no-attachment">No snapshot available</p>'}
+                                </div>
+                                <div class="snapshot-item">
+                                    <div class="snapshot-label">Time Out Snapshot</div>
+                                    ${record.time_out_snapshot ? 
+                                        `<img src="/storage/${record.time_out_snapshot}" alt="Time Out Snapshot" class="snapshot-image" onclick="viewImage('/storage/${record.time_out_snapshot}')">` : 
+                                        '<p class="no-attachment">No snapshot available</p>'}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Only show Attachments if remarks is "On Leave" or "With Pass Slip"
+                if (showAttachmentsOnly) {
+                    html += `
+                        <!-- Attachments -->
+                        <div class="modal-section">
+                            <div class="modal-section-title">Attachments</div>
+                            <div class="attachment-container">
+                                ${showPassSlip ? `
+                                    <div class="attachment-item">
+                                        <div class="attachment-header">Pass Slip</div>
+                                        <div class="attachment-details">
+                                            <div class="modal-info-item">
+                                                <div class="modal-info-label">Date</div>
+                                                <div class="modal-info-value">${passSlip.pass_slip_date ? new Date(passSlip.pass_slip_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}</div>
+                                            </div>
+                                            <div class="modal-info-item">
+                                                <div class="modal-info-label">Departure Time</div>
+                                                <div class="modal-info-value">${passSlip.pass_slip_departure_time || 'N/A'}</div>
+                                            </div>
+                                            <div class="modal-info-item">
+                                                <div class="modal-info-label">Arrival Time</div>
+                                                <div class="modal-info-value">${passSlip.pass_slip_arrival_time || 'N/A'}</div>
+                                            </div>
+                                            <div class="modal-info-item">
+                                                <div class="modal-info-label">Itinerary</div>
+                                                <div class="modal-info-value">${passSlip.pass_slip_itinerary || 'N/A'}</div>
+                                            </div>
+                                            <div class="modal-info-item">
+                                                <div class="modal-info-label">Purpose</div>
+                                                <div class="modal-info-value">${passSlip.lp_purpose || 'N/A'}</div>
+                                            </div>
+                                        </div>
+                                        ${passSlip.lp_image ? `<img src="${passSlip.lp_image}" alt="Pass Slip" class="attachment-image" onclick="viewImage('${passSlip.lp_image}')">` : '<p class="no-attachment">No image available</p>'}
+                                    </div>
+                                ` : ''}
+                                
+                                ${showLeaveSlip ? `
+                                    <div class="attachment-item">
+                                        <div class="attachment-header">Leave Slip</div>
+                                        <div class="attachment-details">
+                                            <div class="modal-info-item">
+                                                <div class="modal-info-label">Start Date</div>
+                                                <div class="modal-info-value">${leaveSlip.leave_start_date ? new Date(leaveSlip.leave_start_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}</div>
+                                            </div>
+                                            <div class="modal-info-item">
+                                                <div class="modal-info-label">End Date</div>
+                                                <div class="modal-info-value">${leaveSlip.leave_end_date ? new Date(leaveSlip.leave_end_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}</div>
+                                            </div>
+                                            <div class="modal-info-item">
+                                                <div class="modal-info-label">Purpose</div>
+                                                <div class="modal-info-value">${leaveSlip.lp_purpose || 'N/A'}</div>
+                                            </div>
+                                        </div>
+                                        ${leaveSlip.lp_image ? `<img src="${leaveSlip.lp_image}" alt="Leave Slip" class="attachment-image" onclick="viewImage('${leaveSlip.lp_image}')">` : '<p class="no-attachment">No image available</p>'}
+                                    </div>
+                                ` : ''}
+                                
+                                ${!showPassSlip && !showLeaveSlip ? '<p class="no-attachment">No attachments available</p>' : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // If no content was generated, show a message
+                if (!html || html.trim() === '') {
+                    html = '<p style="color: #666; text-align: center; padding: 40px;">No details available for this record.</p>';
+                }
+                
+                content.innerHTML = html;
+            } catch (error) {
+                console.error('Error displaying record details:', error);
+                const content = document.getElementById('recordDetailsContent');
+                content.innerHTML = '<p style="color: #dc3545; text-align: center; padding: 40px;">Error displaying record details. Please try again.</p>';
+            }
+        }
+        
+        function closeRecordModal() {
+            const modal = document.getElementById('recordDetailsModal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        }
+        
+        function viewImage(imageSrc) {
+            const viewer = document.getElementById('imageViewerModal');
+            const img = document.getElementById('viewerImage');
+            if (viewer && img) {
+                img.src = imageSrc;
+                viewer.classList.add('active');
+            }
+        }
+        
+        function closeImageViewer() {
+            const viewer = document.getElementById('imageViewerModal');
+            if (viewer) {
+                viewer.classList.remove('active');
+            }
+        }
+        
+        // Initialize modal event listeners once on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Note: Click-outside-to-close is disabled as per user request
+            // Only the X button can close the modal
+            const recordModal = document.getElementById('recordDetailsModal');
+            if (recordModal) {
+                // Prevent closing when clicking outside
+                recordModal.addEventListener('click', function(e) {
+                    // Stop event propagation to prevent any default closing behavior
+                    e.stopPropagation();
+                    // Only allow closing if clicking directly on the overlay background (not on modal-box)
+                    if (e.target === recordModal) {
+                        // Do nothing - prevent closing
+                        e.preventDefault();
+                        return false;
+                    }
+                });
+                
+                // Also prevent clicks inside modal-box from closing
+                const modalBox = recordModal.querySelector('.modal-box');
+                if (modalBox) {
+                    modalBox.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                    });
+                }
+            }
+            
+            const imageViewer = document.getElementById('imageViewerModal');
+            if (imageViewer) {
+                imageViewer.addEventListener('click', function(e) {
+                    // Only close if clicking directly on the overlay, not on image-viewer-content or its children
+                    if (e.target === imageViewer) {
+                        closeImageViewer();
+                    }
+                });
+            }
+        });
     </script>
 @endsection

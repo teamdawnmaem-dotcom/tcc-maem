@@ -47,6 +47,7 @@ Route::post('/regenerate-all-embeddings', [FacultyController::class, 'apiRegener
 Route::get('/attendance', [AttendanceController::class, 'index']);
 Route::post('/attendance', [AttendanceController::class, 'store']);
 Route::post('/attendance/check', [AttendanceController::class, 'check']);
+Route::get('/attendance/{recordId}/details', [AttendanceController::class, 'getRecordDetails']);
 
 // Leave and pass slip status checking for Python service
 Route::post('/faculty-leave-status', [LeaveController::class, 'checkFacultyLeaveStatus']);
