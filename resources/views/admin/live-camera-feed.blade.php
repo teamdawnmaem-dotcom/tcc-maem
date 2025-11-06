@@ -470,9 +470,18 @@
 	
 	console.log('Faculties data loaded:', faculties);
 	console.log('Recordings loaded:', recordings.length);
+	if (recordings.length > 0) {
+		console.log('Sample recording:', recordings[0]);
+		console.log('Sample recording start_time:', recordings[0].start_time, 'type:', typeof recordings[0].start_time);
+	}
 
 	const scheduleRefreshMs = 30000; // refresh schedule every 30s
+	const recordingRefreshMs = 1000; // refresh recordings every 1s
 	let scheduleIntervalId = null;
+	let recordingRefreshIntervalId = null;
+	
+	// Track last known recording IDs to detect new recordings
+	let lastKnownRecordingIds = new Set(recordings.map(r => r.recording_id));
 	
 	// Group recordings by camera_id
 	const recordingsByCamera = {};
@@ -533,25 +542,223 @@
 		return url;
 	}
 	
-	// Load recordings for a camera (grid view)
-	function loadCameraRecordings(cameraId) {
-		const cameraRecordings = recordingsByCamera[cameraId] || [];
-		if (cameraRecordings.length === 0) {
-			const video = document.getElementById(`recording-player-${cameraId}`);
-			const noFeed = document.getElementById(`no-recording-message-${cameraId}`);
-			const info = document.getElementById(`recording-info-${cameraId}`);
-			if (video) video.style.display = 'none';
-			if (noFeed) noFeed.style.display = 'flex';
-			if (info) info.style.display = 'none';
-			return;
-		}
+    // Filter recordings by current date and teaching load time
+    // Based on start_time column from tbl_stream_recordings
+    function filterRecordingsBySchedule(recordings, cameraId) {
+        // Get current teaching load for the camera's room
+        const camera = cameras.find(cam => cam.camera_id == cameraId);
+        if (!camera) {
+            console.log(`[filterRecordingsBySchedule] Camera ${cameraId} not found`);
+            return { recordings: [], hasActiveSchedule: false };
+        }
+        
+        const currentLoad = getCurrentLoadForRoom(camera.room_no);
+        
+        // If there's no active schedule, return empty with flag
+        if (!currentLoad) {
+            console.log(`[filterRecordingsBySchedule] No active schedule for camera ${cameraId}, room ${camera.room_no}`);
+            return { recordings: [], hasActiveSchedule: false };
+        }
+        
+        console.log(`[filterRecordingsBySchedule] Active schedule found for camera ${cameraId}:`, currentLoad);
+        console.log(`[filterRecordingsBySchedule] Total recordings for camera: ${recordings.length}`);
+        
+        // Get current date in Asia/Manila timezone (proper method)
+        const now = new Date();
+        const manilaDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }); // Returns YYYY-MM-DD format
+        const todayDateStr = manilaDateStr; // Already in YYYY-MM-DD format
+        
+        console.log(`[filterRecordingsBySchedule] Today's date (Asia/Manila): ${todayDateStr}`);
 		
-		const playlist = cameraRecordings.map(r => buildVideoUrl(r)).filter(url => url);
-		if (playlist.length === 0) return;
+        // Filter recordings by current date using start_time from tbl_stream_recordings
+        // start_time is datetime type - Laravel serializes as ISO 8601 format (e.g., 2025-11-05T10:33:37.000000Z)
+        // or MySQL format (e.g., 2025-11-05 10:33:37)
+        let filteredRecordings = recordings.filter(recording => {
+            // Check if start_time exists (from tbl_stream_recordings.start_time column)
+            if (!recording.start_time) {
+                console.log(`[filterRecordingsBySchedule] Recording ${recording.recording_id} has no start_time`);
+                return false;
+            }
+            
+            // Parse start_time - datetime type from database
+            let recordingDate;
+            if (typeof recording.start_time === 'string') {
+                // Check if it's ISO format (contains 'T')
+                if (recording.start_time.includes('T')) {
+                    // ISO 8601 format (e.g., 2025-11-05T10:33:37.000000Z or 2025-11-05T10:33:37+08:00)
+                    recordingDate = new Date(recording.start_time);
+                } else if (recording.start_time.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)) {
+                    // MySQL format (e.g., 2025-11-05 10:33:37) - treat as Asia/Manila timezone
+                    const [datePart, timePart] = recording.start_time.split(' ');
+                    const [year, month, day] = datePart.split('-').map(Number);
+                    const [hour, minute, second] = timePart.split(':').map(Number);
+                    // Create date treating the time as Asia/Manila timezone
+                    recordingDate = new Date(year, month - 1, day, hour, minute, second || 0);
+                } else {
+                    recordingDate = new Date(recording.start_time);
+                }
+            } else {
+                recordingDate = new Date(recording.start_time);
+            }
+            
+            // Convert to Asia/Manila timezone for comparison (proper method)
+            const recordingDateStr = recordingDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+            
+            // Match recordings from today's date
+            const matches = recordingDateStr === todayDateStr;
+            if (!matches) {
+                console.log(`[filterRecordingsBySchedule] Recording ${recording.recording_id} date mismatch: ${recordingDateStr} !== ${todayDateStr}`);
+            }
+            return matches;
+        });
+        
+        console.log(`[filterRecordingsBySchedule] Recordings after date filter: ${filteredRecordings.length}`);
+        
+        // Get today's day of week in Asia/Manila timezone
+        const todayDayOfWeek = now.toLocaleString('en-US', { weekday: 'long', timeZone: 'Asia/Manila' });
+        console.log(`[filterRecordingsBySchedule] Today's day of week: ${todayDayOfWeek}, Teaching load day: ${currentLoad.teaching_load_day_of_week}`);
+        
+        // Filter by day of week - ensure recording's day matches teaching load's day
+        if (filteredRecordings.length > 0) {
+            const beforeDayFilter = filteredRecordings.length;
+            filteredRecordings = filteredRecordings.filter(recording => {
+                if (!recording.start_time) return false;
+                
+                // Parse start_time to get the day of week
+                let recordingDate;
+                if (typeof recording.start_time === 'string') {
+                    if (recording.start_time.includes('T')) {
+                        recordingDate = new Date(recording.start_time);
+                    } else if (recording.start_time.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)) {
+                        const [datePart, timePart] = recording.start_time.split(' ');
+                        const [year, month, day] = datePart.split('-').map(Number);
+                        const [hour, minute, second] = timePart.split(':').map(Number);
+                        recordingDate = new Date(year, month - 1, day, hour, minute, second || 0);
+                    } else {
+                        recordingDate = new Date(recording.start_time);
+                    }
+                } else {
+                    recordingDate = new Date(recording.start_time);
+                }
+                
+                // Get recording's day of week in Asia/Manila timezone
+                const recordingDayOfWeek = recordingDate.toLocaleString('en-US', { weekday: 'long', timeZone: 'Asia/Manila' });
+                
+                // Match day of week with teaching load's day of week
+                const dayMatches = recordingDayOfWeek === currentLoad.teaching_load_day_of_week;
+                if (!dayMatches) {
+                    console.log(`[filterRecordingsBySchedule] Recording ${recording.recording_id} day mismatch: ${recordingDayOfWeek} !== ${currentLoad.teaching_load_day_of_week}`);
+                }
+                return dayMatches;
+            });
+            console.log(`[filterRecordingsBySchedule] Recordings after day of week filter: ${filteredRecordings.length} (was ${beforeDayFilter})`);
+        }
+        
+        // Filter by time range (teaching load time) using start_time
+        const timeIn = toMinutes(currentLoad.teaching_load_time_in);
+        const timeOut = toMinutes(currentLoad.teaching_load_time_out);
+        
+        console.log(`[filterRecordingsBySchedule] Time range: ${currentLoad.teaching_load_time_in} - ${currentLoad.teaching_load_time_out} (${timeIn} - ${timeOut} minutes)`);
+        
+        if (timeIn != null && timeOut != null && filteredRecordings.length > 0) {
+            const beforeTimeFilter = filteredRecordings.length;
+            filteredRecordings = filteredRecordings.filter(recording => {
+                // Ensure start_time exists (from tbl_stream_recordings.start_time column)
+                if (!recording.start_time) return false;
+                
+                // Parse start_time - datetime type from database
+                // IMPORTANT: Python service stores time as "YYYY-MM-DD HH:MM:SS" in Asia/Manila timezone
+                // Laravel serializes it as ISO 8601 UTC (with 'Z'), but the original value is Asia/Manila
+                let recordingDate;
+                if (typeof recording.start_time === 'string') {
+                    // Check if it's ISO format (contains 'T')
+                    if (recording.start_time.includes('T')) {
+                        // ISO 8601 format (e.g., 2025-11-06T15:08:00.000000Z)
+                        // Problem: Python stores "2025-11-06 15:08:00" as Asia/Manila time
+                        // Laravel serializes it as "2025-11-06T15:08:00Z" (treating as UTC)
+                        // JavaScript then converts UTC to local timezone, making it 23:08 in Asia/Manila
+                        // Solution: Extract UTC components and treat them as Asia/Manila time directly
+                        const utcDate = new Date(recording.start_time);
+                        const utcHours = utcDate.getUTCHours();
+                        const utcMinutes = utcDate.getUTCMinutes();
+                        const utcSeconds = utcDate.getUTCSeconds();
+                        const utcYear = utcDate.getUTCFullYear();
+                        const utcMonth = utcDate.getUTCMonth();
+                        const utcDay = utcDate.getUTCDate();
+                        // Create a date object using UTC components but interpret as local (Asia/Manila)
+                        recordingDate = new Date(utcYear, utcMonth, utcDay, utcHours, utcMinutes, utcSeconds || 0);
+                    } else if (recording.start_time.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)) {
+                        // MySQL format (e.g., 2025-11-05 10:33:37) - already in Asia/Manila timezone
+                        const [datePart, timePart] = recording.start_time.split(' ');
+                        const [year, month, day] = datePart.split('-').map(Number);
+                        const [hour, minute, second] = timePart.split(':').map(Number);
+                        recordingDate = new Date(year, month - 1, day, hour, minute, second || 0);
+                    } else {
+                        recordingDate = new Date(recording.start_time);
+                    }
+                } else {
+                    recordingDate = new Date(recording.start_time);
+                }
+                
+                // Extract time directly from the date components (treating as Asia/Manila)
+                const recordingHours = recordingDate.getHours();
+                const recordingMins = recordingDate.getMinutes();
+                const recordingTimeStr = `${String(recordingHours).padStart(2, '0')}:${String(recordingMins).padStart(2, '0')}`;
+                const recordingMinutes = recordingHours * 60 + recordingMins;
+                
+                // Check if recording start_time falls within the teaching load time range
+                const inRange = recordingMinutes != null && recordingMinutes >= timeIn && recordingMinutes <= timeOut;
+                if (!inRange) {
+                    console.log(`[filterRecordingsBySchedule] Recording ${recording.recording_id} time ${recordingTimeStr} (${recordingMinutes} min) outside range ${timeIn}-${timeOut}`);
+                }
+                return inRange;
+            });
+            console.log(`[filterRecordingsBySchedule] Recordings after time filter: ${filteredRecordings.length} (was ${beforeTimeFilter})`);
+        }
+        
+        console.log(`[filterRecordingsBySchedule] Final filtered recordings: ${filteredRecordings.length}`);
+        return { recordings: filteredRecordings, hasActiveSchedule: true };
+	}
+	
+    // Load recordings for a camera (grid view)
+    function loadCameraRecordings(cameraId) {
+        const cameraRecordings = recordingsByCamera[cameraId] || [];
+        console.log(`[loadCameraRecordings] Loading recordings for camera ${cameraId}, total: ${cameraRecordings.length}`);
+        
+        // Filter recordings by current date and teaching load time
+        const result = filterRecordingsBySchedule(cameraRecordings, cameraId);
+        const filteredRecordings = result.recordings;
+        const hasActiveSchedule = result.hasActiveSchedule;
+        
+        console.log(`[loadCameraRecordings] Filtered result: ${filteredRecordings.length} recordings, hasActiveSchedule: ${hasActiveSchedule}`);
 		
 		const video = document.getElementById(`recording-player-${cameraId}`);
 		const noFeed = document.getElementById(`no-recording-message-${cameraId}`);
 		const info = document.getElementById(`recording-info-${cameraId}`);
+		
+		if (!hasActiveSchedule) {
+			if (video) video.style.display = 'none';
+			if (noFeed) {
+				noFeed.style.display = 'flex';
+				noFeed.innerHTML = '<div class="no-feed-icon">✕</div><div>No Active Schedule</div>';
+			}
+			if (info) info.style.display = 'none';
+			return;
+		}
+		
+		if (filteredRecordings.length === 0) {
+			if (video) video.style.display = 'none';
+			if (noFeed) {
+				noFeed.style.display = 'flex';
+				noFeed.innerHTML = '<div class="no-feed-icon">&#10005;</div><div>No Recording</div>';
+			}
+			if (info) info.style.display = 'none';
+			return;
+		}
+		
+		const playlist = filteredRecordings.map(r => buildVideoUrl(r)).filter(url => url);
+		if (playlist.length === 0) return;
+		
 		const counter = document.getElementById(`recording-counter-${cameraId}`);
 		
 		if (!video) return;
@@ -620,8 +827,14 @@
 	// Load recordings for detail view
 	function loadDetailRecordings(cameraId) {
 		const cameraRecordings = recordingsByCamera[cameraId] || [];
+		
+		// Filter recordings by current date and teaching load time
+		const result = filterRecordingsBySchedule(cameraRecordings, cameraId);
+		const filteredRecordings = result.recordings;
+		const hasActiveSchedule = result.hasActiveSchedule;
+		
 		currentDetailCameraId = cameraId;
-		currentDetailPlaylist = cameraRecordings.map(r => buildVideoUrl(r)).filter(url => url);
+		currentDetailPlaylist = filteredRecordings.map(r => buildVideoUrl(r)).filter(url => url);
 		currentDetailIndex = 0;
 		
 		const video = document.getElementById('recording-player-detail');
@@ -629,9 +842,22 @@
 		const info = document.getElementById('recording-info-detail');
 		const counter = document.getElementById('recording-counter-detail');
 		
+		if (!hasActiveSchedule) {
+			if (video) video.style.display = 'none';
+			if (noFeed) {
+				noFeed.style.display = 'flex';
+				noFeed.innerHTML = '<div class="no-feed-icon">✕</div><div>No Active Schedule</div>';
+			}
+			if (info) info.style.display = 'none';
+			return;
+		}
+		
 		if (currentDetailPlaylist.length === 0) {
 			if (video) video.style.display = 'none';
-			if (noFeed) noFeed.style.display = 'flex';
+			if (noFeed) {
+				noFeed.style.display = 'flex';
+				noFeed.innerHTML = '<div class="no-feed-icon">&#10005;</div><div>No Recording</div>';
+			}
 			if (info) info.style.display = 'none';
 			return;
 		}
@@ -724,11 +950,85 @@
 		setTimeout(() => playNextRecordingDetail(), 2000);
 	}
 
+	// Fetch new recordings from API
+	async function fetchNewRecordings() {
+		try {
+			const response = await fetch('/api/stream-recordings');
+			if (!response.ok) {
+				console.error('[fetchNewRecordings] Failed to fetch recordings:', response.status);
+				return false;
+			}
+			
+			const data = await response.json();
+			const newRecordings = data.data || data; // Handle paginated or direct array response
+			
+			// Check if there are new recordings
+			const currentRecordingIds = new Set(newRecordings.map(r => r.recording_id));
+			const hasNewRecordings = Array.from(currentRecordingIds).some(id => !lastKnownRecordingIds.has(id));
+			
+			if (hasNewRecordings) {
+				console.log('[fetchNewRecordings] New recordings detected, updating...');
+				
+				// Update recordingsByCamera with new data
+				Object.keys(recordingsByCamera).forEach(cameraId => {
+					recordingsByCamera[cameraId] = [];
+				});
+				
+				newRecordings.forEach(recording => {
+					if (!recordingsByCamera[recording.camera_id]) {
+						recordingsByCamera[recording.camera_id] = [];
+					}
+					recordingsByCamera[recording.camera_id].push(recording);
+					recordingsById[recording.recording_id] = recording;
+				});
+				
+				// Sort recordings by start_time (oldest first for sequential playback)
+				Object.keys(recordingsByCamera).forEach(cameraId => {
+					recordingsByCamera[cameraId].sort((a, b) => {
+						return new Date(a.start_time) - new Date(b.start_time);
+					});
+				});
+				
+				// Update last known IDs
+				lastKnownRecordingIds = currentRecordingIds;
+				
+				// Reload recordings for all cameras in grid view
+				cameras.forEach(cam => {
+					loadCameraRecordings(cam.camera_id);
+				});
+				
+				// If detail view is open, reload its recordings too
+				if (currentDetailCameraId) {
+					loadDetailRecordings(currentDetailCameraId);
+				}
+				
+				return true;
+			}
+			
+			return false;
+		} catch (error) {
+			console.error('[fetchNewRecordings] Error fetching recordings:', error);
+			return false;
+		}
+	}
+
     window.addEventListener("DOMContentLoaded", () => {
         // Load recordings for all cameras in grid view
         cameras.forEach(cam => {
             loadCameraRecordings(cam.camera_id);
         });
+        
+        // Reload recordings periodically to update with current schedule
+        setInterval(() => {
+            cameras.forEach(cam => {
+                loadCameraRecordings(cam.camera_id);
+            });
+        }, scheduleRefreshMs);
+        
+        // Fetch new recordings every second
+        recordingRefreshIntervalId = setInterval(() => {
+            fetchNewRecordings();
+        }, recordingRefreshMs);
         
         // Update schedule panel periodically
         if (scheduleIntervalId) clearInterval(scheduleIntervalId);
@@ -906,7 +1206,11 @@
 		updateSchedulePanel(camera);
 		// refresh periodically without reload
 		if (scheduleIntervalId) clearInterval(scheduleIntervalId);
-		scheduleIntervalId = setInterval(() => updateSchedulePanel(camera), scheduleRefreshMs);
+		scheduleIntervalId = setInterval(() => {
+			updateSchedulePanel(camera);
+			// Reload recordings when schedule updates (in case time range changes)
+			loadDetailRecordings(cameraId);
+		}, scheduleRefreshMs);
 
 		// Load recordings for detail view
 		loadDetailRecordings(cameraId);
@@ -921,5 +1225,11 @@
 			scheduleIntervalId = null;
 		}
 	}
+	
+	// Cleanup intervals on page unload
+	window.addEventListener('beforeunload', () => {
+		if (scheduleIntervalId) clearInterval(scheduleIntervalId);
+		if (recordingRefreshIntervalId) clearInterval(recordingRefreshIntervalId);
+	});
 </script>
 @endsection
