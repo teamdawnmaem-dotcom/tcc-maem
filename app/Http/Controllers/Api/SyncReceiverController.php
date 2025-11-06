@@ -573,7 +573,7 @@ class SyncReceiverController extends Controller
     {
         try {
             $request->validate([
-                'file' => 'required|file|max:102400', // 100MB max
+                'file' => 'required|file', // No size limit - removed to allow large files
             ]);
             
             $file = $request->file('file');
