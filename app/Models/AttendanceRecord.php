@@ -23,6 +23,8 @@ class AttendanceRecord extends Model
         'time_duration_seconds',
         'record_status',
         'record_remarks',
+        'time_in_snapshot',
+        'time_out_snapshot',
     ];
 
         public function faculty()

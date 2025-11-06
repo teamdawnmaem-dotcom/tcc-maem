@@ -436,29 +436,31 @@
 	</div>
 </div>
 
-<!-- Current Recognition Status -->
+{{--
+<!-- Current Recognition Status (commented out as requested) -->
 <div class="recognition-status" id="recognition-status-section">
-	<div class="recognition-title">Current Recognition Status</div>
-	<div class="attendance-table-container">
-		<table class="attendance-table">
-			<thead>
-				<tr>
-					<th>Time</th>
-					<th>Camera</th>
-					<th>Faculty</th>
-					<th>Status</th>
-				</tr>
-			</thead>
-			<tbody id="recognition-logs-body">
-				<tr>
-					<td colspan="4" style="text-align: center; padding: 40px; color: #999; font-style: italic;">
-						Waiting for data...
-					</td>
-				</tr>
-			</tbody>
-		</table>
-	</div>
+    <div class="recognition-title">Current Recognition Status</div>
+    <div class="attendance-table-container">
+        <table class="attendance-table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Camera</th>
+                    <th>Faculty</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="recognition-logs-body">
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 40px; color: #999; font-style: italic;">
+                        Waiting for data...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </div>
+--}}
 @endsection
 
 @section('scripts')
@@ -1320,7 +1322,10 @@
 	function showCameraDetail(cameraId) {
 		document.getElementById('cameraGridView').style.display = 'none';
 		document.getElementById('cameraDetailView').style.display = 'flex';
-		document.getElementById('recognition-status-section').style.display = 'block';
+        (function(){
+            const el = document.getElementById('recognition-status-section');
+            if (el) el.style.display = 'block';
+        })();
 
 		const camera = cameras.find(cam => cam.camera_id == cameraId);
 		document.getElementById('main-camera-label').textContent = camera.camera_name;
@@ -1360,7 +1365,10 @@
 	function showCameraGrid() {
 		document.getElementById('cameraGridView').style.display = 'grid';
 		document.getElementById('cameraDetailView').style.display = 'none';
-		document.getElementById('recognition-status-section').style.display = 'none';
+        (function(){
+            const el = document.getElementById('recognition-status-section');
+            if (el) el.style.display = 'none';
+        })();
 		if (scheduleIntervalId) {
 			clearInterval(scheduleIntervalId);
 			scheduleIntervalId = null;

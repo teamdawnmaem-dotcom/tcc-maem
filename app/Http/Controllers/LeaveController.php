@@ -35,6 +35,18 @@ class LeaveController extends Controller
             'lp_image' => 'required|image|max:2048',
         ]);
 
+        // Check if start date is in the past and if purpose allows it
+        $purpose = strtolower(trim($validated['lp_purpose']));
+        $allowsPastDate = $purpose === 'emergency' || $purpose === 'sick leave';
+        $startDate = \Carbon\Carbon::parse($validated['leave_start_date']);
+        $today = \Carbon\Carbon::today();
+        
+        if ($startDate->lt($today) && !$allowsPastDate) {
+            return redirect()->back()
+                ->withErrors(['leave_start_date' => 'Start date cannot be in the past.'])
+                ->withInput();
+        }
+
         // Force type to Leave
         $validated['lp_type'] = 'Leave';
 
@@ -83,6 +95,18 @@ class LeaveController extends Controller
             'leave_end_date' => 'required|date|after_or_equal:leave_start_date',
             'lp_image' => 'nullable|image|max:2048',
         ]);
+
+        // Check if start date is in the past and if purpose allows it
+        $purpose = strtolower(trim($validated['lp_purpose']));
+        $allowsPastDate = $purpose === 'emergency' || $purpose === 'sick leave';
+        $startDate = \Carbon\Carbon::parse($validated['leave_start_date']);
+        $today = \Carbon\Carbon::today();
+        
+        if ($startDate->lt($today) && !$allowsPastDate) {
+            return redirect()->back()
+                ->withErrors(['leave_start_date' => 'Start date cannot be in the past.'])
+                ->withInput();
+        }
 
         // Ensure type stays Leave
         $validated['lp_type'] = 'Leave';

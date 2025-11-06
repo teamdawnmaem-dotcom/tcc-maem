@@ -1352,7 +1352,7 @@
             const vSdt = isNotEmpty(sdt && sdt.value);
             const vEdt = isNotEmpty(edt && edt.value);
             const vImg = isNotEmpty(img && img.value) && validateImageSize(img);
-            // Logic: start date <= end date; start not in past
+            // Logic: start date <= end date; start not in past (unless purpose is Emergency or Sick Leave)
             let logicOk = true;
             const logicBox = document.querySelector('#addModal .logic-error');
             if (logicBox) logicBox.style.display = 'none';
@@ -1360,7 +1360,11 @@
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 const start = new Date(sdt.value);
-                if (start < today) {
+                // Check if purpose allows past dates (case-insensitive)
+                const purposeValue = (pur && pur.value) ? pur.value.trim().toLowerCase() : '';
+                const allowsPastDate = purposeValue === 'emergency' || purposeValue === 'sick leave';
+                
+                if (start < today && !allowsPastDate) {
                     logicOk = false;
                     if (logicBox) {
                         logicBox.textContent = 'Start date cannot be in the past.';
@@ -1425,7 +1429,7 @@
             const vSdt = isNotEmpty(sdt && sdt.value);
             const vEdt = isNotEmpty(edt && edt.value);
             const vImg = !img || !img.files || img.files.length === 0 || validateImageSize(img);
-            // Logic: start date <= end date; start not in past
+            // Logic: start date <= end date; start not in past (unless purpose is Emergency or Sick Leave)
             let logicOk = true;
             const logicBox = document.querySelector('#editModal .logic-error');
             if (logicBox) logicBox.style.display = 'none';
@@ -1433,7 +1437,11 @@
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 const start = new Date(sdt.value);
-                if (start < today) {
+                // Check if purpose allows past dates (case-insensitive)
+                const purposeValue = (pur && pur.value) ? pur.value.trim().toLowerCase() : '';
+                const allowsPastDate = purposeValue === 'emergency' || purposeValue === 'sick leave';
+                
+                if (start < today && !allowsPastDate) {
                     logicOk = false;
                     if (logicBox) {
                         logicBox.textContent = 'Start date cannot be in the past.';

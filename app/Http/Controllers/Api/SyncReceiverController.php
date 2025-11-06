@@ -298,6 +298,8 @@ class SyncReceiverController extends Controller
                 'record_status' => 'required|string|max:50',
                 'record_remarks' => 'required|string|max:50',
                 'time_duration_seconds' => 'required|integer',
+                'time_in_snapshot' => 'nullable|string|max:500',
+                'time_out_snapshot' => 'nullable|string|max:500',
             ]);
             
             DB::table('tbl_attendance_record')->updateOrInsert(
@@ -642,7 +644,7 @@ class SyncReceiverController extends Controller
             'attendance-records' => [
                 'table' => 'tbl_attendance_record',
                 'unique' => ['record_id'],
-                'columns' => ['record_id','faculty_id','teaching_load_id','camera_id','record_date','record_time_in','record_time_out','record_status','record_remarks','time_duration_seconds'],
+                'columns' => ['record_id','faculty_id','teaching_load_id','camera_id','record_date','record_time_in','record_time_out','record_status','record_remarks','time_duration_seconds','time_in_snapshot','time_out_snapshot'],
             ],
             'leaves' => [
                 'table' => 'tbl_leave_pass',

@@ -287,6 +287,10 @@ class CloudSyncService
             }
             
             $payload = $localRecords->map(function ($record) {
+                // Sync snapshot images to cloud and update paths
+                $cloudTimeInSnapshot = $this->syncAttendanceSnapshot($record->time_in_snapshot);
+                $cloudTimeOutSnapshot = $this->syncAttendanceSnapshot($record->time_out_snapshot);
+                
                 return [
                     'record_id' => $record->record_id,
                     'record_date' => $this->formatDateTime($record->record_date),
@@ -298,6 +302,8 @@ class CloudSyncService
                     'record_status' => $record->record_status,
                     'record_remarks' => $record->record_remarks,
                     'camera_id' => $record->camera_id,
+                    'time_in_snapshot' => $cloudTimeInSnapshot,
+                    'time_out_snapshot' => $cloudTimeOutSnapshot,
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('attendance-records', $payload);
@@ -1200,6 +1206,51 @@ class CloudSyncService
     }
     
     /**
+     * Sync attendance snapshot image to cloud
+     * @param string $snapshotPath Local snapshot path
+     * @return string Cloud snapshot path/URL
+     */
+    protected function syncAttendanceSnapshot($snapshotPath)
+    {
+        if (empty($snapshotPath)) {
+            return $snapshotPath;
+        }
+        
+        // Directory: storage/app/public/attendance_snapshots/
+        $uploadResult = $this->uploadFileToCloud($snapshotPath, 'attendance_snapshots');
+        
+        if ($uploadResult && $uploadResult['success']) {
+            Log::info("Synced attendance snapshot to cloud: {$snapshotPath} -> " . ($uploadResult['path'] ?? $uploadResult['url']));
+            return $uploadResult['path'] ?? $uploadResult['url'] ?? $snapshotPath;
+        }
+        
+        Log::warning("Failed to sync attendance snapshot: {$snapshotPath}");
+        return $snapshotPath;
+    }
+    
+    /**
+     * Download attendance snapshot image from cloud
+     * @param string $cloudSnapshotPath Cloud snapshot path/URL
+     * @return string Local snapshot path
+     */
+    protected function downloadAttendanceSnapshot($cloudSnapshotPath)
+    {
+        if (empty($cloudSnapshotPath)) {
+            return $cloudSnapshotPath;
+        }
+        
+        $localPath = $this->downloadFileFromCloud($cloudSnapshotPath, 'attendance_snapshots');
+        
+        if ($localPath) {
+            Log::info("Downloaded attendance snapshot from cloud: {$cloudSnapshotPath} -> {$localPath}");
+            return $localPath;
+        }
+        
+        Log::warning("Failed to download attendance snapshot: {$cloudSnapshotPath}");
+        return $cloudSnapshotPath;
+    }
+    
+    /**
      * Download stream recording video from cloud
      * @param string $cloudVideoPath Cloud video path/URL
      * @return string Local video path
@@ -1731,6 +1782,10 @@ class CloudSyncService
             
             foreach ($newRecords as $cloudRecord) {
                 try {
+                    // Download snapshot images from cloud
+                    $localTimeInSnapshot = $this->downloadAttendanceSnapshot($cloudRecord['time_in_snapshot'] ?? null);
+                    $localTimeOutSnapshot = $this->downloadAttendanceSnapshot($cloudRecord['time_out_snapshot'] ?? null);
+                    
                     DB::table('tbl_attendance_record')->upsert([
                         [
                             'record_id' => $cloudRecord['record_id'],
@@ -1743,8 +1798,10 @@ class CloudSyncService
                             'record_status' => $cloudRecord['record_status'] ?? null,
                             'record_remarks' => $cloudRecord['record_remarks'] ?? null,
                             'camera_id' => $cloudRecord['camera_id'] ?? null,
+                            'time_in_snapshot' => $localTimeInSnapshot,
+                            'time_out_snapshot' => $localTimeOutSnapshot,
                         ]
-                    ], ['record_id'], ['record_date', 'faculty_id', 'teaching_load_id', 'record_time_in', 'record_time_out', 'time_duration_seconds', 'record_status', 'record_remarks', 'camera_id']);
+                    ], ['record_id'], ['record_date', 'faculty_id', 'teaching_load_id', 'record_time_in', 'record_time_out', 'time_duration_seconds', 'record_status', 'record_remarks', 'camera_id', 'time_in_snapshot', 'time_out_snapshot']);
                     
                     $synced[] = $cloudRecord['record_id'];
                 } catch (\Exception $e) {
