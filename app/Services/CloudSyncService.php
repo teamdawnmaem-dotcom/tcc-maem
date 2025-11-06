@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use GuzzleHttp\Client;
 use App\Models\Faculty;
 use App\Models\Room;
 use App\Models\Camera;
@@ -965,26 +966,58 @@ class CloudSyncService
             
             $filename = basename($localPath);
             
-            // Using multipart file upload with increased timeout for large files
+            // Using Guzzle directly with file stream to avoid memory exhaustion for large files
             // Directory structure: storage/app/public/{directory}/
-            $response = Http::timeout(300) // 5 minutes for large video files
-                ->withHeaders([
+            // Use file resource/stream instead of file_get_contents to handle large files efficiently
+            $client = new Client([
+                'timeout' => 300, // 5 minutes for large video files
+                'headers' => [
                     'Authorization' => 'Bearer ' . $this->cloudApiKey,
-                ])
-                ->attach('file', file_get_contents($fullPath), $filename)
-                ->post("{$this->cloudApiUrl}/sync/upload/{$directory}");
+                ],
+            ]);
             
-            if ($response->successful()) {
-                $result = $response->json();
-                return [
-                    'success' => true,
-                    'url' => $result['url'] ?? null,
-                    'path' => $result['path'] ?? null
-                ];
+            // Open file as stream to avoid loading entire file into memory
+            $fileHandle = fopen($fullPath, 'rb');
+            if (!$fileHandle) {
+                Log::error("Failed to open file for upload: {$fullPath}");
+                return null;
             }
             
-            Log::error("Failed to upload file to cloud: " . $response->body());
-            return null;
+            try {
+                $response = $client->post("{$this->cloudApiUrl}/sync/upload/{$directory}", [
+                    'multipart' => [
+                        [
+                            'name' => 'file',
+                            'contents' => $fileHandle, // Guzzle supports file resources for streaming
+                            'filename' => $filename,
+                        ],
+                    ],
+                ]);
+                
+                // Convert Guzzle response to Laravel response format
+                $statusCode = $response->getStatusCode();
+                $body = $response->getBody()->getContents();
+                
+                if ($statusCode >= 200 && $statusCode < 300) {
+                    $result = json_decode($body, true);
+                    return [
+                        'success' => true,
+                        'url' => $result['url'] ?? null,
+                        'path' => $result['path'] ?? null
+                    ];
+                }
+                
+                Log::error("Failed to upload file to cloud: " . $body);
+                return null;
+            } catch (\GuzzleHttp\Exception\RequestException $e) {
+                Log::error("Error uploading file to cloud ({$localPath}): " . $e->getMessage());
+                return null;
+            } finally {
+                // Ensure file handle is closed even if request fails
+                if (is_resource($fileHandle)) {
+                    fclose($fileHandle);
+                }
+            }
             
         } catch (\Exception $e) {
             Log::error("Error uploading file to cloud ({$localPath}): " . $e->getMessage());
