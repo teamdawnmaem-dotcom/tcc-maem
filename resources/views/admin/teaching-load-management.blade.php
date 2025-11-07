@@ -2416,15 +2416,58 @@
             @if(str_contains(session('success'), 'CSV upload completed'))
                 @php
                     $successMessage = session('success');
-                    // Convert \n to <br> for proper line breaks in SweetAlert
-                    $successMessage = str_replace("\n", "<br>", $successMessage);
+                    $lines = explode("\n", $successMessage);
+                    $formattedMessage = '';
+                    $inSuccessSection = false;
+                    $inErrorSection = false;
+                    
+                    foreach ($lines as $line) {
+                        $line = trim($line);
+                        if (empty($line)) continue;
+                        
+                        // Main title
+                        if (strpos($line, 'CSV upload completed') !== false) {
+                            $formattedMessage .= '<div style="font-size: 1.2rem; font-weight: bold; color: #333; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #e0e0e0;">' . htmlspecialchars($line) . '</div>';
+                        }
+                        // Success summary
+                        elseif (strpos($line, 'Successfully added') !== false) {
+                            $formattedMessage .= '<div style="font-size: 1rem; font-weight: bold; color: #2e7d32; margin: 20px 0 12px 0; padding: 10px; background-color: #e8f5e9; border-left: 4px solid #2e7d32; border-radius: 4px;">' . htmlspecialchars($line) . '</div>';
+                            $inSuccessSection = true;
+                            $inErrorSection = false;
+                        }
+                        // Success Details header
+                        elseif ($line === 'Success Details:') {
+                            $formattedMessage .= '<div style="font-size: 0.95rem; font-weight: bold; color: #2e7d32; margin: 15px 0 8px 0;">' . htmlspecialchars($line) . '</div>';
+                        }
+                        // Error summary
+                        elseif (strpos($line, 'Errors:') !== false) {
+                            $formattedMessage .= '<div style="font-size: 1rem; font-weight: bold; color: #d32f2f; margin: 25px 0 12px 0; padding: 10px; background-color: #ffebee; border-left: 4px solid #d32f2f; border-radius: 4px; border-top: 1px solid #e0e0e0; padding-top: 15px;">' . htmlspecialchars($line) . '</div>';
+                            $inSuccessSection = false;
+                            $inErrorSection = true;
+                        }
+                        // Error Details header
+                        elseif ($line === 'Error Details:') {
+                            $formattedMessage .= '<div style="font-size: 0.95rem; font-weight: bold; color: #d32f2f; margin: 15px 0 8px 0;">' . htmlspecialchars($line) . '</div>';
+                        }
+                        // Row details
+                        elseif (strpos($line, 'Row ') === 0) {
+                            $bgColor = $inErrorSection ? '#ffebee' : '#e8f5e9';
+                            $borderColor = $inErrorSection ? '#d32f2f' : '#2e7d32';
+                            $textColor = $inErrorSection ? '#c62828' : '#1b5e20';
+                            $formattedMessage .= '<div style="padding: 10px 12px; margin: 6px 0; background-color: ' . $bgColor . '; border-left: 3px solid ' . $borderColor . '; border-radius: 3px; font-size: 0.9rem; color: ' . $textColor . '; line-height: 1.5; border-bottom: 1px solid rgba(0,0,0,0.05);">' . htmlspecialchars($line) . '</div>';
+                        }
+                        // Other lines
+                        else {
+                            $formattedMessage .= '<div style="padding: 6px 0; font-size: 0.9rem; color: #666; line-height: 1.4;">' . htmlspecialchars($line) . '</div>';
+                        }
+                    }
                 @endphp
                 Swal.fire({
-                    icon: 'success',
+                    icon: null,
                     title: 'CSV Upload Completed!',
                     html: `
-                        <div style="text-align: left; max-height: 400px; overflow-y: auto; padding: 10px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9;">
-                            {!! $successMessage !!}
+                        <div style="text-align: left; max-height: 500px; overflow-y: auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                            {!! $formattedMessage !!}
                         </div>
                     `,
                     confirmButtonColor: '#8B0000',
@@ -2432,7 +2475,7 @@
                     allowOutsideClick: false,
                     allowEscapeKey: true,
                     showCloseButton: true,
-                    width: '700px'
+                    width: '750px'
                 });
             @else
                 Swal.fire({

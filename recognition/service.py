@@ -96,7 +96,7 @@ _recording_threads = {}  # Track recording threads per camera
 RECOGNITION_INTERVAL = 1  # seconds between recognition attempts (WebRTC)
 BACKGROUND_RECOGNITION_INTERVAL = 1  # seconds for background processing
 PRESENCE_THRESHOLD = 1800  # 30 minutes in seconds
-LATE_THRESHOLD = 1800  # 30 minutes in seconds for late marking
+LATE_THRESHOLD = 900  # 15 minutes in seconds for late marking
 
 # Stream recording settings
 RECORDING_INTERVAL = 180  # 3 minutes in seconds
@@ -300,7 +300,7 @@ def initialize_late_tracking():
                         }
 
 def check_late_threshold():
-    """Check if any schedules have passed the late threshold (30 minutes from start)."""
+    """Check if any schedules have passed the late threshold (15 minutes from start)."""
     import pytz
     tz = pytz.timezone("Asia/Manila")
     now = datetime.datetime.now(tz)
@@ -311,17 +311,17 @@ def check_late_threshold():
         room_no, load_id = key
         start_time = late_info["start_time"]
         
-        # Check if 30 minutes have passed since class start
-        if not late_info["late_threshold_reached"] and (now_min - start_time) >= 30:
+        # Check if 15 minutes have passed since class start
+        if not late_info["late_threshold_reached"] and (now_min - start_time) >= 15:
             # Check if faculty has been recognized at all
             acc = _presence_accumulator.get(key)
             if not acc or acc["seconds"] == 0:
-                # Faculty was not recognized in the first 30 minutes
+                # Faculty was not recognized in the first 15 minutes
                 late_info["late_threshold_reached"] = True
-                print(f"DEBUG: Late threshold reached for room {room_no}, load {load_id} - instructor was not recognized in first 30 minutes")
+                print(f"DEBUG: Late threshold reached for room {room_no}, load {load_id} - instructor was not recognized in first 15 minutes")
             else:
-                # Faculty was recognized within first 30 minutes, so not late
-                print(f"DEBUG: Faculty was recognized within first 30 minutes for room {room_no}, load {load_id} - not marked as late")
+                # Faculty was recognized within first 15 minutes, so not late
+                print(f"DEBUG: Faculty was recognized within first 15 minutes for room {room_no}, load {load_id} - not marked as late")
             # Don't post attendance here - let schedule end function determine final status
 
 # -------------------
@@ -512,7 +512,7 @@ def check_schedule_end_and_mark_absent():
                     print(f"DEBUG: Faculty only accumulated {accumulated_time} seconds (need {PRESENCE_THRESHOLD})")
                 else:
                     # Sufficient presence accumulated (≥30 minutes)
-                    # Check if late threshold was reached (not recognized in first 30 minutes)
+                    # Check if late threshold was reached (not recognized in first 15 minutes)
                     late_info = _late_tracking.get(key, {})
                     late_threshold_reached = late_info.get("late_threshold_reached", False)
                     print(f"DEBUG: Faculty accumulated {acc['seconds']} seconds. Late threshold reached: {late_threshold_reached}")
@@ -520,7 +520,7 @@ def check_schedule_end_and_mark_absent():
                     if late_threshold_reached:
                         record_status = "Late"
                         record_remarks = "Late"
-                        print(f"DEBUG: Faculty accumulated {acc['seconds']} seconds but was late (not recognized in first 30 min)")
+                        print(f"DEBUG: Faculty accumulated {acc['seconds']} seconds but was late (not recognized in first 15 min)")
                     else:
                         record_status = "Present"
                         record_remarks = "Present"
@@ -2768,7 +2768,7 @@ async def background_tasks():
             # Initialize late tracking for new schedules
             initialize_late_tracking()
             
-            # Check for late threshold (30 minutes from class start)
+            # Check for late threshold (15 minutes from class start)
             check_late_threshold()
             
             # Check for schedule endings and mark absent

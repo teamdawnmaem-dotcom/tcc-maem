@@ -41,10 +41,26 @@
             font-size: 14px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            width: 75%;
-            flex: 0 0 75%;
+            flex: 1;
             min-width: 0;
             box-sizing: border-box;
+        }
+
+        .csv-btn {
+            padding: 10px 24px;
+            font-size: 14px;
+            border: none;
+            border-radius: 4px;
+            background-color: #3498db;
+            color: #fff;
+            cursor: pointer;
+            font-weight: bold;
+            white-space: nowrap;
+            transition: background-color 0.2s;
+        }
+
+        .csv-btn:hover {
+            background-color: #2980b9;
         }
 
         .add-btn {
@@ -56,8 +72,6 @@
             color: #fff;
             cursor: pointer;
             font-weight: bold;
-            width: 25%;
-            flex: 0 0 25%;
             white-space: nowrap;
         }
 
@@ -197,8 +211,7 @@
             }
 
             .search-input {
-                width: 75% !important;
-                flex: 0 0 calc(75% - 4px);
+                flex: 1;
                 padding: 10px 12px;
                 margin-top: -50px;
                 margin-bottom: 60px;
@@ -207,9 +220,16 @@
                 margin: 0;
             }
 
+            .csv-btn {
+                padding: 10px 8px;
+                font-size: 0.85rem;
+                border-radius: 6px;
+                font-weight: bold;
+                white-space: nowrap;
+                margin: 0;
+            }
+
             .add-btn {
-                width: 25%;
-                flex: 0 0 calc(25% - 4px);
                 padding: 10px 8px;
                 font-size: 0.85rem;
                 border-radius: 6px;
@@ -475,6 +495,7 @@
     </div>
     <div class="faculty-actions-row">
         <input type="text" class="search-input" id="subjectSearch" placeholder="Search...">
+        <button class="csv-btn" onclick="openModal && openModal('csvUploadModal')">CSV Upload</button>
         <button class="add-btn" onclick="openModal && openModal('addSubjectModal')">Add</button>
     </div>
 
@@ -807,6 +828,61 @@
             </div>
         </form>
     </div>
+
+    <!-- CSV Upload Modal -->
+    <div id="csvUploadModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px; max-width: 500px; transform: scale(0.8); transform-origin: center;">
+            <form id="csvUploadForm" action="{{ route('deptHead.subjects.csv-upload') }}" method="POST" enctype="multipart/form-data" style="padding: 0;">
+                @csrf
+                <div class="modal-header"
+                    style="background-color: #8B0000; color: white; padding: 18px 24px; font-size: 24px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.5px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                    CSV UPLOAD
+                </div>
+                <div style="padding: 24px;">
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 1rem; color: #222; margin-bottom: 10px; font-weight: bold;">Upload CSV File:</label>
+                        <input type="file" name="csv_file" id="csvFileInput" accept=".csv" required
+                            style="width: 100%; padding: 10px; border: 2px solid #3498db; border-radius: 5px; font-size: 1rem;">
+                        <div id="csvFileName" style="margin-top: 8px; font-size: 0.9rem; color: #3498db; font-weight: 500; display: none;"></div>
+                        <div style="margin-top: 8px;">
+                            <a href="{{ route('deptHead.subjects.csv-template') }}" 
+                               style="color: #3498db; text-decoration: none; font-size: 0.9rem; font-weight: 500;">
+                                📥 Download Sample CSV Template
+                            </a>
+                        </div>
+                    </div>
+
+                    <div style="background-color: #f0f8ff; border-left: 4px solid #3498db; padding: 15px; margin-bottom: 20px;">
+                        <div style="font-size: 0.95rem; color: #333; margin-bottom: 10px; font-weight: bold;">CSV Format Instructions:</div>
+                        <div style="font-size: 0.85rem; color: #666; line-height: 1.6;">
+                            <div>• Column 1: Subject Code (max 100 characters)</div>
+                            <div>• Column 2: Subject Description (max 255 characters)</div>
+                            <div>• Column 3: Department (must match one of the valid departments)</div>
+                        </div>
+                    </div>
+
+                    <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px;">
+                        <div style="font-size: 0.9rem; color: #856404;">
+                            <strong>Important Notes:</strong>
+                            <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+                                <li>The CSV file should include headers in the first row</li>
+                                <li>All 3 columns are required and cannot be empty</li>
+                                <li>Department must be one of the valid departments listed in the system</li>
+                                <li>Duplicate entries (same code, description, and department) will be rejected</li>
+                                <li>Duplicate entries within the same CSV file will be rejected</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="modal-buttons">
+                        <button type="submit" class="modal-btn add" style="width: 50%;">Upload</button>
+                        <button type="button" class="modal-btn cancel" style="width: 50%;"
+                            onclick="closeModal('csvUploadModal')">Cancel</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 @endsection
 
 @section('scripts')
@@ -862,7 +938,25 @@
 
         function closeModal(id) {
             const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
+            if (el) {
+                el.style.display = 'none';
+                // Reset CSV upload form if closing CSV modal
+                if (id === 'csvUploadModal') {
+                    const form = document.getElementById('csvUploadForm');
+                    if (form) {
+                        form.reset();
+                        const csvFileName = document.getElementById('csvFileName');
+                        if (csvFileName) csvFileName.style.display = 'none';
+                        const submitButton = form.querySelector('button[type="submit"]');
+                        if (submitButton) {
+                            submitButton.disabled = false;
+                            submitButton.textContent = 'Upload';
+                            submitButton.style.opacity = '1';
+                            submitButton.style.cursor = 'pointer';
+                        }
+                    }
+                }
+            }
         }
 
         function openUpdateModal(id) {
@@ -1247,6 +1341,185 @@
                     // Allow normal form submission - the modal already provides confirmation
                     // No need for additional SweetAlert2 confirmation
                 });
+            })();
+
+            // CSV Upload Form Handler
+            (function() {
+                const csvUploadForm = document.getElementById('csvUploadForm');
+                const csvFileInput = document.getElementById('csvFileInput');
+                const csvFileName = document.getElementById('csvFileName');
+                
+                if (csvUploadForm) {
+                    csvUploadForm.addEventListener('submit', function(e) {
+                        const fileInput = csvFileInput;
+                        const submitButton = csvUploadForm.querySelector('button[type="submit"]');
+                        
+                        if (!fileInput.files || fileInput.files.length === 0) {
+                            e.preventDefault();
+                            if (window.Swal) {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'No File Selected',
+                                    text: 'Please select a CSV file to upload.',
+                                    confirmButtonColor: '#8B0000'
+                                });
+                            }
+                            return false;
+                        }
+                        
+                        // Show loading SweetAlert
+                        if (window.Swal) {
+                            Swal.fire({
+                                title: 'Uploading CSV...',
+                                text: 'Please wait while we process your file.',
+                                icon: 'info',
+                                allowOutsideClick: false,
+                                allowEscapeKey: false,
+                                showConfirmButton: false,
+                                didOpen: () => {
+                                    Swal.showLoading();
+                                }
+                            });
+                        }
+                        
+                        // Show loading state
+                        if (submitButton) {
+                            submitButton.disabled = true;
+                            submitButton.textContent = 'Uploading...';
+                            submitButton.style.opacity = '0.6';
+                            submitButton.style.cursor = 'not-allowed';
+                        }
+                        
+                        // Allow form to submit normally to reload page with new data
+                        return true;
+                    });
+                }
+
+                // Show selected file name
+                if (csvFileInput) {
+                    csvFileInput.addEventListener('change', function(e) {
+                        const file = e.target.files[0];
+                        if (file && csvFileName) {
+                            csvFileName.textContent = 'Selected: ' + file.name;
+                            csvFileName.style.display = 'block';
+                        } else if (csvFileName) {
+                            csvFileName.style.display = 'none';
+                        }
+                    });
+                }
+
+                // Reset CSV upload form when modal is closed
+                function resetCsvUploadForm() {
+                    const form = document.getElementById('csvUploadForm');
+                    if (form) {
+                        form.reset();
+                        if (csvFileName) {
+                            csvFileName.style.display = 'none';
+                        }
+                        const submitButton = form.querySelector('button[type="submit"]');
+                        if (submitButton) {
+                            submitButton.disabled = false;
+                            submitButton.textContent = 'Upload';
+                            submitButton.style.opacity = '1';
+                            submitButton.style.cursor = 'pointer';
+                        }
+                    }
+                }
+
+                // Reset CSV form when modal is closed
+                document.addEventListener('click', function(e) {
+                    if (e.target && e.target.classList && e.target.classList.contains('modal-overlay') && e.target.id === 'csvUploadModal') {
+                        resetCsvUploadForm();
+                    }
+                });
+            })();
+
+            // Handle CSV upload success/error messages
+            (function() {
+                @if(session('success') && str_contains(session('success'), 'CSV upload completed'))
+                    const successMessage = @json(session('success'));
+                    if (window.Swal && successMessage) {
+                        // Parse and format the message for better readability
+                        const lines = successMessage.split('\n').filter(line => line.trim() !== '');
+                        let formattedHtml = '<div style="text-align: left; max-height: 500px; overflow-y: auto; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">';
+                        
+                        // Escape HTML to prevent XSS
+                        const escapeHtml = (text) => {
+                            const div = document.createElement('div');
+                            div.textContent = text;
+                            return div.innerHTML;
+                        };
+                        
+                        let inSuccessSection = false;
+                        let inErrorSection = false;
+                        
+                        lines.forEach((line, index) => {
+                            const trimmedLine = line.trim();
+                            if (!trimmedLine) return;
+                            
+                            // Main title
+                            if (trimmedLine.includes('CSV upload completed')) {
+                                formattedHtml += '<div style="font-size: 1.2rem; font-weight: bold; color: #333; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #e0e0e0;">' + escapeHtml(trimmedLine) + '</div>';
+                            }
+                            // Success summary
+                            else if (trimmedLine.includes('Successfully added')) {
+                                formattedHtml += '<div style="font-size: 1rem; font-weight: bold; color: #2e7d32; margin: 20px 0 12px 0; padding: 10px; background-color: #e8f5e9; border-left: 4px solid #2e7d32; border-radius: 4px;">' + escapeHtml(trimmedLine) + '</div>';
+                                inSuccessSection = true;
+                                inErrorSection = false;
+                            }
+                            // Success Details header
+                            else if (trimmedLine === 'Success Details:') {
+                                formattedHtml += '<div style="font-size: 0.95rem; font-weight: bold; color: #2e7d32; margin: 15px 0 8px 0;">' + escapeHtml(trimmedLine) + '</div>';
+                            }
+                            // Error summary
+                            else if (trimmedLine.includes('Errors:')) {
+                                formattedHtml += '<div style="font-size: 1rem; font-weight: bold; color: #d32f2f; margin: 25px 0 12px 0; padding: 10px; background-color: #ffebee; border-left: 4px solid #d32f2f; border-radius: 4px; border-top: 1px solid #e0e0e0; padding-top: 15px;">' + escapeHtml(trimmedLine) + '</div>';
+                                inSuccessSection = false;
+                                inErrorSection = true;
+                            }
+                            // Error Details header
+                            else if (trimmedLine === 'Error Details:') {
+                                formattedHtml += '<div style="font-size: 0.95rem; font-weight: bold; color: #d32f2f; margin: 15px 0 8px 0;">' + escapeHtml(trimmedLine) + '</div>';
+                            }
+                            // Row details
+                            else if (trimmedLine.startsWith('Row ')) {
+                                const bgColor = inErrorSection ? '#ffebee' : '#e8f5e9';
+                                const borderColor = inErrorSection ? '#d32f2f' : '#2e7d32';
+                                const textColor = inErrorSection ? '#c62828' : '#1b5e20';
+                                formattedHtml += '<div style="padding: 10px 12px; margin: 6px 0; background-color: ' + bgColor + '; border-left: 3px solid ' + borderColor + '; border-radius: 3px; font-size: 0.9rem; color: ' + textColor + '; line-height: 1.5; border-bottom: 1px solid rgba(0,0,0,0.05);">' + escapeHtml(trimmedLine) + '</div>';
+                            }
+                            // Other lines
+                            else {
+                                formattedHtml += '<div style="padding: 6px 0; font-size: 0.9rem; color: #666; line-height: 1.4;">' + escapeHtml(trimmedLine) + '</div>';
+                            }
+                        });
+                        
+                        formattedHtml += '</div>';
+                        
+                        Swal.fire({
+                            icon: null,
+                            title: 'CSV Upload Completed!',
+                            html: formattedHtml,
+                            confirmButtonColor: '#8B0000',
+                            confirmButtonText: 'OK',
+                            allowOutsideClick: false,
+                            allowEscapeKey: true,
+                            showCloseButton: true,
+                            width: '750px'
+                        });
+                    }
+                @endif
+
+                @if($errors->has('csv_file'))
+                    if (window.Swal) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'CSV Upload Failed',
+                            text: '{{ $errors->first("csv_file") }}',
+                            confirmButtonColor: '#8B0000'
+                        });
+                    }
+                @endif
             })();
         })();
     </script>

@@ -761,6 +761,9 @@
         /* Logout Modal */
         .logout-modal .modal-box {
             width: 336px;
+            height: auto !important;
+            max-height: none !important;
+            min-height: auto !important;
             text-align: center;
             padding: 32px 28px 28px 28px;
             border-radius: 12.8px;
@@ -1110,6 +1113,9 @@
             .logout-modal .modal-box {
                 width: 95vw !important;
                 max-width: 95vw !important;
+                height: auto !important;
+                max-height: none !important;
+                min-height: auto !important;
                 padding: 24px 20px !important;
             }
 
@@ -1187,6 +1193,8 @@
                     onclick="window.location.href='{{ route('checker.leave.management') }}'">Leave</div>
                 <div class="sub-nav-item @yield('pass-active')"
                     onclick="window.location.href='{{ route('checker.pass.management') }}'">Pass Slip</div>
+                <div class="sub-nav-item @yield('official-matters-active')"
+                    onclick="window.location.href='{{ route('checker.official.matters.management') }}'">Official Matters</div>
             </div>
 
             <div class="nav-item has-dropdown @yield('monitoring-active') @if (trim($__env->yieldContent('monitoring-active')) == 'active' ||

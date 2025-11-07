@@ -1464,6 +1464,7 @@ document.querySelector('.search-input').addEventListener('keydown', function(e) 
             const record = data.record;
             const passSlip = data.pass_slip;
             const leaveSlip = data.leave_slip;
+            const officialMatter = data.official_matter;
             
             const content = document.getElementById('recordDetailsContent');
             
@@ -1496,13 +1497,14 @@ document.querySelector('.search-input').addEventListener('keydown', function(e) 
             const remarks = (record.record_remarks || '').toUpperCase().trim();
             const showPassSlip = remarks === 'WITH PASS SLIP' && passSlip;
             const showLeaveSlip = remarks === 'ON LEAVE' && leaveSlip;
+            const showOfficialMatter = officialMatter && officialMatter.om_remarks && remarks === officialMatter.om_remarks.toUpperCase().trim();
             
             // Check if attendance came from recognition (has snapshots)
             const isFromRecognition = !!(record.time_in_snapshot || record.time_out_snapshot);
             
             // Determine what sections to show
             // Priority: If remarks exist, show attachments only. Otherwise, if from recognition, show recognition data.
-            const showAttachmentsOnly = (remarks === 'ON LEAVE' || remarks === 'WITH PASS SLIP');
+            const showAttachmentsOnly = (remarks === 'ON LEAVE' || remarks === 'WITH PASS SLIP' || showOfficialMatter);
             const showRecognitionOnly = isFromRecognition && !showAttachmentsOnly;
             
             // Build HTML
@@ -1608,7 +1610,32 @@ document.querySelector('.search-input').addEventListener('keydown', function(e) 
                                 </div>
                             ` : ''}
                             
-                            ${!showPassSlip && !showLeaveSlip ? '<p class="no-attachment">No attachments available</p>' : ''}
+                            ${showOfficialMatter ? `
+                                <div class="attachment-item">
+                                    <div class="attachment-header">Official Matter</div>
+                                    <div class="attachment-details">
+                                        <div class="modal-info-item">
+                                            <div class="modal-info-label">Start Date</div>
+                                            <div class="modal-info-value">${officialMatter.om_start_date ? new Date(officialMatter.om_start_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}</div>
+                                        </div>
+                                        <div class="modal-info-item">
+                                            <div class="modal-info-label">End Date</div>
+                                            <div class="modal-info-value">${officialMatter.om_end_date ? new Date(officialMatter.om_end_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}</div>
+                                        </div>
+                                        <div class="modal-info-item">
+                                            <div class="modal-info-label">Purpose</div>
+                                            <div class="modal-info-value">${officialMatter.om_purpose || 'N/A'}</div>
+                                        </div>
+                                        <div class="modal-info-item">
+                                            <div class="modal-info-label">Remarks</div>
+                                            <div class="modal-info-value">${officialMatter.om_remarks || 'N/A'}</div>
+                                        </div>
+                                    </div>
+                                    ${officialMatter.om_attachment ? `<img src="${officialMatter.om_attachment}" alt="Official Matter" class="attachment-image" onclick="viewImage('${officialMatter.om_attachment}')">` : '<p class="no-attachment">No image available</p>'}
+                                </div>
+                            ` : ''}
+                            
+                            ${!showPassSlip && !showLeaveSlip && !showOfficialMatter ? '<p class="no-attachment">No attachments available</p>' : ''}
                         </div>
                     </div>
                     `;

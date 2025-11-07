@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Models\ActivityLog;
 use App\Models\TeachingLoadArchive;
 use App\Models\AttendanceRecordArchive;
+use App\Models\OfficialMatter;
 
 class CloudSyncService
 {
@@ -62,6 +63,7 @@ class CloudSyncService
             $results['synced']['activity_logs'] = $this->syncActivityLogs();
             $results['synced']['teaching_load_archives'] = $this->syncTeachingLoadArchives();
             $results['synced']['attendance_record_archives'] = $this->syncAttendanceRecordArchives();
+            $results['synced']['official_matters'] = $this->syncOfficialMatters();
             
             // Calculate summary
             foreach ($results['synced'] as $key => $value) {
@@ -1358,6 +1360,7 @@ class CloudSyncService
             $results['synced']['activity_logs'] = $this->syncActivityLogsFromCloud();
             $results['synced']['teaching_load_archives'] = $this->syncTeachingLoadArchivesFromCloud();
             $results['synced']['attendance_record_archives'] = $this->syncAttendanceRecordArchivesFromCloud();
+            $results['synced']['official_matters'] = $this->syncOfficialMattersFromCloud();
             
             // Calculate summary
             foreach ($results['synced'] as $key => $value) {
@@ -2343,6 +2346,181 @@ class CloudSyncService
             Log::info("Synced " . count($synced) . " attendance record archives from cloud to local");
         } catch (\Exception $e) {
             Log::error("Error syncing attendance record archives from cloud: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync official matters
+     */
+    protected function syncOfficialMatters()
+    {
+        $synced = [];
+        
+        try {
+            // Get existing official matter IDs from cloud (last 90 days)
+            $existingCloudIds = $this->getExistingCloudIds('official-matters', 'om_id', ['days' => 90]);
+            
+            // Get all local official matters and filter out existing ones
+            $localOfficialMatters = OfficialMatter::all()->filter(function ($om) use ($existingCloudIds) {
+                return !in_array($om->om_id, $existingCloudIds);
+            });
+            
+            if ($localOfficialMatters->isEmpty()) {
+                Log::info('No new official matters to sync to cloud');
+                return $synced;
+            }
+            
+            $payload = $localOfficialMatters->map(function ($om) {
+                // Sync attachment to cloud and update path
+                $cloudAttachmentPath = $this->syncOfficialMatterAttachment($om->om_attachment);
+                
+                return [
+                    'om_id' => $om->om_id,
+                    'faculty_id' => $om->faculty_id,
+                    'om_department' => $om->om_department,
+                    'om_purpose' => $om->om_purpose,
+                    'om_remarks' => $om->om_remarks,
+                    'om_start_date' => $om->om_start_date,
+                    'om_end_date' => $om->om_end_date,
+                    'om_attachment' => $cloudAttachmentPath,
+                    'created_at' => $this->formatDateTime($om->created_at),
+                    'updated_at' => $this->formatDateTime($om->updated_at),
+                ];
+            })->values()->all();
+            $resp = $this->pushBulkToCloud('official-matters', $payload);
+            $upserted = $resp['data']['upserted'] ?? 0;
+            Log::info('Bulk official-matters result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($localOfficialMatters)]);
+            
+            if ($resp['success'] && $upserted > 0) {
+                // Only return synced IDs if records were actually upserted
+                $synced = $localOfficialMatters->pluck('om_id')->all();
+                Log::info('Synced ' . count($synced) . ' new official matters to cloud');
+            } elseif ($resp['success'] && $upserted == 0) {
+                Log::warning("Official matters sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
+            }
+        } catch (\Exception $e) {
+            Log::error("Error syncing official matters: " . $e->getMessage());
+        }
+        
+        return $synced;
+    }
+    
+    /**
+     * Sync official matter attachment
+     * @param string $attachmentPath Local attachment path
+     * @return string Cloud attachment path/URL
+     */
+    protected function syncOfficialMatterAttachment($attachmentPath)
+    {
+        if (empty($attachmentPath)) {
+            return $attachmentPath;
+        }
+        
+        // Directory: storage/app/public/official_matters/
+        $uploadResult = $this->uploadFileToCloud($attachmentPath, 'official_matters');
+        
+        if ($uploadResult && $uploadResult['success']) {
+            Log::info("Synced official matter attachment to cloud: {$attachmentPath} -> " . ($uploadResult['path'] ?? $uploadResult['url']));
+            return $uploadResult['path'] ?? $uploadResult['url'] ?? $attachmentPath;
+        }
+        
+        Log::warning("Failed to sync official matter attachment: {$attachmentPath}");
+        return $attachmentPath;
+    }
+    
+    /**
+     * Download official matter attachment from cloud
+     * @param string $cloudAttachmentPath Cloud attachment path/URL
+     * @return string Local attachment path
+     */
+    protected function downloadOfficialMatterAttachment($cloudAttachmentPath)
+    {
+        if (empty($cloudAttachmentPath)) {
+            return $cloudAttachmentPath;
+        }
+        
+        $localPath = $this->downloadFileFromCloud($cloudAttachmentPath, 'official_matters');
+        
+        if ($localPath) {
+            Log::info("Downloaded official matter attachment from cloud: {$cloudAttachmentPath} -> {$localPath}");
+            return $localPath;
+        }
+        
+        Log::warning("Failed to download official matter attachment: {$cloudAttachmentPath}");
+        return $cloudAttachmentPath;
+    }
+    
+    /**
+     * Sync official matters from cloud to local
+     */
+    protected function syncOfficialMattersFromCloud()
+    {
+        $synced = [];
+        
+        try {
+            // Get existing official matter IDs from local
+            $existingLocalIds = DB::table('tbl_official_matters')->pluck('om_id')->toArray();
+            
+            // Get official matters from cloud (last 90 days)
+            $response = Http::timeout(60)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->cloudApiKey,
+                    'Accept' => 'application/json',
+                ])
+                ->get("{$this->cloudApiUrl}/official-matters", ['days' => 90]);
+            
+            if (!$response->successful()) {
+                Log::error("Failed to get official matters from cloud: " . $response->body());
+                return $synced;
+            }
+            
+            $cloudOfficialMatters = $response->json();
+            
+            if (empty($cloudOfficialMatters) || !is_array($cloudOfficialMatters)) {
+                return $synced;
+            }
+            
+            // Filter out official matters that already exist locally
+            $newOfficialMatters = array_filter($cloudOfficialMatters, function ($cloudOM) use ($existingLocalIds) {
+                return !in_array($cloudOM['om_id'] ?? null, $existingLocalIds);
+            });
+            
+            if (empty($newOfficialMatters)) {
+                Log::info('No new official matters to sync from cloud to local');
+                return $synced;
+            }
+            
+            foreach ($newOfficialMatters as $cloudOM) {
+                try {
+                    // Download attachment from cloud
+                    $localAttachmentPath = $this->downloadOfficialMatterAttachment($cloudOM['om_attachment'] ?? null);
+                    
+                    DB::table('tbl_official_matters')->upsert([
+                        [
+                            'om_id' => $cloudOM['om_id'],
+                            'faculty_id' => $cloudOM['faculty_id'] ?? null,
+                            'om_department' => $cloudOM['om_department'] ?? null,
+                            'om_purpose' => $cloudOM['om_purpose'] ?? null,
+                            'om_remarks' => $cloudOM['om_remarks'] ?? null,
+                            'om_start_date' => $cloudOM['om_start_date'] ?? null,
+                            'om_end_date' => $cloudOM['om_end_date'] ?? null,
+                            'om_attachment' => $localAttachmentPath,
+                            'created_at' => $this->formatDateTime($cloudOM['created_at'] ?? null),
+                            'updated_at' => $this->formatDateTime($cloudOM['updated_at'] ?? null),
+                        ]
+                    ], ['om_id'], ['faculty_id', 'om_department', 'om_purpose', 'om_remarks', 'om_start_date', 'om_end_date', 'om_attachment', 'updated_at']);
+                    
+                    $synced[] = $cloudOM['om_id'];
+                } catch (\Exception $e) {
+                    Log::error("Error syncing official matter {$cloudOM['om_id']} from cloud: " . $e->getMessage());
+                }
+            }
+            
+            Log::info("Synced " . count($synced) . " official matters from cloud to local");
+        } catch (\Exception $e) {
+            Log::error("Error syncing official matters from cloud: " . $e->getMessage());
         }
         
         return $synced;
