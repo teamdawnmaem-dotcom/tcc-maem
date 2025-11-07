@@ -14,6 +14,7 @@ use App\Http\Controllers\TeachingLoadController;
 use App\Http\Controllers\LiveCameraController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\PassController;
+use App\Http\Controllers\OfficialMatterController;
 
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\AttendanceRecordArchiveController;
@@ -136,6 +137,8 @@ Route::prefix('deptHead')->middleware('role:department head')->group(function ()
     Route::put('/subjects/{id}', [\App\Http\Controllers\SubjectController::class, 'update'])->name('deptHead.subjects.update');
     Route::delete('/subjects/{id}', [\App\Http\Controllers\SubjectController::class, 'destroy'])->name('deptHead.subjects.destroy');
     Route::post('/subjects/check-duplicate', [\App\Http\Controllers\SubjectController::class, 'checkDuplicate'])->name('deptHead.subjects.check-duplicate');
+    Route::post('/subjects/csv-upload', [\App\Http\Controllers\SubjectController::class, 'csvUpload'])->name('deptHead.subjects.csv-upload');
+    Route::get('/subjects/csv-template', [\App\Http\Controllers\SubjectController::class, 'csvTemplate'])->name('deptHead.subjects.csv-template');
     
     // Live Feed
     Route::get('/live-camera-feed', [LiveCameraController::class, 'index'])->name('deptHead.live.camera.feed');
@@ -173,6 +176,12 @@ Route::prefix('deptHead')->middleware('role:department head')->group(function ()
     Route::delete('/passes/{id}', [PassController::class, 'destroy'])->name('checker.passes.destroy');
     Route::post('/passes/check-leave-conflict', [PassController::class, 'checkLeaveConflict'])->name('checker.passes.check-leave-conflict');
     Route::post('/passes/check-pass-overlap', [PassController::class, 'checkPassOverlap'])->name('checker.passes.check-pass-overlap');
+
+    // Official Matters Routes
+    Route::get('/official-matters', [OfficialMatterController::class, 'index'])->name('checker.official.matters.management');
+    Route::post('/official-matters', [OfficialMatterController::class, 'store'])->name('checker.official.matters.store');
+    Route::put('/official-matters/{id}', [OfficialMatterController::class, 'update'])->name('checker.official.matters.update');
+    Route::delete('/official-matters/{id}', [OfficialMatterController::class, 'destroy'])->name('checker.official.matters.destroy');
       
     // Live Feed
     Route::get('/live-camera-feed', [LiveCameraController::class, 'index2'])->name('checker.live.camera.feed');

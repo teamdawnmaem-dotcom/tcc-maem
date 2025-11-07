@@ -125,25 +125,40 @@ class AttendanceController extends Controller
 	}
 
 	/**
-	 * Get attendance record details with attachments (pass slip and leave slip)
+	 * Get attendance record details with attachments (pass slip, leave slip, and official matter)
 	 */
 	public function getRecordDetails($recordId)
 	{
 		$record = AttendanceRecord::with(['faculty', 'teachingLoad', 'camera.room'])
 			->findOrFail($recordId);
 
+		$recordDate = \Carbon\Carbon::parse($record->record_date)->toDateString();
+
 		// Get pass slip if exists for the record date
 		$passSlip = \App\Models\Pass::where('faculty_id', $record->faculty_id)
-			->whereDate('pass_slip_date', \Carbon\Carbon::parse($record->record_date)->toDateString())
+			->whereDate('pass_slip_date', $recordDate)
 			->first();
 
 		// Get leave slip if exists for the record date
 		$leaveSlip = \App\Models\Leave::where('faculty_id', $record->faculty_id)
-			->where(function($query) use ($record) {
-				$recordDate = \Carbon\Carbon::parse($record->record_date)->toDateString();
+			->where(function($query) use ($recordDate) {
 				$query->whereDate('leave_start_date', '<=', $recordDate)
 					->whereDate('leave_end_date', '>=', $recordDate);
 			})
+			->first();
+
+		// Get official matter if exists for the record date
+		// Match by faculty_id or department, and date range, and remarks match
+		$officialMatter = \App\Models\OfficialMatter::where(function($query) use ($record) {
+				$query->where('faculty_id', $record->faculty_id)
+					->orWhere('om_department', $record->faculty->faculty_department ?? '')
+					->orWhere('om_department', 'All Instructor');
+			})
+			->where(function($query) use ($recordDate) {
+				$query->whereDate('om_start_date', '<=', $recordDate)
+					->whereDate('om_end_date', '>=', $recordDate);
+			})
+			->where('om_remarks', $record->record_remarks)
 			->first();
 
 		return response()->json([
@@ -165,6 +180,14 @@ class AttendanceController extends Controller
 					'leave_end_date' => $leaveSlip->leave_end_date,
 					'lp_purpose' => $leaveSlip->lp_purpose,
 					'lp_image' => $leaveSlip->lp_image ? asset('storage/' . $leaveSlip->lp_image) : null,
+				] : null,
+				'official_matter' => $officialMatter ? [
+					'om_id' => $officialMatter->om_id,
+					'om_start_date' => $officialMatter->om_start_date,
+					'om_end_date' => $officialMatter->om_end_date,
+					'om_purpose' => $officialMatter->om_purpose,
+					'om_remarks' => $officialMatter->om_remarks,
+					'om_attachment' => $officialMatter->om_attachment ? asset('storage/' . $officialMatter->om_attachment) : null,
 				] : null,
 			]
 		]);

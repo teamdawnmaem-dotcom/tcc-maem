@@ -146,6 +146,10 @@ Route::middleware('api.key')->prefix('sync')->group(function () {
     Route::get('/attendance-record-archives', [SyncReceiverController::class, 'getAttendanceRecordArchives']);
     Route::post('/attendance-record-archives', [SyncReceiverController::class, 'receiveAttendanceRecordArchive']);
     
+    // Official Matters
+    Route::get('/official-matters', [SyncReceiverController::class, 'getOfficialMatters']);
+    Route::post('/official-matters', [SyncReceiverController::class, 'receiveOfficialMatter']);
+    
     // File Uploads
     Route::post('/upload/{directory}', [SyncReceiverController::class, 'receiveFileUpload']);
 

@@ -681,6 +681,11 @@ class SyncReceiverController extends Controller
                 'unique' => ['archive_id'],
                 'columns' => ['archive_id','original_record_id','faculty_id','teaching_load_id','camera_id','record_date','record_time_in','record_time_out','time_duration_seconds','record_status','record_remarks','school_year','semester','archived_at','archived_by','archive_notes','created_at','updated_at'],
             ],
+            'official-matters' => [
+                'table' => 'tbl_official_matters',
+                'unique' => ['om_id'],
+                'columns' => ['om_id','faculty_id','om_department','om_purpose','om_remarks','om_start_date','om_end_date','om_attachment','created_at','updated_at'],
+            ],
         ];
 
         if (!isset($map[$resource])) {
@@ -1094,6 +1099,82 @@ class SyncReceiverController extends Controller
         }
     }
     
+    // ============================================================================
+    // OFFICIAL MATTERS ENDPOINTS
+    // ============================================================================
+    
+    /**
+     * Get existing official matters (full data, filtered by days if provided)
+     */
+    public function getOfficialMatters(Request $request)
+    {
+        try {
+            $query = DB::table('tbl_official_matters');
+            
+            // Filter by days if provided
+            $days = $request->input('days');
+            if ($days && is_numeric($days)) {
+                $query->where(function($q) use ($days) {
+                    $q->where('om_start_date', '>=', now()->subDays($days)->toDateString())
+                      ->orWhere('om_end_date', '>=', now()->subDays($days)->toDateString());
+                });
+            }
+            
+            $officialMatters = $query->get();
+            return response()->json($officialMatters);
+        } catch (\Exception $e) {
+            Log::error('Error getting official matters: ' . $e->getMessage());
+            return response()->json([], 500);
+        }
+    }
+    
+    /**
+     * Receive and store official matter data
+     */
+    public function receiveOfficialMatter(Request $request)
+    {
+        try {
+            // Primary key is required for sync
+            if (!$request->has('om_id') || !$request->input('om_id')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'om_id (primary key) is required for sync operations'
+                ], 400);
+            }
+            
+            $validated = $request->validate([
+                'om_id' => 'required|integer|min:1', // Primary key required (BIGINT)
+                'faculty_id' => 'nullable|integer',
+                'om_department' => 'nullable|string|max:255',
+                'om_purpose' => 'required|string|max:255',
+                'om_remarks' => 'required|string|max:255',
+                'om_start_date' => 'required|date',
+                'om_end_date' => 'required|date',
+                'om_attachment' => 'required|string|max:255',
+                'created_at' => 'nullable|date',
+                'updated_at' => 'nullable|date',
+            ]);
+            
+            DB::table('tbl_official_matters')->updateOrInsert(
+                ['om_id' => $validated['om_id']],
+                $validated
+            );
+            
+            Log::info("Synced official matter {$validated['om_id']} from local server");
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Official matter synced successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error receiving official matter: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    
     /**
      * Sync status endpoint
      */
@@ -1121,6 +1202,7 @@ class SyncReceiverController extends Controller
                 'activity_logs' => DB::table('tbl_activity_logs')->count(),
                 'teaching_load_archives' => DB::table('tbl_teaching_load_archive')->count(),
                 'attendance_record_archives' => DB::table('tbl_attendance_record_archive')->count(),
+                'official_matters' => DB::table('tbl_official_matters')->count(),
             ];
             
             return response()->json([

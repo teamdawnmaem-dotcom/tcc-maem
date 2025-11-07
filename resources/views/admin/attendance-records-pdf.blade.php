@@ -597,12 +597,21 @@
     </table>
 
     <div class="summary-section">
-        <div class="summary-title">Summary: {{ $records->count() }} records | 
-            Present: {{ $records->where('record_remarks', 'Present')->count() }} | 
-            Absent: {{ $records->where('record_remarks', 'Absent')->count() }} | 
-            Late: {{ $records->where('record_remarks', 'Late')->count() }} | 
-            Leave: {{ $records->where('record_remarks', 'On Leave')->count() }} | 
-            Pass: {{ $records->where('record_remarks', 'With Pass Slip')->count() }}
+        <div class="summary-title">
+            Summary: {{ $records->count() }} records
+            @php
+                // Get all unique remarks and their counts dynamically
+                $remarksCounts = $records->groupBy('record_remarks')->map->count();
+                $summaryParts = [];
+                foreach ($remarksCounts as $remark => $count) {
+                    if (!empty($remark)) {
+                        $summaryParts[] = $remark . ': ' . $count;
+                    }
+                }
+            @endphp
+            @if(!empty($summaryParts))
+                | {{ implode(' | ', $summaryParts) }}
+            @endif
         </div>
     </div>
 
