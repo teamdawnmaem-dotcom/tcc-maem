@@ -2051,6 +2051,49 @@ def get_shared_frame(camera_id):
 # -------------------
 # Stream Recording Functions
 # -------------------
+def draw_live_tag_on_frame(frame):
+    """Draw a LIVE tag in the upper right corner of the frame."""
+    try:
+        if frame is None:
+            return frame
+        
+        height, width = frame.shape[:2]
+        
+        # LIVE tag properties
+        text = "LIVE"
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.7
+        font_thickness = 2
+        text_color = (255, 255, 255)  # White text
+        bg_color = (0, 0, 255)  # Red background (BGR format)
+        
+        # Get text size
+        (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, font_thickness)
+        
+        # Position in upper right corner with padding
+        padding = 10
+        x = width - text_width - padding * 2
+        y = text_height + padding
+        
+        # Draw background rectangle
+        rect_top = y - text_height - padding // 2
+        rect_bottom = y + baseline + padding // 2
+        rect_left = x - padding
+        rect_right = width - padding
+        
+        # Draw semi-transparent red background
+        overlay = frame.copy()
+        cv2.rectangle(overlay, (rect_left, rect_top), (rect_right, rect_bottom), bg_color, -1)
+        cv2.addWeighted(overlay, 0.8, frame, 0.2, 0, frame)
+        
+        # Draw text
+        cv2.putText(frame, text, (x, y), font, font_scale, text_color, font_thickness)
+        
+        return frame
+    except Exception as e:
+        print(f"Error drawing LIVE tag on frame: {e}")
+        return frame
+
 def record_stream_segment(camera_id, camera_feed, duration=60):
     """Record a stream segment for the specified duration (default 1 minute)."""
     import pytz
@@ -2263,6 +2306,10 @@ def record_stream_segment(camera_id, camera_feed, duration=60):
                     frame = last_frame
                 else:
                     last_frame = frame
+                
+                # Draw LIVE tag on frame before recording
+                if frame is not None:
+                    frame = draw_live_tag_on_frame(frame.copy())
                 
                 # Write frame to video
                 if use_ffmpeg and ffmpeg_process:
