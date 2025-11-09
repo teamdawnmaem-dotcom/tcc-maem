@@ -1146,8 +1146,9 @@
                 font-size: 0.85rem !important;
             }
         }
+
+        @yield('styles')
     </style>
-    @yield('styles')
 </head>
 
 <body>

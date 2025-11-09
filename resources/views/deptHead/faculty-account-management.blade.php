@@ -6,8 +6,6 @@
 
 @section('styles')
     <style>
-
-       
         /* ====== Header & Actions ====== */
         .faculty-header {
             margin-bottom: 0;
@@ -33,29 +31,34 @@
         .faculty-actions-row {
             display: flex;
             gap: 8px;
-            position: absolute;
-            top: 104px;
-            right: 32px;
-            z-index: 100;
+            margin-bottom: 16px;
+            width: 100%;
+            align-items: stretch;
         }
 
         .search-input {
-            padding: 6.4px;
-            font-size: 11.2px;
+            padding: 10px 12px;
+            font-size: 14px;
             border: 1px solid #ccc;
-            border-radius: 3.2px;
-            width: 320px;
+            border-radius: 4px;
+            width: 75%;
+            flex: 0 0 75%;
+            min-width: 0;
+            box-sizing: border-box;
         }
 
         .add-btn {
-            padding: 6.4px 19.2px;
-            font-size: 11.2px;
+            padding: 10px 24px;
+            font-size: 14px;
             border: none;
-            border-radius: 3.2px;
+            border-radius: 4px;
             background-color: #2ecc71;
             color: #fff;
             cursor: pointer;
             font-weight: bold;
+            width: 25%;
+            flex: 0 0 25%;
+            white-space: nowrap;
         }
 
         /* ====== Table Styles ====== */
@@ -412,8 +415,6 @@
         /* Tablet and below (768px) */
         @media (max-width: 768px) {
             /* Header adjustments */
-
-            
             .faculty-title {
                 font-size: 1.5rem;
             }
@@ -425,36 +426,17 @@
 
             /* Actions row - stack on small screens */
             .faculty-actions-row {
-                position: relative;
-                top: 0;
-                right: 0;
-                width: 100%;
-                flex-direction: row;
-                align-items: center;
-                gap: 8px;
-                z-index: 1;
-                padding-bottom: 20px;
+                flex-direction: column;
+                gap: 12px;
             }
 
             .search-input {
-                flex: 0 0 calc(75% - 4px);
-                width: calc(75% - 4px);
-                padding: 10px 12px;
-                font-size: 0.9rem;
-                border-radius: 6px;
-                box-sizing: border-box;
-                margin: 0;
+                width: 100%;
             }
 
             .add-btn {
-                flex: 0 0 calc(25% - 4px);
-                width: calc(25% - 4px);
+                width: 100%;
                 padding: 12px;
-                font-size: 0.9rem;
-                border-radius: 6px;
-                font-weight: bold;
-                text-align: center;
-                margin: 0;
             }
 
             /* Table adjustments */
@@ -794,7 +776,6 @@
     @include('partials.flash')
     @include('partials.flashupdate')
     @include('partials.flashdelete')
-
     <div class="faculty-header">
         <div class="faculty-title-group">
             <div class="faculty-title">Faculty Management</div>
@@ -850,7 +831,6 @@
             </table>
         </div>
     </div>
-
 
     <!-- Add Faculty Modal -->
     <div id="addFacultyModal" class="modal-overlay" style="display:none;">

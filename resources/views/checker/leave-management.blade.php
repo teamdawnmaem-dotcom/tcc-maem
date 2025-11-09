@@ -1,11 +1,674 @@
-﻿@extends('layouts.appChecker')
+@extends('layouts.appChecker')
 
 @section('title', 'Leave Management - Tagoloan Community College')
 @section('files-active', 'active')
 @section('leave-active', 'active')
 
 @section('styles')
-    <link rel="stylesheet" href="{{ asset('css/checker/leave-management.css') }}">
+    <style>
+        .faculty-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 32px;
+        }
+
+        .faculty-title-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .faculty-title {
+            font-size: 1.84rem;
+            font-weight: bold;
+            color: #6d0000;
+        }
+
+        .faculty-subtitle {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 24px;
+        }
+
+        .faculty-actions-row {
+            display: flex;
+            gap: 8px;
+            position: absolute;
+            top: 104px;
+            right: 32px;
+            z-index: 100;
+        }
+
+        .search-input {
+            padding: 6.4px;
+            font-size: 11.2px;
+            border: 1px solid #ccc;
+            border-radius: 3.2px;
+            width: 320px;
+        }
+
+        .add-btn {
+            padding: 6.4px 19.2px;
+            font-size: 11.2px;
+            border: none;
+            border-radius: 3.2px;
+            background-color: #2ecc71;
+            color: #fff;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .teaching-load-table-container {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+        }
+
+        .teaching-load-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .teaching-load-table th {
+            background: #8B0000;
+            color: #fff;
+            padding: 12.8px 0;
+            font-size: 0.88rem;
+            font-weight: bold;
+            border: none;
+        }
+
+        /* Keep table header visible while scrolling */
+        .teaching-load-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        .teaching-load-table td {
+            padding: 9.6px 0;
+            text-align: center;
+            font-size: 0.8rem;
+            border: none;
+        }
+
+        .teaching-load-table tr:nth-child(even) {
+            background: #fff;
+        }
+
+        .teaching-load-table tr:nth-child(odd) {
+            background: #fbeeee;
+        }
+
+        .teaching-load-table tr:hover {
+            background: #fff2e6;
+        }
+
+        /* Make only the table area scroll vertically */
+        .teaching-load-table-scroll {
+            max-height: 536px;
+            overflow-y: auto;
+            width: 100%;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 6.4px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .edit-btn,
+        .delete-btn {
+            width: 48px;
+            height: 25.6px;
+            border-radius: 4.8px;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .edit-btn {
+            background: #7cc6fa;
+            color: #fff;
+        }
+
+        .delete-btn {
+            background: #ff3636;
+            color: #fff;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal-box {
+            background: #fff;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 360px;
+            padding: 0;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #8B0000;
+            text-align: center;
+            margin-bottom: 0;
+        }
+
+        .modal-form {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .modal-content {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        #deleteModal .modal-box {
+            padding: 32px 32px 24px 32px;
+        }
+
+        .modal-form-group {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 9.6px;
+            margin-bottom: 9.6px;
+        }
+
+        .modal-form-group label {
+            min-width: 104px;
+            text-align: left;
+            margin-bottom: 0;
+            font-size: 0.8rem;
+            color: #222;
+        }
+
+        .modal-form-group input,
+        .modal-form-group textarea,
+        .modal-form-group select {
+            flex: 1;
+            width: 100%;
+            padding: 8px 9.6px;
+            font-size: 0.8rem;
+            border: 1px solid #bbb;
+            border-radius: 4px;
+        }
+
+        .modal-form-group textarea {
+            resize: vertical;
+        }
+
+        .modal-btn {
+            width: 100%;
+            padding: 11.2px 0;
+            font-size: 0.88rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 4.8px;
+            margin-top: 0;
+            cursor: pointer;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 9.6px;
+            justify-content: center;
+            margin-top: 14.4px;
+        }
+
+        .modal-btn.cancel {
+            background: #fff !important;
+            color: #800000 !important;
+            border: 2px solid #800000 !important;
+            border-radius: 6.4px;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .modal-btn.cancel:hover {
+            background: #800000 !important;
+            color: #fff !important;
+        }
+
+        .modal-btn.delete {
+            background: #fff !important;
+            color: #ff0000 !important;
+            border: 2px solid #ff0000 !important;
+            border-radius: 6.4px;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .modal-btn.delete:hover {
+            background: #ff0000 !important;
+            color: #fff !important;
+        }
+
+        .view-slip-btn {
+            padding: 6.4px 12.8px;
+            font-size: 0.72rem;
+            border: none;
+            border-radius: 4px;
+            background-color: #8B0000;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .view-slip-btn:hover {
+            background-color: #6d0000;
+        }
+
+        #slipModal .modal-box {
+            max-width: 900px !important;
+            width: 95%;
+            height: auto;
+            padding: 0;
+            position: relative;
+            background: #fff;
+            border-radius: 9.6px;
+            overflow: hidden;
+        }
+
+        #slipImage {
+            max-width: 100%;
+            max-height: 75vh;
+            border-radius: 6.4px;
+            object-fit: contain;
+            display: block;
+        }
+
+        /* Close button styles for slip modal */
+        #slipModal .close {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            z-index: 1000;
+            width: 32px;
+            height: 32px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            font-size: 19.2px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 3.2px 9.6px rgba(0, 0, 0, 0.3);
+        }
+
+        #slipModal .close:hover {
+            background: rgba(139, 0, 0, 0.9);
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        #slipModal .close:active {
+            transform: scale(0.95);
+        }
+
+        /* Slip modal header */
+        #slipModal .modal-header {
+            background: transparent;
+            color: #8B0000;
+            padding: 12px 16px;
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        /* Slip modal content */
+        #slipModal .slip-content {
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+        }
+
+        /* Mobile Responsive Design for phones (max-width: 430px) */
+        @media (max-width: 430px) {
+            /* Faculty Header */
+            .faculty-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+                margin-bottom: 20px;
+                position: relative;
+            }
+
+            .faculty-title-group {
+                width: 100%;
+            }
+
+            .faculty-title {
+                font-size: 1.4rem;
+                margin-bottom: 4px;
+            }
+
+            .faculty-subtitle {
+                font-size: 0.75rem;
+                margin-bottom: 0;
+            }
+
+            /* Faculty Actions Row */
+            .faculty-actions-row {
+                position: relative;
+                top: 0;
+                right: 0;
+                width: 100%;
+                flex-direction: row;
+                align-items: center;
+                gap: 8px;
+                z-index: 1;
+            }
+
+            .search-input {
+                flex: 0 0 calc(75% - 4px);
+                width: calc(75% - 4px);
+                padding: 10px 12px;
+                font-size: 0.9rem;
+                border-radius: 6px;
+                box-sizing: border-box;
+                margin: 0;
+            }
+
+            .add-btn {
+                flex: 0 0 calc(25% - 4px);
+                width: calc(25% - 4px);
+                padding: 12px;
+                font-size: 0.9rem;
+                border-radius: 6px;
+                font-weight: bold;
+                text-align: center;
+                margin: 0;
+            }
+
+            /* Table Container */
+            .teaching-load-table-container {
+                border-radius: 8px;
+                overflow: hidden;
+            }
+
+            .teaching-load-table-scroll {
+                max-height: 50vh;
+                overflow-x: auto;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .teaching-load-table {
+                min-width: 900px; /* Minimum width to maintain readability */
+            }
+
+            .teaching-load-table th {
+                padding: 10px 6px;
+                font-size: 0.7rem;
+                white-space: nowrap;
+            }
+
+            .teaching-load-table td {
+                padding: 8px 6px;
+                font-size: 0.7rem;
+                white-space: nowrap;
+            }
+
+            /* Empty state message */
+            .teaching-load-table td[colspan] {
+                font-size: 0.75rem;
+                padding: 20px 12px;
+            }
+
+            /* Action Buttons */
+            .action-btns {
+                gap: 6px;
+            }
+
+            .edit-btn,
+            .delete-btn {
+                width: 40px;
+                height: 28px;
+                font-size: 0.9rem;
+            }
+
+            .view-slip-btn {
+                padding: 6px 10px !important;
+                font-size: 0.7rem !important;
+            }
+
+            /* Modals - Mobile Optimized */
+            .modal-overlay {
+                padding: 10px;
+                align-items: flex-start;
+                padding-top: 60px;
+            }
+
+            .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+                padding: 0 !important;
+                margin: 0;
+                max-height: 85vh;
+                overflow-y: auto;
+                
+            }
+
+            /* Add Modal */
+            #addModal .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+            }
+
+            #addModal .modal-header {
+                font-size: 1.1rem !important;
+                padding: 12px 16px !important;
+            }
+
+            #addModal .modal-content {
+                padding: 16px !important;
+            }
+
+            #addModal .modal-form-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+                margin-bottom: 12px;
+                padding-bottom: 18px;
+            }
+
+            #addModal .modal-form-group label {
+                min-width: auto;
+                width: 100%;
+                margin-bottom: 4px;
+                font-size: 0.85rem;
+            }
+
+            #addModal .modal-form-group input,
+            #addModal .modal-form-group select,
+            #addModal .modal-form-group textarea {
+                width: 100%;
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+
+            #addModal .validation-message {
+                position: relative;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding-left: 0;
+                margin-top: 4px;
+            }
+
+            #addModal .modal-buttons {
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 16px;
+            }
+
+            #addModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 0.9rem !important;
+            }
+
+            /* Edit Modal */
+            #editModal .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+            }
+
+            #editModal .modal-header {
+                font-size: 1.1rem !important;
+                padding: 12px 16px !important;
+            }
+
+            #editModal .modal-content {
+                padding: 16px !important;
+            }
+
+            #editModal .modal-form-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+                margin-bottom: 12px;
+                padding-bottom: 18px;
+            }
+
+            #editModal .modal-form-group label {
+                min-width: auto;
+                width: 100%;
+                margin-bottom: 4px;
+                font-size: 0.85rem;
+            }
+
+            #editModal .modal-form-group input,
+            #editModal .modal-form-group select,
+            #editModal .modal-form-group textarea {
+                width: 100%;
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+
+            #editModal .validation-message {
+                position: relative;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding-left: 0;
+                margin-top: 4px;
+            }
+
+            #editModal .modal-buttons {
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 16px;
+            }
+
+            #editModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 0.9rem !important;
+            }
+
+            /* Delete Modal */
+            #deleteModal .modal-box {
+                width: 90vw !important;
+                max-width: 90vw !important;
+                padding: 24px 20px !important;
+            }
+
+            #deleteModal .modal-header {
+                font-size: 1.1rem !important;
+                margin-bottom: 16px !important;
+            }
+
+            #deleteModal .modal-buttons {
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 20px !important;
+            }
+
+            #deleteModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 0.9rem !important;
+            }
+
+            /* Slip Modal */
+            #slipModal .modal-box {
+                width: 95vw !important;
+                max-width: 95vw !important;
+                padding: 0 !important;
+            }
+
+            #slipModal .modal-header {
+                font-size: 1rem !important;
+                padding: 10px 16px !important;
+            }
+
+            #slipModal .slip-content {
+                padding: 12px !important;
+            }
+
+            #slipImage {
+                max-height: 60vh !important;
+            }
+
+            #slipModal .close {
+                width: 28px !important;
+                height: 28px !important;
+                font-size: 16px !important;
+                top: 8px !important;
+                right: 12px !important;
+            }
+
+            /* Logic Error Messages */
+            .logic-error {
+                font-size: 0.8rem !important;
+                padding: 8px 12px !important;
+            }
+
+            .server-error {
+                font-size: 0.8rem !important;
+                padding: 8px 12px !important;
+            }
+        }
+    </style>
 @endsection
 
 @section('content')
@@ -94,10 +757,73 @@
                 </div>
 
                 <div class="modal-content" style="padding: 19.2px 19.2px 19.2px;">
-                    
-                    <div class="modal-field">
-                        <label class="modal-label">Faculty</label>
-                        <select class="modal-select" name="faculty_id" id="facultySelect">
+                    <style>
+                        #addModal .modal-form-group {
+                            display: flex;
+                            align-items: center;
+                            gap: 4.8px;
+                            margin-bottom: 3.2px;
+                            padding-bottom: 4.8px;
+                            position: relative;
+                        }
+
+                        #addModal .modal-form-group label {
+                            min-width: 104px;
+                            margin-bottom: 0;
+                            font-size: 0.8rem;
+                            text-align: left;
+                        }
+
+                        #addModal .modal-form-group input,
+                        #addModal .modal-form-group select,
+                        #addModal .modal-form-group textarea {
+                            flex: 1;
+                            width: 100%;
+                            padding: 8px 9.6px;
+                            font-size: 0.8rem;
+                            border: 1px solid #bbb;
+                            border-radius: 4px;
+                        }
+
+                        #addModal .validation-message {
+                            font-size: 0.64rem;
+                            left: 104px;
+                            right: 8px;
+                            bottom: -8px;
+                            padding-left: 8px;
+                            line-height: 1.1;
+                            position: absolute;
+                            color: #ff3636;
+                            pointer-events: none;
+                        }
+
+                        #addModal .modal-buttons {
+                            display: flex;
+                            gap: 9.6px;
+                            justify-content: center;
+                            margin-top: 9.6px;
+                        }
+
+                        #addModal .modal-btn {
+                            flex: 1;
+                        }
+
+                        #addModal .modal-btn.add {
+                            background: transparent !important;
+                            border: 2px solid #28a745 !important;
+                            color: #28a745 !important;
+                        }
+
+                        #addModal .modal-btn.add:hover {
+                            background: #28a745 !important;
+                            color: #fff !important;
+                            border-color: #28a745 !important;
+                        }
+                    </style>
+
+                    <div class="modal-form-group">
+                        <label>Faculty</label>
+                        <select name="faculty_id" id="facultySelect">
                             <option value="">-- Select Faculty --</option>
                             @foreach ($faculties as $faculty)
                                 <option value="{{ $faculty->faculty_id }}"
@@ -106,31 +832,19 @@
                                 </option>
                             @endforeach
                         </select>
-                        <div class="validation-message"></div>
                     </div>
-                    <div class="modal-field">
-                        <label class="modal-label">Department</label>
-                        <input class="modal-input" type="text" id="facultyDepartment" readonly>
-                        <div class="validation-message"></div>
+                    <div class="modal-form-group">
+                        <label>Department</label>
+                        <input type="text" id="facultyDepartment" readonly>
                     </div>
-                    <div class="modal-field">
-                        <label class="modal-label">Purpose</label>
-                        <input class="modal-input" type="text" name="lp_purpose" id="add_lp_purpose">
-                        <div class="validation-message"></div>
-                    </div>
-                    <div class="modal-field">
-                        <label class="modal-label">Start Date</label>
-                        <input class="modal-input" type="date" name="leave_start_date" id="add_leave_start_date">
-                        <div class="validation-message"></div>
-                    </div>
-                    <div class="modal-field">
-                        <label class="modal-label">End Date</label>
-                        <input class="modal-input" type="date" name="leave_end_date" id="add_leave_end_date">
-                        <div class="validation-message"></div>
-                    </div>
-                    <div class="modal-field">
-                        <label class="modal-label">Slip Image</label>
-                        <input class="modal-file" type="file" name="lp_image" accept="image/*" id="add_lp_image">
+                    <div class="modal-form-group"><label>Purpose</label><input type="text" name="lp_purpose"
+                            id="add_lp_purpose"></div>
+                    <div class="modal-form-group"><label>Start Date</label><input type="date" name="leave_start_date"
+                            id="add_leave_start_date"></div>
+                    <div class="modal-form-group"><label>End Date</label><input type="date" name="leave_end_date"
+                            id="add_leave_end_date"></div>
+                    <div class="modal-form-group"><label>Slip Image</label><input type="file" name="lp_image"
+                            accept="image/*" id="add_lp_image">
                         <div class="validation-message" id="add_lp_image_error"></div>
                     </div>
 
@@ -166,7 +880,65 @@
                 </div>
 
                 <div class="modal-content" style="padding: 19.2px 19.2px 19.2px;">
-                    
+                    <style>
+                        #editModal .modal-form-group {
+                            display: flex;
+                            align-items: center;
+                            gap: 4.8px;
+                            margin-bottom: 3.2px;
+                            padding-bottom: 4.8px;
+                            position: relative;
+                        }
+
+                        #editModal .modal-form-group label {
+                            min-width: 104px;
+                            margin-bottom: 0;
+                            font-size: 0.8rem;
+                            text-align: left;
+                        }
+
+                        #editModal .modal-form-group input,
+                        #editModal .modal-form-group select,
+                        #editModal .modal-form-group textarea {
+                            flex: 1;
+                            width: 100%;
+                            padding: 8px 9.6px;
+                            font-size: 0.8rem;
+                            border: 1px solid #bbb;
+                            border-radius: 4px;
+                        }
+
+                        #editModal .validation-message {
+                            font-size: 0.64rem;
+                            left: 104px;
+                            right: 8px;
+                            bottom: -8px;
+                            padding-left: 8px;
+                            line-height: 1.1;
+                            position: absolute;
+                            color: #ff3636;
+                            pointer-events: none;
+                        }
+
+                        #editModal .modal-buttons {
+                            display: flex;
+                            gap: 9.6px;
+                            justify-content: center;
+                            margin-top: 9.6px;
+                        }
+
+                        #editModal .modal-btn.add {
+                            background: transparent !important;
+                            border: 2px solid #7cc6fa !important;
+                            color: #7cc6fa !important;
+                        }
+
+                        #editModal .modal-btn.add:hover {
+                            background: #7cc6fa !important;
+                            color: #fff !important;
+                            border-color: #7cc6fa !important;
+                        }
+                    </style>
 
                     <div class="modal-form-group">
                         <label>Faculty</label>
@@ -224,7 +996,7 @@
 
             <!-- Warning Icon and Message -->
             <div style="text-align: center; margin:0 px 0;">
-                <div style="font-size: 4rem; color: #ff3636; margin-bottom: 20px;">âš ï¸</div>
+                <div style="font-size: 4rem; color: #ff3636; margin-bottom: 20px;">⚠️</div>
                 <div style="font-size: 1.2rem; color: #333; margin-bottom: 10px; font-weight: bold;">Are you sure?</div>
                 <div style="font-size: 1rem; color: #666; line-height: 1.5;">
                     This action cannot be undone. The leave record will be permanently deleted.
@@ -441,7 +1213,7 @@
 
         function setMessage(el, msg) {
             if (!el) return;
-            const g = el.closest('.modal-field');
+            const g = el.closest('.modal-form-group');
             if (!g) return;
             let m = g.querySelector('.validation-message');
             if (!m) {

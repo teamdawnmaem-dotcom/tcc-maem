@@ -4,7 +4,319 @@
 @section('archived-attendance-active', 'active')
 
 @section('styles')
-    <link rel="stylesheet" href="{{ asset('css/admin/archived-attendance-records.css') }}">
+    <style>
+        .faculty-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 32px;
+        }
+
+        .faculty-title-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .faculty-title {
+            font-size: 1.84rem;
+            font-weight: bold;
+            color: #6d0000;
+        }
+
+        .faculty-subtitle {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 24px;
+        }
+
+        .faculty-actions-row {
+            display: flex;
+            gap: 8px;
+            position: absolute;
+            top: 104px;
+            right: 32px;
+            z-index: 100;
+        }
+
+        .view-archive-btn {
+            background-color: #6c757d;
+            color: white;
+            padding: 6px 19px;
+            font-size: 11.2px;
+            border: none;
+            border-radius: 3.2px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .teaching-load-table-container {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+            overflow-x: auto;
+        }
+
+        .teaching-load-table {
+            width: 100%;
+            min-width: 2000px;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .teaching-load-table th {
+            background: #8B0000;
+            color: #fff;
+            padding: 9.6px 6.4px;
+            font-size: 0.72rem;
+            font-weight: bold;
+            border: none;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .teaching-load-table td {
+            padding: 9.6px 6.4px;
+            text-align: center;
+            font-size: 0.68rem;
+            border: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: middle;
+        }
+
+        .teaching-load-table tr:nth-child(even) {
+            background: #fff;
+        }
+
+        .teaching-load-table tr:nth-child(odd) {
+            background: #fbeeee;
+        }
+
+        .teaching-load-table tr:hover {
+            background: #fff2e6;
+        }
+
+        .teaching-load-table-scroll {
+            max-height: 536px;
+            overflow-y: auto;
+            width: 100%;
+        }
+
+        /* Column width adjustments for comprehensive details */
+        .teaching-load-table th:nth-child(1), .teaching-load-table td:nth-child(1) { width: 8%; } /* Archive Info */
+        .teaching-load-table th:nth-child(2), .teaching-load-table td:nth-child(2) { width: 10%; } /* Faculty */
+        .teaching-load-table th:nth-child(3), .teaching-load-table td:nth-child(3) { width: 8%; } /* Department */
+        .teaching-load-table th:nth-child(4), .teaching-load-table td:nth-child(4) { width: 6%; } /* Course Code */
+        .teaching-load-table th:nth-child(5), .teaching-load-table td:nth-child(5) { width: 8%; } /* Subject */
+        .teaching-load-table th:nth-child(6), .teaching-load-table td:nth-child(6) { width: 6%; } /* Class Section */
+        .teaching-load-table th:nth-child(7), .teaching-load-table td:nth-child(7) { width: 5%; } /* Day */
+        .teaching-load-table th:nth-child(8), .teaching-load-table td:nth-child(8) { width: 8%; } /* Schedule */
+        .teaching-load-table th:nth-child(9), .teaching-load-table td:nth-child(9) { width: 6%; } /* Date */
+        .teaching-load-table th:nth-child(10), .teaching-load-table td:nth-child(10) { width: 5%; } /* Time In */
+        .teaching-load-table th:nth-child(11), .teaching-load-table td:nth-child(11) { width: 5%; } /* Time Out */
+        .teaching-load-table th:nth-child(12), .teaching-load-table td:nth-child(12) { width: 6%; } /* Duration */
+        .teaching-load-table th:nth-child(13), .teaching-load-table td:nth-child(13) { width: 6%; } /* Room */
+        .teaching-load-table th:nth-child(14), .teaching-load-table td:nth-child(14) { width: 5%; } /* Building */
+        .teaching-load-table th:nth-child(15), .teaching-load-table td:nth-child(15) { width: 5%; } /* Status */
+        .teaching-load-table th:nth-child(16), .teaching-load-table td:nth-child(16) { width: 7%; } /* Remarks */
+
+
+        /* Search functionality */
+        .search-section {
+            display: flex;
+            gap: 16px;
+            align-items: end;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 2px solid #f1f3f4;
+        }
+
+        .search-group {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 9.6px 12.8px;
+            border: 1.6px solid #e9ecef;
+            border-radius: 6.4px;
+            font-size: 0.76rem;
+            background: #ffffff;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #8B0000;
+            box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .search-input::placeholder {
+            color: #adb5bd;
+            font-weight: 400;
+        }
+
+        /* Remarks color coding */
+        .teaching-load-table .remarks-on-leave {
+            color: #dc3545 !important;
+            font-weight: bold !important;
+        }
+
+        .teaching-load-table .remarks-on-pass-slip {
+            color: #ff8c00 !important;
+            font-weight: bold !important;
+        }
+
+        /* Filter Styles */
+        .filter-section {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            box-shadow: 0 6.4px 20px rgba(0, 0, 0, 0.08);
+            padding: 24px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .filter-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #8B0000, #6d0000);
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+            align-items: end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            min-width: 0;
+        }
+
+        .filter-label {
+            font-size: 0.72rem;
+            color: #495057;
+            margin-bottom: 6.4px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .filter-input,
+        .filter-select {
+            padding: 9.6px 12.8px;
+            border: 1.6px solid #e9ecef;
+            border-radius: 6.4px;
+            font-size: 0.76rem;
+            background: #ffffff;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .filter-input:focus,
+        .filter-select:focus {
+            outline: none;
+            border-color: #8B0000;
+            box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .filter-btn,
+        .clear-btn {
+            padding: 9.6px 19px;
+            border: none;
+            border-radius: 6.4px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+            min-width: 120px;
+            width: auto;
+        }
+
+        .filter-btn {
+            background: linear-gradient(135deg, #8B0000, #6d0000);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(139, 0, 0, 0.3);
+        }
+
+        .filter-btn:hover {
+            background: linear-gradient(135deg, #6d0000, #5a0000);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 0, 0, 0.4);
+        }
+
+        .clear-btn {
+            background: linear-gradient(135deg, #6c757d, #5a6268);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+        }
+
+        .clear-btn:hover {
+            background: linear-gradient(135deg, #5a6268, #495057);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+        }
+
+        .archive-info {
+            text-align: center;
+        }
+
+        .archive-info h4 {
+            margin: 0 0 5px 0;
+            color: #8B0000;
+            font-size: 0.88rem;
+        }
+
+        .archive-info p {
+            margin: 0 0 5px 0;
+            color: #666;
+            font-size: 0.72rem;
+        }
+
+        .archive-info small {
+            color: #999;
+            font-size: 0.64rem;
+        }
+
+        /* Remarks color coding */
+        .remarks-on-leave {
+            color: #dc3545 !important;
+            font-weight: bold !important;
+        }
+
+        .remarks-on-pass-slip {
+            color: #ff8c00 !important;
+            font-weight: bold !important;
+        }
+    </style>
 @endsection
 
 @section('content')
@@ -14,8 +326,7 @@
         <div class="faculty-title-group">
             <div class="faculty-title">Archived Attendance Records</div>
             <div class="faculty-subtitle"></div>
-        </div>
-    </div>
+
 
     @if($errors->any())
         <div style="background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
@@ -80,7 +391,6 @@
         </div>
     </div>
 
-    <!-- Desktop Table View -->
     <div class="teaching-load-table-container">
         <div class="teaching-load-table-scroll">
             <table class="teaching-load-table">
@@ -217,160 +527,6 @@
         </div>
     </div>
 
-    <!-- Mobile Card View -->
-    <div class="mobile-card-container">
-        @forelse($archivedRecords as $record)
-            @php
-                // Prepare data for mobile card
-                $facultyName = $record->faculty ? $record->faculty->faculty_fname . ' ' . $record->faculty->faculty_lname : 'Unknown Faculty';
-                $department = $record->faculty ? $record->faculty->faculty_department : 'Unknown Department';
-                $courseCode = $record->teachingLoadArchive ? $record->teachingLoadArchive->teaching_load_course_code : 'N/A';
-                $subject = $record->teachingLoadArchive ? $record->teachingLoadArchive->teaching_load_subject : 'N/A';
-                $classSection = $record->teachingLoadArchive ? $record->teachingLoadArchive->teaching_load_class_section : 'N/A';
-                $day = $record->teachingLoadArchive ? $record->teachingLoadArchive->teaching_load_day_of_week : 'N/A';
-                
-                if($record->teachingLoadArchive) {
-                    try {
-                        $scheduleIn = \Carbon\Carbon::parse($record->teachingLoadArchive->teaching_load_time_in)->format('g:i A');
-                        $scheduleOut = \Carbon\Carbon::parse($record->teachingLoadArchive->teaching_load_time_out)->format('g:i A');
-                        $schedule = $scheduleIn . ' - ' . $scheduleOut;
-                    } catch(\Exception $e) {
-                        $schedule = ($record->teachingLoadArchive->teaching_load_time_in ?? 'N/A') . ' - ' . ($record->teachingLoadArchive->teaching_load_time_out ?? 'N/A');
-                    }
-                } else {
-                    $schedule = 'N/A';
-                }
-                
-                try {
-                    $recordDate = \Carbon\Carbon::parse($record->record_date)->format('M d, Y');
-                } catch(\Exception $e) {
-                    $recordDate = $record->record_date;
-                }
-                
-                try {
-                    $archivedDate = \Carbon\Carbon::parse($record->archived_at)->format('M d, Y');
-                } catch(\Exception $e) {
-                    $archivedDate = $record->archived_at;
-                }
-                
-                $timeIn = 'N/A';
-                if(!(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP' || !$record->record_time_in)) {
-                    try {
-                        $timeIn = \Carbon\Carbon::parse($record->record_time_in)->format('g:i a');
-                    } catch(\Exception $e) {
-                        $timeIn = $record->record_time_in;
-                    }
-                }
-                
-                $timeOut = 'N/A';
-                if(!(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP' || !$record->record_time_out)) {
-                    try {
-                        $timeOut = \Carbon\Carbon::parse($record->record_time_out)->format('g:i a');
-                    } catch(\Exception $e) {
-                        $timeOut = $record->record_time_out;
-                    }
-                }
-                
-                $duration = '0m 0s';
-                if(!(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP')) {
-                    if($record->time_duration_seconds != 0) {
-                        $duration = intval($record->time_duration_seconds / 60) . 'm ' . ($record->time_duration_seconds % 60) . 's';
-                    }
-                } else {
-                    $duration = '0';
-                }
-                
-                $room = $record->camera && $record->camera->room ? $record->camera->room->room_name : 'Unknown Room';
-                $building = $record->camera && $record->camera->room ? $record->camera->room->room_building_no : 'Unknown Building';
-                $status = $record->record_status;
-                $remarks = $record->record_remarks;
-                $remarksClass = '';
-                if(strtoupper(trim($remarks)) === 'ON LEAVE') {
-                    $remarksClass = 'remarks-on-leave';
-                } elseif(strtoupper(trim($remarks)) === 'WITH PASS SLIP') {
-                    $remarksClass = 'remarks-on-pass-slip';
-                }
-            @endphp
-            <div class="mobile-card" 
-                 data-school-year="{{ $record->school_year }}" 
-                 data-semester="{{ $record->semester }}" 
-                 data-faculty="{{ $facultyName }}">
-                <div class="mobile-card-header">
-                    <div class="mobile-card-archive-badge">
-                        {{ $record->school_year }} • {{ $record->semester }}
-                    </div>
-                    <div class="mobile-card-faculty">{{ $facultyName }}</div>
-                    <div class="mobile-card-department">{{ $department }}</div>
-                    <small style="color: #999; font-size: 0.7rem;">Archived: {{ $archivedDate }}</small>
-                </div>
-                <div class="mobile-card-body">
-                    <div class="mobile-card-row">
-                        <div class="mobile-card-label">Course Code</div>
-                        <div class="mobile-card-value">{{ $courseCode }}</div>
-                    </div>
-                    <div class="mobile-card-row">
-                        <div class="mobile-card-label">Subject</div>
-                        <div class="mobile-card-value">{{ $subject }}</div>
-                    </div>
-                    <div class="mobile-card-row">
-                        <div class="mobile-card-label">Class Section</div>
-                        <div class="mobile-card-value">{{ $classSection }}</div>
-                    </div>
-                    <div class="mobile-card-row">
-                        <div class="mobile-card-label">Day</div>
-                        <div class="mobile-card-value">{{ $day }}</div>
-                    </div>
-                    <div class="mobile-card-row">
-                        <div class="mobile-card-label">Schedule</div>
-                        <div class="mobile-card-value">{{ $schedule }}</div>
-                    </div>
-                    <div class="mobile-card-row">
-                        <div class="mobile-card-label">Date</div>
-                        <div class="mobile-card-value">{{ $recordDate }}</div>
-                    </div>
-                    <div class="mobile-card-row">
-                        <div class="mobile-card-label">Time In</div>
-                        <div class="mobile-card-value" style="{{ $timeIn === 'N/A' ? 'color: #999;' : '' }}">{{ $timeIn }}</div>
-                    </div>
-                    <div class="mobile-card-row">
-                        <div class="mobile-card-label">Time Out</div>
-                        <div class="mobile-card-value" style="{{ $timeOut === 'N/A' ? 'color: #999;' : '' }}">{{ $timeOut }}</div>
-                    </div>
-                    <div class="mobile-card-row">
-                        <div class="mobile-card-label">Duration</div>
-                        <div class="mobile-card-value" style="{{ ($duration === '0' || $duration === '0m 0s') ? 'color: #999;' : '' }}">{{ $duration }}</div>
-                    </div>
-                    <div class="mobile-card-row">
-                        <div class="mobile-card-label">Room</div>
-                        <div class="mobile-card-value">{{ $room }}</div>
-                    </div>
-                    <div class="mobile-card-row">
-                        <div class="mobile-card-label">Building</div>
-                        <div class="mobile-card-value">{{ $building }}</div>
-                    </div>
-                    <div class="mobile-card-row">
-                        <div class="mobile-card-label">Status</div>
-                        <div class="mobile-card-value">{{ $status }}</div>
-                    </div>
-                    <div class="mobile-card-row">
-                        <div class="mobile-card-label">Remarks</div>
-                        <div class="mobile-card-value">
-                            @if($remarksClass)
-                                <span class="{{ $remarksClass }}">{{ $remarks }}</span>
-                            @else
-                                {{ $remarks }}
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
-        @empty
-            <div class="mobile-card" style="text-align: center; padding: 40px;">
-                <p style="font-style: italic; color: #666; margin: 0;">No archived attendance records found.</p>
-            </div>
-        @endforelse
-    </div>
-
     
 
 @endsection
@@ -378,10 +534,27 @@
 @section('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        // Filter functionality - works with both table and mobile cards
+        // Filter functionality
         function applyFilters() {
-            // Trigger search which now includes filter checks
-            searchRecords();
+            const schoolYear = document.getElementById('schoolYearFilter').value;
+            const semester = document.getElementById('semesterFilter').value;
+            const faculty = document.getElementById('facultyFilter').value;
+            
+            const rows = document.querySelectorAll('.teaching-load-table tbody tr');
+            
+            rows.forEach(row => {
+                const rowSchoolYear = row.dataset.schoolYear;
+                const rowSemester = row.dataset.semester;
+                const rowFaculty = row.dataset.faculty;
+                
+                let show = true;
+                
+                if (schoolYear && rowSchoolYear !== schoolYear) show = false;
+                if (semester && rowSemester !== semester) show = false;
+                if (faculty && rowFaculty !== faculty) show = false;
+                
+                row.style.display = show ? '' : 'none';
+            });
         }
 
         function clearFilters() {
@@ -389,126 +562,45 @@
             document.getElementById('semesterFilter').value = '';
             document.getElementById('facultyFilter').value = '';
             
-            // Clear table rows (desktop)
             const rows = document.querySelectorAll('.teaching-load-table tbody tr');
             rows.forEach(row => {
                 row.style.display = '';
             });
-            
-            // Clear mobile cards
-            const cards = document.querySelectorAll('.mobile-card');
-            cards.forEach(card => {
-                card.style.display = '';
-            });
-            
-            // Also trigger search to refresh view
-            searchRecords();
         }
 
-        // Search functionality - works with both table and mobile cards
+        // Search functionality
         function searchRecords() {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const schoolYear = document.getElementById('schoolYearFilter').value;
-            const semester = document.getElementById('semesterFilter').value;
-            const faculty = document.getElementById('facultyFilter').value;
-            
-            // Search in table rows (desktop)
             const rows = document.querySelectorAll('.teaching-load-table tbody tr');
-            let anyTableVisible = false;
+            let anyVisible = false;
 
             rows.forEach(row => {
+                // Skip the "no results" row if it exists
                 if (row.classList.contains('no-results')) return;
 
-                // Check filters first
-                const rowSchoolYear = row.dataset.schoolYear;
-                const rowSemester = row.dataset.semester;
-                const rowFaculty = row.dataset.faculty;
-                
-                let passesFilter = true;
-                if (schoolYear && rowSchoolYear !== schoolYear) passesFilter = false;
-                if (semester && rowSemester !== semester) passesFilter = false;
-                if (faculty && rowFaculty !== faculty) passesFilter = false;
-                
-                // Then check search term
-                let passesSearch = true;
-                if (searchTerm) {
-                    let text = row.textContent.toLowerCase();
-                    passesSearch = text.includes(searchTerm);
-                }
-                
-                if (passesFilter && passesSearch) {
+                let text = row.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
                     row.style.display = '';
-                    anyTableVisible = true;
+                    anyVisible = true;
                 } else {
                     row.style.display = 'none';
                 }
             });
 
-            // Handle "no results" row for table
+            // Handle "no results" row
             let tbody = document.querySelector('.teaching-load-table tbody');
-            if (tbody) {
-                let noResultsRow = tbody.querySelector('.no-results');
-                if (!anyTableVisible && (searchTerm || schoolYear || semester || faculty)) {
-                    if (!noResultsRow) {
-                        noResultsRow = document.createElement('tr');
-                        noResultsRow.classList.add('no-results');
-                        noResultsRow.innerHTML =
-                            `<td colspan="16" style="text-align:center; padding:20px; color:#999; font-style:italic;">No results found</td>`;
-                        tbody.appendChild(noResultsRow);
-                    }
-                } else {
-                    if (noResultsRow) noResultsRow.remove();
-                }
-            }
-            
-            // Search in mobile cards
-            const cards = document.querySelectorAll('.mobile-card');
-            let anyCardVisible = false;
-            const mobileContainer = document.querySelector('.mobile-card-container');
-            
-            cards.forEach(card => {
-                if (card.classList.contains('no-results-mobile')) return;
+            let noResultsRow = tbody.querySelector('.no-results');
 
-                // Check filters first
-                const cardSchoolYear = card.dataset.schoolYear;
-                const cardSemester = card.dataset.semester;
-                const cardFaculty = card.dataset.faculty;
-                
-                let passesFilter = true;
-                if (schoolYear && cardSchoolYear !== schoolYear) passesFilter = false;
-                if (semester && cardSemester !== semester) passesFilter = false;
-                if (faculty && cardFaculty !== faculty) passesFilter = false;
-                
-                // Then check search term
-                let passesSearch = true;
-                if (searchTerm) {
-                    let text = card.textContent.toLowerCase();
-                    passesSearch = text.includes(searchTerm);
+            if (!anyVisible) {
+                if (!noResultsRow) {
+                    noResultsRow = document.createElement('tr');
+                    noResultsRow.classList.add('no-results');
+                    noResultsRow.innerHTML =
+                        `<td colspan="16" style="text-align:center; padding:20px; color:#999; font-style:italic;">No results found</td>`;
+                    tbody.appendChild(noResultsRow);
                 }
-                
-                if (passesFilter && passesSearch) {
-                    card.style.display = '';
-                    anyCardVisible = true;
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-            
-            // Handle "no results" message for mobile
-            if (mobileContainer) {
-                let noResultsCard = mobileContainer.querySelector('.no-results-mobile');
-                if (!anyCardVisible && (searchTerm || schoolYear || semester || faculty)) {
-                    if (!noResultsCard) {
-                        noResultsCard = document.createElement('div');
-                        noResultsCard.classList.add('mobile-card', 'no-results-mobile');
-                        noResultsCard.style.textAlign = 'center';
-                        noResultsCard.style.padding = '40px';
-                        noResultsCard.innerHTML = '<p style="font-style: italic; color: #666; margin: 0;">No results found</p>';
-                        mobileContainer.appendChild(noResultsCard);
-                    }
-                } else {
-                    if (noResultsCard) noResultsCard.remove();
-                }
+            } else {
+                if (noResultsRow) noResultsRow.remove();
             }
         }
 
@@ -520,17 +612,6 @@
             if (e.key === 'Enter') {
                 e.preventDefault();
                 searchRecords();
-            }
-        });
-        
-        // Apply filters on page load if filters are set
-        document.addEventListener('DOMContentLoaded', function() {
-            const schoolYear = document.getElementById('schoolYearFilter').value;
-            const semester = document.getElementById('semesterFilter').value;
-            const faculty = document.getElementById('facultyFilter').value;
-            
-            if (schoolYear || semester || faculty) {
-                applyFilters();
             }
         });
     </script>
