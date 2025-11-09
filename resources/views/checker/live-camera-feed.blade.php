@@ -1,11 +1,353 @@
-﻿@extends('layouts.appChecker')
+@extends('layouts.appChecker')
 
 @section('title', 'Live Camera Feed - Tagoloan Community College')
 @section('monitoring-active', 'active')
 @section('live-camera-active', 'active')
 
 @section('styles')
-    <link rel="stylesheet" href="{{ asset('css/checker/live-camera-feed.css') }}">
+    <style>
+        .faculty-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 32px;
+        }
+
+        .faculty-title-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .faculty-title {
+            font-size: 1.84rem;
+            font-weight: bold;
+            color: #6d0000;
+        }
+
+        .faculty-subtitle {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 24px;            
+        }
+
+        .faculty-actions-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .camera-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .camera-feed {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: flex;
+            flex-direction: column;
+            min-height: 200px;
+        }
+
+        .camera-feed.no-feed-available {
+            cursor: not-allowed;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .camera-feed:hover {
+            transform: translateY(-2px);
+        }
+
+        .camera-label {
+            background: #8B0000;
+            color: #fff;
+            padding: 12px;
+            font-size: 0.88rem;
+            font-weight: bold;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            display: block !important;
+        }
+
+        .no-feed {
+            height: 160px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 0.8rem;
+            flex: 1;
+            min-height: 160px;
+        }
+
+        #webrtc-player-detail {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            flex: 1;
+            background: #000;
+        }
+
+        .camera-feed video {
+            width: 100%;
+            height: 160px;
+            object-fit: contain;
+            flex: 1;
+            background: #000;
+        }
+
+        #video-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .no-feed-icon {
+            font-size: 2.4rem;
+            margin-bottom: 8px;
+            color: #ccc;
+        }
+
+        .camera-feed-container {
+            display: flex;
+            gap: 16px;
+            margin-top: 16px;
+            height: calc(100vh - 160px);
+            min-height: 400px;
+        }
+
+        .main-camera-feed {
+            flex: 2;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .details-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: relative;
+            height: 100%;
+        }
+
+        .combined-card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .lab-header {
+            background: #8B0000;
+            color: #fff;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 0.88rem;
+        }
+
+        .combined-card-content {
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .schedule-title {
+            font-size: 1.04rem;
+            font-weight: bold;
+            color: #8B0000;
+            margin-bottom: 16px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .schedule-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 9.6px;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            flex-shrink: 0;
+        }
+
+        .faculty-image-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .faculty-image {
+            width: 1.2in;
+            height: 1.2in;
+            object-fit: cover;
+            border-radius: 6.4px;
+            border: 1.6px solid #8B0000;
+            box-shadow: 0 3.2px 6.4px rgba(0, 0, 0, 0.1);
+        }
+
+        .no-schedule-image {
+            width: 1.2in;
+            height: 1.2in;
+            object-fit: cover;
+            border-radius: 6.4px;
+            border: 2px solid #ccc;
+            box-shadow: 0 3.2px 6.4px rgba(0, 0, 0, 0.1);
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 0.64rem;
+            text-align: center;
+        }
+
+        .schedule-label {
+            font-weight: bold;
+            color: #333;
+            min-width: 104px;
+        }
+
+        .schedule-value {
+            color: #666;
+            text-align: right;
+        }
+
+        .back-btn {
+            background: #8B0000;
+            color: #fff;
+            border: none;
+            border-radius: 4.8px;
+            padding: 9.6px 16px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+            position: absolute;
+            top: 104px;
+            right: 32px;
+            z-index: 100;
+        }
+
+        .back-btn:hover {
+            background: #6d0000;
+        }
+
+        .attendance-section {
+            margin-top: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+            display: none;
+        }
+
+        .attendance-title {
+            background: #8B0000;
+            color: #fff;
+            padding: 12px;
+            font-size: 0.88rem;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .recognition-status {
+            margin-top: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+            display: none;
+            max-height: 320px;
+        }
+
+        .recognition-title {
+            background: #8B0000;
+            color: #fff;
+            padding: 12px;
+            font-size: 0.88rem;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .attendance-table-container {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .scheduled-faculty {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .unscheduled-faculty {
+            color: #ff8c00;
+            font-weight: bold;
+        }
+
+        .attendance-table th {
+            background: #f5f5f5;
+            color: #333;
+            padding: 9.6px;
+            font-size: 0.72rem;
+            font-weight: bold;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .attendance-table td {
+            padding: 9.6px;
+            font-size: 0.72rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .attendance-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        .search-input {
+            padding: 6.4px;
+            font-size: 11.2px;
+            border: 1px solid #ccc;
+            border-radius: 3.2px;
+        }
+
+        .search-btn {
+            padding: 6.4px 9.6px;
+            font-size: 11.2px;
+            border: 1px solid #bbb;
+            border-radius: 3.2px;
+            background-color: #fff;
+            color: #222;
+            cursor: pointer;
+        }
+    </style>
 @endsection
 
 @section('content')
@@ -80,9 +422,9 @@
             
             <!-- Playlist controls overlay -->
             <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 10px; z-index: 10;">
-                <button onclick="playPreviousRecordingDetail()" style="background: rgba(139,0,0,0.8); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">â®ï¸ Previous</button>
-                <button onclick="playNextRecordingDetail()" style="background: rgba(139,0,0,0.8); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">Next â­ï¸</button>
-                <button onclick="restartPlaylistDetail()" style="background: rgba(139,0,0,0.8); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">ðŸ”„ Restart</button>
+                <button onclick="playPreviousRecordingDetail()" style="background: rgba(139,0,0,0.8); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">⏮️ Previous</button>
+                <button onclick="playNextRecordingDetail()" style="background: rgba(139,0,0,0.8); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">Next ⏭️</button>
+                <button onclick="restartPlaylistDetail()" style="background: rgba(139,0,0,0.8); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">🔄 Restart</button>
             </div>
             
             <div style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; z-index: 10; display: none;" id="recording-info-detail">
@@ -449,7 +791,7 @@
                 if (!inRange) {
                     console.log(`[filterRecordingsBySchedule] Recording ${recording.recording_id} time ${recordingTimeStr} (${recordingMinutes} min) outside range ${timeIn}-${timeOut}`);
                 } else {
-                    console.log(`[filterRecordingsBySchedule] Recording ${recording.recording_id} time ${recordingTimeStr} (${recordingMinutes} min) WITHIN range ${timeIn}-${timeOut} âœ“`);
+                    console.log(`[filterRecordingsBySchedule] Recording ${recording.recording_id} time ${recordingTimeStr} (${recordingMinutes} min) WITHIN range ${timeIn}-${timeOut} ✓`);
                 }
                 return inRange;
             });
@@ -480,7 +822,7 @@
             if (video) video.style.display = 'none';
             if (noFeed) {
                 noFeed.style.display = 'flex';
-                noFeed.innerHTML = '<div class="no-feed-icon">âœ•</div><div>No Active Schedule</div>';
+                noFeed.innerHTML = '<div class="no-feed-icon">✕</div><div>No Active Schedule</div>';
             }
             if (info) info.style.display = 'none';
             return;
@@ -605,7 +947,7 @@
             if (video) video.style.display = 'none';
             if (noFeed) {
                 noFeed.style.display = 'flex';
-                noFeed.innerHTML = '<div class="no-feed-icon">âœ•</div><div>No Active Schedule</div>';
+                noFeed.innerHTML = '<div class="no-feed-icon">✕</div><div>No Active Schedule</div>';
             }
             if (info) info.style.display = 'none';
             return;
