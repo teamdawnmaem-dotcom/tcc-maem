@@ -99,7 +99,7 @@ PRESENCE_THRESHOLD = 1800  # 30 minutes in seconds
 LATE_THRESHOLD = 900  # 15 minutes in seconds for late marking
 
 # Stream recording settings
-RECORDING_INTERVAL = 180  # 3 minutes in seconds
+RECORDING_INTERVAL = 60  # 1 minute in seconds
 RECORDING_STORAGE_PATH = os.getenv("RECORDING_STORAGE_PATH", "../storage/app/public/stream_recordings")
 
 # Performance optimization settings
@@ -2051,8 +2051,8 @@ def get_shared_frame(camera_id):
 # -------------------
 # Stream Recording Functions
 # -------------------
-def record_stream_segment(camera_id, camera_feed, duration=180):
-    """Record a stream segment for the specified duration (default 3 minutes)."""
+def record_stream_segment(camera_id, camera_feed, duration=60):
+    """Record a stream segment for the specified duration (default 1 minute)."""
     import pytz
     from datetime import datetime as dt
     
