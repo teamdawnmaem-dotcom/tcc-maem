@@ -19,7 +19,7 @@
         }
 
         .faculty-title {
-            font-size: 1.84rem;
+            font-size: 1.50rem;
             font-weight: bold;
             color: #6d0000;
         }
@@ -319,7 +319,7 @@
     <div class="faculty-header">
         <div class="faculty-title-group">
             <div class="faculty-title">Live Camera Feed</div>
-            <div class="faculty-subtitle"></div>
+           
         </div>
     </div>
 

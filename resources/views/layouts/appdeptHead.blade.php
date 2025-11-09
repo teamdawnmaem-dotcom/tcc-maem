@@ -1062,7 +1062,7 @@
             .main-content {
                 margin-left: 0;
                 padding: 16px;
-                padding-top: 68px;
+                padding-top: 20px;
             }
 
             /* Modal Styles for Mobile */
