@@ -30,33 +30,31 @@
         .faculty-actions-row {
             display: flex;
             gap: 8px;
-            margin-top: 16px;
-            margin-bottom: 32px;
-            width: 100%;
-            align-items: stretch;
+            position: absolute;
+            top: 104px;
+            right: 32px;
+            z-index: 100;
         }
 
         .search-input {
-            padding: 10px 12px;
-            font-size: 14px;
+            padding: 6.4px;
+            font-size: 11.2px;
             border: 1px solid #ccc;
-            border-radius: 4px;
-            flex: 1;
-            min-width: 0;
-            box-sizing: border-box;
+            border-radius: 3.2px;
+            width: 320px;
         }
 
         .csv-btn {
-            padding: 10px 24px;
-            font-size: 14px;
-            border: none;
-            border-radius: 4px;
+           
             background-color: #3498db;
             color: #fff;
+            padding: 6.4px 19.2px;
+            font-size: 11.2px;
+            border: none;
+            border-radius: 3.2px;
+           
             cursor: pointer;
             font-weight: bold;
-            white-space: nowrap;
-            transition: background-color 0.2s;
         }
 
         .csv-btn:hover {
@@ -64,15 +62,14 @@
         }
 
         .add-btn {
-            padding: 10px 24px;
-            font-size: 14px;
+            padding: 6.4px 19.2px;
+            font-size: 11.2px;
             border: none;
-            border-radius: 4px;
+            border-radius: 3.2px;
             background-color: #2ecc71;
             color: #fff;
             cursor: pointer;
             font-weight: bold;
-            white-space: nowrap;
         }
 
         .subject-table-container {
@@ -178,8 +175,8 @@
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 16px;
-                margin-top: -40px;
-                margin-bottom: 24px;
+                padding-bottom: 10px;
+               
                 position: relative;
             }
 
@@ -204,39 +201,43 @@
                 right: 0;
                 width: 100%;
                 flex-direction: row;
+                align-items: center;
                 gap: 8px;
                 z-index: 1;
-                margin: 0;
-                padding: 0;
             }
 
             .search-input {
-                flex: 1;
+                width: 50%;
                 padding: 10px 12px;
-                margin-top: -50px;
-                margin-bottom: 60px;
-                font-size: 0.9rem;
+                font-size: 0.8rem;
                 border-radius: 6px;
+                box-sizing: border-box;
                 margin: 0;
             }
 
+
             .csv-btn {
-                padding: 10px 8px;
-                font-size: 0.85rem;
+                flex: 0 0 calc(25% - 4px);
+                width: calc(25% - 4px);
+                padding: 12px;
+                font-size: 12px;
                 border-radius: 6px;
                 font-weight: bold;
-                white-space: nowrap;
+                text-align: center;
                 margin: 0;
             }
 
             .add-btn {
-                padding: 10px 8px;
-                font-size: 0.85rem;
+                flex: 0 0 calc(25% - 4px);
+                width: calc(25% - 4px);
+                padding: 12px;
+                font-size: 0.8rem;
                 border-radius: 6px;
                 font-weight: bold;
-                white-space: nowrap;
+                text-align: center;
                 margin: 0;
             }
+
 
             /* Table Container - Ensure alignment with actions row */
             .subject-table-container {
@@ -490,7 +491,6 @@
     <div class="faculty-header">
         <div class="faculty-title-group">
             <div class="faculty-title">Subject Management</div>
-            <div class="faculty-subtitle"></div>
         </div>
     </div>
     <div class="faculty-actions-row">
@@ -498,7 +498,7 @@
         <button class="csv-btn" onclick="openModal && openModal('csvUploadModal')">CSV Upload</button>
         <button class="add-btn" onclick="openModal && openModal('addSubjectModal')">Add</button>
     </div>
-
+    <br>
     <div class="subject-table-container">
         <div class="subject-table-scroll">
             <table class="subject-table">

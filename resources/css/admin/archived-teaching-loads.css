@@ -1,0 +1,527 @@
+﻿/* ====== Header & Actions ====== */
+        .faculty-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 32px;
+        }
+
+        .faculty-title-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .faculty-title {
+            font-size: 1.84rem;
+            font-weight: bold;
+            color: #6d0000;
+        }
+
+        .faculty-subtitle {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 24px;
+        }
+
+        .faculty-actions-row {
+            display: flex;
+            gap: 8px;
+            position: fixed;
+            top: 104px;
+            right: 32px;
+            z-index: 100;
+        }
+
+        .search-input {
+            padding: 6.4px;
+            font-size: 11.2px;
+            border: 1px solid #ccc;
+            border-radius: 3.2px;
+            width: 320px;
+        }
+
+        .back-btn {
+            padding: 6px 19px;
+            font-size: 11.2px;
+            border: none;
+            border-radius: 3.2px;
+            background-color: #6c757d;
+            color: #fff;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        /* ====== Table Styles ====== */
+        .faculty-table-container {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+        }
+
+        .faculty-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .faculty-table th {
+            background: #8B0000;
+            color: #fff;
+            padding: 12.8px 6.4px;
+            font-size: 0.88rem;
+            font-weight: bold;
+            border: none;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .faculty-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        .faculty-table td {
+            padding: 0px 0px 0px 0px;
+            text-align: center;
+            font-size: 0.8rem;
+            border: none;
+            vertical-align: middle;
+        }
+
+        .faculty-table tr:nth-child(even) {
+            background: #fff;
+        }
+
+        .faculty-table tr:nth-child(odd) {
+            background: #fbeeee;
+        }
+
+        .faculty-table tr:hover {
+            background: #fff2e6;
+        }
+
+        .faculty-table-scroll {
+            max-height: 536px;
+            overflow-y: auto;
+            width: 100%;
+        }
+
+        /* ====== Action Buttons ====== */
+        .action-btns {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .restore-btn,
+        .delete-btn {
+            width: 32px;
+            height: 25.6px;
+            border-radius: 4.8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.88rem;
+            font-weight: bold;
+            background: #fff;
+            border: none;
+            cursor: pointer;
+        }
+
+        .restore-btn {
+            background: #28a745;
+            color: #fff;
+            position: relative;
+        }
+
+        .restore-btn::before {
+            content: 'â†»';
+            font-size: 1.3rem;
+            font-weight: bold;
+            display: inline-block;
+            transform: rotate(-45deg);
+        }
+
+        .delete-btn {
+            background: #ff3636;
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .restore-btn:active,
+        .delete-btn:active {
+            box-shadow: 0 0 0 2px #2222;
+        }
+
+        /* ====== Archive Info ====== */
+        .archive-info {
+            background: #f8f9fa;
+            border-left: 3.2px solid #8B0000;
+            padding: 8px 12px;
+            margin-bottom: 16px;
+            border-radius: 0 6.4px 6.4px 0;
+        }
+
+        .archive-info h4 {
+            margin: 0 0 5px 0;
+            color: #8B0000;
+            font-size: 0.88rem;
+        }
+
+        .archive-info p {
+            margin: 0;
+            color: #666;
+            font-size: 0.72rem;
+        }
+
+        /* ====== Filter Styles ====== */
+        .filter-section {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6.4px;
+            margin-bottom: 16px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .filter-group label {
+            font-size: 0.72rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+         .filter-group select {
+             padding: 6.4px 9.6px;
+             border: 1px solid #ccc;
+             border-radius: 3.2px;
+             font-size: 0.72rem;
+         }
+
+         /* ====== Modal Styles ====== */
+         .modal-overlay {
+             position: fixed;
+             top: 0;
+             left: 0;
+             right: 0;
+             bottom: 0;
+             background: rgba(0, 0, 0, 0.3);
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             z-index: 9999;
+         }
+
+         .modal-box {
+             background: #fff;
+             border-radius: 8px;
+             width: 360px;
+             max-width: 95vw;
+             padding: 0;
+             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
+             display: flex;
+             flex-direction: column;
+             align-items: center;
+             overflow: hidden;
+             position: relative;
+             z-index: 10000;
+             pointer-events: auto;
+         }
+
+         .modal-header-custom {
+             background-color: #8B0000;
+             color: #fff;
+             font-weight: bold;
+             text-align: center;
+             border-top-left-radius: 9.6px;
+             border-top-right-radius: 9.6px;
+             padding: 12px 16px;
+             font-size: 1.2rem;
+             letter-spacing: 0.8px;
+             width: 100%;
+             margin-bottom: 0;
+         }
+
+         .modal-btn {
+             width: auto;
+             padding: 9.6px 19px;
+             font-size: 0.8rem;
+             font-weight: bold;
+             border-radius: 8px;
+             cursor: pointer;
+             margin-top: 10px;
+             border: none;
+         }
+
+         .modal-btn.cancel {
+             background: #fff;
+             color: #800000;
+             border: 2px solid #800000;
+             border-radius: 8px;
+         }
+
+         .modal-btn.cancel:hover {
+             background: #800000;
+             color: #fff;
+         }
+
+         /* Mobile Responsive Design for phones (max-width: 430px) */
+         @media (max-width: 430px) {
+             /* Faculty Header */
+             .faculty-header {
+                 flex-direction: column;
+                 align-items: flex-start;
+                 gap: 16px;
+                 margin-bottom: 20px;
+                 position: relative;
+             }
+
+             .faculty-title-group {
+                 width: 100%;
+             }
+
+             .faculty-title {
+                 font-size: 1.4rem;
+                 margin-bottom: 4px;
+             }
+
+             .faculty-subtitle {
+                 font-size: 0.75rem;
+                 margin-bottom: 0;
+             }
+
+             /* Faculty Actions Row */
+             .faculty-actions-row {
+                 position: relative;
+                 top: 0;
+                 right: 0;
+                 width: 100%;
+                 flex-direction: column;
+                 gap: 10px;
+                 z-index: 1;
+             }
+
+             .search-input {
+                 width: 100% !important;
+                 padding: 10px 12px;
+                 font-size: 0.9rem;
+                 border-radius: 6px;
+                 box-sizing: border-box;
+             }
+
+             .back-btn {
+                 width: 100%;
+                 padding: 12px;
+                 font-size: 0.9rem;
+                 border-radius: 6px;
+                 font-weight: bold;
+                 text-align: center;
+                 display: block;
+             }
+
+             /* Filter Section */
+             .filter-section {
+                 flex-direction: column;
+                 align-items: stretch;
+                 gap: 12px;
+                 padding: 16px 12px;
+                 margin-bottom: 16px;
+                 border-radius: 8px;
+             }
+
+             .filter-group {
+                 width: 100%;
+             }
+
+             .filter-group label {
+                 font-size: 0.7rem;
+                 margin-bottom: 6px;
+             }
+
+             .filter-group select {
+                 width: 100%;
+                 padding: 10px 12px;
+                 font-size: 0.85rem;
+                 border-radius: 6px;
+                 box-sizing: border-box;
+             }
+
+             /* Archive Info */
+             .archive-info {
+                 padding: 10px 10px;
+                 font-size: 0.7rem;
+             }
+
+             .archive-info h4 {
+                 font-size: 0.8rem;
+                 margin-bottom: 4px;
+             }
+
+             .archive-info p {
+                 font-size: 0.7rem;
+                 margin: 2px 0;
+             }
+
+             .archive-info small {
+                 font-size: 0.65rem;
+             }
+
+             /* Table Container */
+             .faculty-table-container {
+                 border-radius: 8px;
+                 overflow: hidden;
+             }
+
+             .faculty-table-scroll {
+                 max-height: 50vh;
+                 overflow-x: auto;
+                 overflow-y: auto;
+                 -webkit-overflow-scrolling: touch;
+             }
+
+             .faculty-table {
+                 min-width: 1000px; /* Minimum width to maintain readability */
+             }
+
+             .faculty-table th {
+                 padding: 10px 6px;
+                 font-size: 0.7rem;
+                 white-space: nowrap;
+             }
+
+             .faculty-table td {
+                 padding: 8px 6px;
+                 font-size: 0.7rem;
+                 white-space: nowrap;
+             }
+
+             /* Empty state message */
+             .faculty-table td[colspan] {
+                 font-size: 0.75rem;
+                 padding: 20px 12px;
+             }
+
+             /* Action Buttons */
+             .action-btns {
+                 gap: 6px;
+             }
+
+             .restore-btn,
+             .delete-btn {
+                 width: 32px;
+                 height: 28px;
+                 font-size: 0.9rem;
+             }
+
+             /* Attendance Count Badge */
+             .attendance-count {
+                 font-size: 0.75rem !important;
+                 padding: 3px 6px !important;
+             }
+
+             /* Modals - Mobile Optimized */
+             .modal-overlay {
+                 padding: 10px;
+             }
+
+             .modal-box {
+                 width: 95vw !important;
+                 max-width: 95vw !important;
+                 padding: 0 !important;
+                 margin: 0;
+             }
+
+             /* Restore Modal */
+             #restoreModal .modal-box {
+                 width: 95vw !important;
+                 max-width: 95vw !important;
+             }
+
+             #restoreModal .modal-header-custom {
+                 font-size: 1.1rem !important;
+                 padding: 12px 16px !important;
+             }
+
+             #restoreModal > div {
+                 padding: 16px !important;
+             }
+
+             #restoreModal .modal-btn {
+                 width: 100% !important;
+                 padding: 12px !important;
+                 font-size: 0.9rem !important;
+                 margin: 5px 0 !important;
+             }
+
+             /* Delete Modal */
+             #deleteModal .modal-box {
+                 width: 95vw !important;
+                 max-width: 95vw !important;
+             }
+
+             #deleteModal .modal-header-custom {
+                 font-size: 1.1rem !important;
+                 padding: 12px 16px !important;
+             }
+
+             #deleteModal > div {
+                 padding: 16px !important;
+             }
+
+             #deleteModal .modal-btn {
+                 width: 100% !important;
+                 padding: 12px !important;
+                 font-size: 0.9rem !important;
+                 margin: 5px 0 !important;
+             }
+
+             /* Modal Content Adjustments */
+             .modal-box > div {
+                 padding: 16px !important;
+             }
+
+             .modal-box div[style*="padding"] {
+                 padding: 12px !important;
+             }
+
+             /* Info boxes in modals */
+             .modal-box div[style*="background"] {
+                 padding: 12px !important;
+                 margin-bottom: 12px !important;
+             }
+
+             .modal-box div[style*="background"] span {
+                 font-size: 1.2rem !important;
+             }
+
+             .modal-box div[style*="background"] strong {
+                 font-size: 0.85rem !important;
+             }
+
+             .modal-box div[style*="background"] p {
+                 font-size: 0.8rem !important;
+             }
+
+             /* Modal buttons container */
+             .modal-box div[style*="text-align: center"] {
+                 flex-direction: column !important;
+                 gap: 10px !important;
+             }
+
+             .modal-box div[style*="text-align: center"] button {
+                 width: 100% !important;
+                 margin: 0 !important;
+             }
+         }

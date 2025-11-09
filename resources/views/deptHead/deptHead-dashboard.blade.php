@@ -105,27 +105,27 @@
 
     /* Mobile Responsive Design - 430px */
     @media (max-width: 430px) {
-        /* Remove excessive top spacing */
+        /* Optimized top spacing - enough to clear header but not excessive */
         .main-content {
-            padding-top: 68px !important;
+            padding-top: 48px !important;
         }
 
         .dashboard-title {
             font-size: 1.8rem;
-            margin-bottom: 0.3em;
+            margin-bottom: 0.2em;
         }
         
         .dashboard-subtitle {
             font-size: 0.8rem;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
 
         .user-greeting {
             flex-direction: column;
             align-items: flex-start;
-            gap: 12px;
-            padding: 16px 20px;
-            margin-bottom: 16px;
+            gap: 10px;
+            padding: 14px 18px;
+            margin-bottom: 12px;
         }
 
         .greeting-text {
@@ -158,8 +158,8 @@
 
         .stats-row {
             flex-direction: column;
-            gap: 16px;
-            margin-bottom: 24px;
+            gap: 12px;
+            margin-bottom: 16px;
         }
 
         .stat-card {
