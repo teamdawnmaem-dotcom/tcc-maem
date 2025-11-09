@@ -1,524 +1,11 @@
-@extends('layouts.appChecker')
+﻿@extends('layouts.appChecker')
 
 @section('title', 'Official Matters - Tagoloan Community College')
 @section('files-active', 'active')
 @section('official-matters-active', 'active')
 
 @section('styles')
-    <style>
-        .faculty-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-bottom: 32px;
-        }
-
-        .faculty-title-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .faculty-title {
-            font-size: 1.84rem;
-            font-weight: bold;
-            color: #6d0000;
-        }
-
-        .faculty-subtitle {
-            font-size: 0.8rem;
-            color: #666;
-            margin-bottom: 24px;
-        }
-
-        .faculty-actions-row {
-            display: flex;
-            gap: 8px;
-            position: absolute;
-            top: 104px;
-            right: 32px;
-            z-index: 100;
-        }
-
-        .search-input {
-            padding: 6.4px;
-            font-size: 11.2px;
-            border: 1px solid #ccc;
-            border-radius: 3.2px;
-            width: 320px;
-        }
-
-        .add-btn {
-            padding: 6.4px 19.2px;
-            font-size: 11.2px;
-            border: none;
-            border-radius: 3.2px;
-            background-color: #2ecc71;
-            color: #fff;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .teaching-load-table-container {
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
-            overflow: hidden;
-        }
-
-        .teaching-load-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .teaching-load-table th {
-            background: #8B0000;
-            color: #fff;
-            padding: 12.8px 0;
-            font-size: 0.88rem;
-            font-weight: bold;
-            border: none;
-        }
-
-        .teaching-load-table thead th {
-            position: sticky;
-            top: 0;
-            z-index: 2;
-        }
-
-        .teaching-load-table td {
-            padding: 9.6px 0;
-            text-align: center;
-            font-size: 0.8rem;
-            border: none;
-        }
-
-        .teaching-load-table tr:nth-child(even) {
-            background: #fff;
-        }
-
-        .teaching-load-table tr:nth-child(odd) {
-            background: #fbeeee;
-        }
-
-        .teaching-load-table tr:hover {
-            background: #fff2e6;
-        }
-
-        .teaching-load-table-scroll {
-            max-height: 536px;
-            overflow-y: auto;
-            width: 100%;
-        }
-
-        .action-btns {
-            display: flex;
-            gap: 6.4px;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .edit-btn,
-        .delete-btn {
-            width: 48px;
-            height: 25.6px;
-            border-radius: 4.8px;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.72rem;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .edit-btn {
-            background: #7cc6fa;
-            color: #fff;
-        }
-
-        .delete-btn {
-            background: #ff3636;
-            color: #fff;
-        }
-
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.3);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-        }
-
-        .modal-box {
-            background: #fff;
-            border-radius: 8px;
-            width: 100%;
-            max-width: 400px;
-            padding: 0;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .modal-header {
-            font-size: 1.6rem;
-            font-weight: bold;
-            color: #8B0000;
-            text-align: center;
-            margin-bottom: 0;
-        }
-
-        .modal-form {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .modal-content {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        #deleteModal .modal-box {
-            padding: 32px 32px 24px 32px;
-        }
-
-        .modal-form-group {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: 9.6px;
-            margin-bottom: 9.6px;
-        }
-
-        .modal-form-group label {
-            min-width: 104px;
-            text-align: left;
-            margin-bottom: 0;
-            font-size: 0.8rem;
-            color: #222;
-        }
-
-        .modal-form-group input,
-        .modal-form-group textarea,
-        .modal-form-group select {
-            flex: 1;
-            width: 100%;
-            padding: 8px 9.6px;
-            font-size: 0.8rem;
-            border: 1px solid #bbb;
-            border-radius: 4px;
-        }
-
-        .modal-form-group textarea {
-            resize: vertical;
-        }
-
-        .modal-btn {
-            width: 100%;
-            padding: 11.2px 0;
-            font-size: 0.88rem;
-            font-weight: bold;
-            border: none;
-            border-radius: 4.8px;
-            margin-top: 0;
-            cursor: pointer;
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 9.6px;
-            justify-content: center;
-            margin-top: 14.4px;
-        }
-
-        .modal-btn.cancel {
-            background: #fff !important;
-            color: #800000 !important;
-            border: 2px solid #800000 !important;
-            border-radius: 6.4px;
-            padding: 8px 16px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .modal-btn.cancel:hover {
-            background: #800000 !important;
-            color: #fff !important;
-        }
-
-        .modal-btn.delete {
-            background: #fff !important;
-            color: #ff0000 !important;
-            border: 2px solid #ff0000 !important;
-            border-radius: 6.4px;
-            padding: 8px 16px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .modal-btn.delete:hover {
-            background: #ff0000 !important;
-            color: #fff !important;
-        }
-
-        .view-slip-btn {
-            padding: 6.4px 12.8px;
-            font-size: 0.72rem;
-            border: none;
-            border-radius: 4px;
-            background-color: #8B0000;
-            color: #fff;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 500;
-        }
-
-        .view-slip-btn:hover {
-            background-color: #6d0000;
-        }
-
-        /* Toggle Switch Styles */
-        .toggle-switch {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .toggle-switch label {
-            min-width: auto;
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: #333;
-        }
-
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 24px;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 24px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: #8B0000;
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(26px);
-        }
-
-        /* Hide/show fields based on toggle */
-        .faculty-mode {
-            display: block;
-        }
-
-        .department-mode {
-            display: none;
-        }
-
-        .toggle-on .faculty-mode {
-            display: none;
-        }
-
-        .toggle-on .department-mode {
-            display: block;
-        }
-
-        #slipModal .modal-box {
-            max-width: 900px !important;
-            width: 95%;
-            height: auto;
-            padding: 0;
-            position: relative;
-            background: #fff;
-            border-radius: 9.6px;
-            overflow: hidden;
-        }
-
-        #slipImage {
-            max-width: 100%;
-            max-height: 75vh;
-            border-radius: 6.4px;
-            object-fit: contain;
-            display: block;
-        }
-
-        #slipModal .close {
-            position: absolute;
-            top: 12px;
-            right: 16px;
-            z-index: 1000;
-            width: 32px;
-            height: 32px;
-            background: rgba(0, 0, 0, 0.7);
-            color: #fff;
-            border: none;
-            border-radius: 50%;
-            font-size: 19.2px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            box-shadow: 0 3.2px 9.6px rgba(0, 0, 0, 0.3);
-        }
-
-        #slipModal .close:hover {
-            background: rgba(139, 0, 0, 0.9);
-            transform: scale(1.1);
-        }
-
-        #slipModal .modal-header {
-            background: transparent;
-            color: #8B0000;
-            padding: 12px 16px;
-            margin: 0;
-            font-size: 1.2rem;
-            font-weight: bold;
-            text-align: center;
-        }
-
-        #slipModal .slip-content {
-            padding: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8f9fa;
-        }
-
-        .validation-message {
-            font-size: 0.64rem;
-            left: 104px;
-            right: 8px;
-            bottom: -8px;
-            padding-left: 8px;
-            line-height: 1.1;
-            position: absolute;
-            color: #ff3636;
-            pointer-events: none;
-        }
-
-        .logic-error {
-            display: none;
-            color: #ff3636;
-            text-align: center;
-            margin: 6px 0;
-            font-weight: 600;
-        }
-
-        .server-error {
-            color: #ff3636;
-            text-align: center;
-            margin: 6px 0;
-            font-weight: 600;
-        }
-
-        /* Validation styles */
-        input.valid,
-        select.valid,
-        textarea.valid {
-            border-color: #28a745;
-        }
-
-        input.invalid,
-        select.invalid,
-        textarea.invalid {
-            border-color: #ff3636;
-        }
-
-        #addModal .modal-form-group,
-        #editModal .modal-form-group {
-            position: relative;
-        }
-
-        /* Mobile Responsive */
-        @media (max-width: 430px) {
-            .faculty-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 16px;
-                margin-bottom: 20px;
-                position: relative;
-            }
-
-            .faculty-actions-row {
-                position: relative;
-                top: 0;
-                right: 0;
-                width: 100%;
-                flex-direction: row;
-                align-items: center;
-                gap: 8px;
-            }
-
-            .search-input {
-                flex: 0 0 calc(75% - 4px);
-                width: calc(75% - 4px);
-            }
-
-            .add-btn {
-                flex: 0 0 calc(25% - 4px);
-                width: calc(25% - 4px);
-            }
-
-            .modal-box {
-                width: 95vw !important;
-                max-width: 95vw !important;
-            }
-
-            .modal-form-group {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 6px;
-            }
-
-            .modal-form-group label {
-                min-width: auto;
-                width: 100%;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ asset('css/checker/official-matters-management.css') }}">
 @endsection
 
 @section('content')
@@ -537,6 +24,7 @@
         </div>
     </div>
 
+    <!-- Desktop Table View -->
     <div class="teaching-load-table-container">
         <div class="teaching-load-table-scroll">
             <table class="teaching-load-table">
@@ -608,6 +96,75 @@
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <!-- Mobile Card View -->
+    <div class="mobile-card-container">
+        @forelse ($officialMatters as $matter)
+            @php
+                $facultyName = $matter->faculty ? $matter->faculty->faculty_fname . ' ' . $matter->faculty->faculty_lname : $matter->om_department;
+                $department = $matter->faculty ? $matter->faculty->faculty_department : $matter->om_department;
+                $purpose = $matter->om_purpose;
+                $remarks = $matter->om_remarks;
+                $startDate = \Carbon\Carbon::parse($matter->om_start_date)->format('F j, Y');
+                $endDate = \Carbon\Carbon::parse($matter->om_end_date)->format('F j, Y');
+                $attachmentUrl = $matter->om_attachment ? asset('storage/' . $matter->om_attachment) : null;
+            @endphp
+            <div class="mobile-card">
+                <div class="mobile-card-header">
+                    <div class="mobile-card-title">{{ $facultyName }}</div>
+                    <div class="mobile-card-department">{{ $department }}</div>
+                </div>
+                <div class="mobile-card-body">
+                    <div class="mobile-card-row">
+                        <div class="mobile-card-label">Purpose</div>
+                        <div class="mobile-card-value">{{ $purpose }}</div>
+                    </div>
+                    <div class="mobile-card-row">
+                        <div class="mobile-card-label">Remarks</div>
+                        <div class="mobile-card-value">{{ $remarks }}</div>
+                    </div>
+                    <div class="mobile-card-row">
+                        <div class="mobile-card-label">Start Date</div>
+                        <div class="mobile-card-value">{{ $startDate }}</div>
+                    </div>
+                    <div class="mobile-card-row">
+                        <div class="mobile-card-label">End Date</div>
+                        <div class="mobile-card-value">{{ $endDate }}</div>
+                    </div>
+                    @if ($attachmentUrl)
+                        <div class="mobile-card-row">
+                            <div class="mobile-card-label">Attachment</div>
+                            <div class="mobile-card-value">
+                                <button class="view-slip-btn" onclick="viewSlip('{{ $attachmentUrl }}')">View Attachment</button>
+                            </div>
+                        </div>
+                    @else
+                        <div class="mobile-card-row">
+                            <div class="mobile-card-label">Attachment</div>
+                            <div class="mobile-card-value" style="color: #999;">N/A</div>
+                        </div>
+                    @endif
+                </div>
+                <div class="mobile-card-actions">
+                    <button class="edit-btn" data-id="{{ $matter->om_id }}"
+                        data-faculty="{{ $matter->faculty_id }}"
+                        data-department="{{ $matter->om_department }}"
+                        data-purpose="{{ $matter->om_purpose }}"
+                        data-remarks="{{ $matter->om_remarks }}"
+                        data-start="{{ $matter->om_start_date }}"
+                        data-end="{{ $matter->om_end_date }}"
+                        onclick="openUpdateModal(this)">
+                        Edit
+                    </button>
+                    <button class="delete-btn" onclick="openDeleteModal({{ $matter->om_id }})">Delete</button>
+                </div>
+            </div>
+        @empty
+            <div class="mobile-card" style="text-align: center; padding: 40px;">
+                <p style="font-style: italic; color: #666; margin: 0;">No Official Matters Records found.</p>
+            </div>
+        @endforelse
     </div>
 
     <!-- Add Modal -->
@@ -845,7 +402,7 @@
             @method('DELETE')
             <div class="modal-header delete">DELETE OFFICIAL MATTER</div>
             <div style="text-align: center; margin: 0 px 0;">
-                <div style="font-size: 4rem; color: #ff3636; margin-bottom: 20px;">⚠️</div>
+                <div style="font-size: 4rem; color: #ff3636; margin-bottom: 20px;">âš ï¸</div>
                 <div style="font-size: 1.2rem; color: #333; margin-bottom: 10px; font-weight: bold;">Are you sure?</div>
                 <div style="font-size: 1rem; color: #666; line-height: 1.5;">
                     This action cannot be undone. The official matter record will be permanently deleted.
@@ -1299,38 +856,75 @@
                 }
             })();
 
-            // Search functionality
+            // Search functionality - works with both table and mobile cards
             const searchInput = document.querySelector('.search-input');
             if (searchInput) {
                 searchInput.addEventListener('input', function() {
                     let searchTerm = this.value.toLowerCase();
+                    
+                    // Search in table rows (desktop)
                     let rows = document.querySelectorAll('.teaching-load-table tbody tr');
-                    let anyVisible = false;
+                    let anyTableVisible = false;
 
                     rows.forEach(row => {
                         if (row.classList.contains('no-results')) return;
                         let text = row.textContent.toLowerCase();
                         if (text.includes(searchTerm)) {
                             row.style.display = '';
-                            anyVisible = true;
+                            anyTableVisible = true;
                         } else {
                             row.style.display = 'none';
                         }
                     });
 
+                    // Handle "no results" row for table
                     let tbody = document.querySelector('.teaching-load-table tbody');
-                    let noResultsRow = tbody.querySelector('.no-results');
-
-                    if (!anyVisible) {
-                        if (!noResultsRow) {
-                            noResultsRow = document.createElement('tr');
-                            noResultsRow.classList.add('no-results');
-                            noResultsRow.innerHTML =
-                                `<td colspan="8" style="text-align:center; padding:20px; color:#999; font-style:italic;">No results found</td>`;
-                            tbody.appendChild(noResultsRow);
+                    if (tbody) {
+                        let noResultsRow = tbody.querySelector('.no-results');
+                        if (!anyTableVisible && searchTerm) {
+                            if (!noResultsRow) {
+                                noResultsRow = document.createElement('tr');
+                                noResultsRow.classList.add('no-results');
+                                noResultsRow.innerHTML =
+                                    `<td colspan="8" style="text-align:center; padding:20px; color:#999; font-style:italic;">No results found</td>`;
+                                tbody.appendChild(noResultsRow);
+                            }
+                        } else {
+                            if (noResultsRow) noResultsRow.remove();
                         }
-                    } else {
-                        if (noResultsRow) noResultsRow.remove();
+                    }
+                    
+                    // Search in mobile cards
+                    let cards = document.querySelectorAll('.mobile-card');
+                    let anyCardVisible = false;
+                    const mobileContainer = document.querySelector('.mobile-card-container');
+                    
+                    cards.forEach(card => {
+                        if (card.classList.contains('no-results-mobile')) return;
+                        let text = card.textContent.toLowerCase();
+                        if (text.includes(searchTerm)) {
+                            card.style.display = '';
+                            anyCardVisible = true;
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                    
+                    // Handle "no results" message for mobile
+                    if (mobileContainer) {
+                        let noResultsCard = mobileContainer.querySelector('.no-results-mobile');
+                        if (!anyCardVisible && searchTerm) {
+                            if (!noResultsCard) {
+                                noResultsCard = document.createElement('div');
+                                noResultsCard.classList.add('mobile-card', 'no-results-mobile');
+                                noResultsCard.style.textAlign = 'center';
+                                noResultsCard.style.padding = '40px';
+                                noResultsCard.innerHTML = '<p style="font-style: italic; color: #666; margin: 0;">No results found</p>';
+                                mobileContainer.appendChild(noResultsCard);
+                            }
+                        } else {
+                            if (noResultsCard) noResultsCard.remove();
+                        }
                     }
                 });
             }

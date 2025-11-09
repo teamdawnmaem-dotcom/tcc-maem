@@ -561,6 +561,409 @@
             background: #27ae60;
             border-color: #27ae60;
         }
+
+        /* =========================
+           Mobile Responsive Design
+           ========================= */
+        @media screen and (max-width: 480px) {
+            /* Header adjustments */
+            .faculty-header {
+                flex-direction: column;
+                align-items: flex-start;
+                margin-bottom: 20px;
+                position: relative;
+            }
+
+            .faculty-title {
+                font-size: 1.4rem;
+                margin-bottom: 8px;
+            }
+
+            .faculty-subtitle {
+                font-size: 0.75rem;
+                margin-bottom: 16px;
+            }
+
+            .faculty-actions-row {
+                position: relative;
+                top: 0;
+                right: 0;
+                width: 100%;
+                flex-direction: row;
+                align-items: center;
+                gap: 8px;
+                z-index: 1;
+            }
+
+            .search-input {
+                width: 100%;
+                padding: 10px;
+                font-size: 12px;
+            }
+
+            .csv-btn {
+                flex: 0 0 calc(25% - 4px);
+                width: calc(25% - 4px);
+                padding: 12px;
+                font-size: 12px;
+                border-radius: 6px;
+                font-weight: bold;
+                text-align: center;
+                margin: 0;
+            }
+
+            .add-btn {
+                flex: 0 0 calc(25% - 4px);
+                width: calc(25% - 4px);
+                padding: 12px;
+                font-size: 0.8rem;
+                border-radius: 6px;
+                font-weight: bold;
+                text-align: center;
+                margin: 0;
+            }
+
+            /* Table container adjustments */
+            .teaching-load-table-container {
+                border-radius: 6px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .teaching-load-table-scroll {
+                max-height: 500px;
+                overflow-x: auto;
+                overflow-y: auto;
+            }
+
+            .teaching-load-table {
+                min-width: 800px;
+                font-size: 0.75rem;
+            }
+
+            .teaching-load-table th {
+                padding: 10px 6px;
+                font-size: 0.75rem;
+                white-space: nowrap;
+            }
+
+            .teaching-load-table td {
+                padding: 8px 6px;
+                font-size: 0.7rem;
+                white-space: nowrap;
+            }
+
+            .action-btns {
+                gap: 4px;
+            }
+
+            .edit-btn,
+            .delete-btn {
+                width: 28px;
+                height: 24px;
+                font-size: 0.75rem;
+            }
+
+            /* Modal adjustments */
+            .modal-overlay {
+                padding: 10px;
+                align-items: flex-start;
+                padding-top: 20px;
+            }
+
+            .modal-box {
+                width: 100% !important;
+                max-width: 100% !important;
+                max-height: 90vh;
+                overflow-y: auto;
+                transform: scale(1) !important;
+                padding: 0 !important;
+                margin: 0;
+            }
+
+            .modal-header {
+                font-size: 18px !important;
+                padding: 14px 16px !important;
+            }
+
+            /* Add Modal specific */
+            #addTeachingLoadModal .modal-form {
+                padding: 16px !important;
+                gap: 16px !important;
+            }
+
+            #addTeachingLoadModal .form-section {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+
+            #addTeachingLoadModal .section-title {
+                grid-column: 1 !important;
+                font-size: 1rem !important;
+                margin-bottom: 8px !important;
+            }
+
+            #addTeachingLoadModal .modal-form-group {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 6px !important;
+                margin-bottom: 12px !important;
+            }
+
+            #addTeachingLoadModal .modal-form-group.full-width {
+                grid-column: 1 !important;
+            }
+
+            #addTeachingLoadModal .modal-form-group label {
+                min-width: 100% !important;
+                font-size: 0.9rem !important;
+                margin-bottom: 4px !important;
+            }
+
+            #addTeachingLoadModal .modal-form-group input,
+            #addTeachingLoadModal .modal-form-group select {
+                width: 100% !important;
+                padding: 10px !important;
+                font-size: 14px !important;
+            }
+
+            #addTeachingLoadModal .validation-message {
+                position: static !important;
+                margin-top: 4px !important;
+                left: 0 !important;
+                right: 0 !important;
+                padding-left: 0 !important;
+            }
+
+            #addTeachingLoadModal .modal-buttons {
+                flex-direction: column !important;
+                gap: 10px !important;
+                margin-top: 16px !important;
+            }
+
+            #addTeachingLoadModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 14px !important;
+            }
+
+            /* Update Modal specific */
+            #updateTeachingLoadModal .modal-form {
+                padding: 16px !important;
+                gap: 16px !important;
+            }
+
+            #updateTeachingLoadModal .form-section {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+
+            #updateTeachingLoadModal .section-title {
+                grid-column: 1 !important;
+                font-size: 1rem !important;
+                margin-bottom: 8px !important;
+            }
+
+            #updateTeachingLoadModal .modal-form-group {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 6px !important;
+                margin-bottom: 12px !important;
+            }
+
+            #updateTeachingLoadModal .modal-form-group.full-width {
+                grid-column: 1 !important;
+            }
+
+            #updateTeachingLoadModal .modal-form-group label {
+                min-width: 100% !important;
+                font-size: 0.9rem !important;
+                margin-bottom: 4px !important;
+            }
+
+            #updateTeachingLoadModal .modal-form-group input,
+            #updateTeachingLoadModal .modal-form-group select {
+                width: 100% !important;
+                padding: 10px !important;
+                font-size: 14px !important;
+            }
+
+            #updateTeachingLoadModal .validation-message {
+                position: static !important;
+                margin-top: 4px !important;
+                left: 0 !important;
+                right: 0 !important;
+                padding-left: 0 !important;
+            }
+
+            #updateTeachingLoadModal .modal-buttons {
+                flex-direction: column !important;
+                gap: 10px !important;
+                margin-top: 16px !important;
+            }
+
+            #updateTeachingLoadModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 14px !important;
+            }
+
+            /* Delete Modal */
+            #deleteTeachingLoadModal .modal-box {
+                padding: 20px 16px !important;
+            }
+
+            #deleteTeachingLoadModal .modal-header {
+                font-size: 18px !important;
+                margin-bottom: 16px !important;
+            }
+
+            #deleteTeachingLoadModal .modal-buttons {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+
+            #deleteTeachingLoadModal .modal-btn {
+                width: 100% !important;
+                min-width: 100% !important;
+                padding: 12px !important;
+                font-size: 14px !important;
+            }
+
+            /* CSV Upload Modal */
+            #csvUploadModal .modal-box {
+                padding: 0 !important;
+            }
+
+            #csvUploadModal .modal-header {
+                font-size: 18px !important;
+                padding: 14px 16px !important;
+            }
+
+            #csvUploadModal > form > div {
+                padding: 16px !important;
+            }
+
+            #csvUploadModal .modal-buttons {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+
+            #csvUploadModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 14px !important;
+            }
+
+            #csvFileInput {
+                font-size: 14px !important;
+                padding: 10px !important;
+            }
+
+            /* CSV Upload Modal Instructions */
+            #csvUploadModal div[style*="background-color: #f0f8ff"],
+            #csvUploadModal div[style*="background-color: #fff3cd"] {
+                padding: 12px !important;
+                font-size: 0.85rem !important;
+            }
+
+            #csvUploadModal div[style*="background-color: #f0f8ff"] > div,
+            #csvUploadModal div[style*="background-color: #fff3cd"] > div {
+                font-size: 0.85rem !important;
+                line-height: 1.5 !important;
+            }
+
+            #csvUploadModal ul {
+                padding-left: 18px !important;
+                margin: 8px 0 !important;
+            }
+
+            #csvUploadModal li {
+                font-size: 0.8rem !important;
+                line-height: 1.5 !important;
+                margin-bottom: 4px !important;
+            }
+
+            /* Archive All Modal */
+            #archiveAllModal .modal-box {
+                padding: 0 !important;
+            }
+
+            #archiveAllModal .modal-header-custom {
+                font-size: 18px !important;
+                padding: 14px 16px !important;
+            }
+
+            #archiveAllModal .modal-form-group {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                margin-bottom: 16px !important;
+            }
+
+            #archiveAllModal .modal-form-group label {
+                min-width: 100% !important;
+                margin-bottom: 8px !important;
+                font-size: 0.9rem !important;
+            }
+
+            #archiveAllModal .modal-form-group select,
+            #archiveAllModal .modal-form-group textarea {
+                width: 100% !important;
+                padding: 10px !important;
+                font-size: 14px !important;
+            }
+
+            #archiveAllModal .modal-btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 14px !important;
+            }
+
+            /* Time logic error */
+            .time-logic-error {
+                grid-column: 1 !important;
+                font-size: 0.85rem !important;
+                margin-top: 8px !important;
+            }
+
+            /* No results message */
+            .teaching-load-table tbody tr td[colspan] {
+                padding: 20px 10px !important;
+                font-size: 0.85rem !important;
+            }
+
+            /* SweetAlert responsive */
+            .swal-popup-responsive {
+                max-width: 95% !important;
+                margin: 10px !important;
+            }
+
+            .swal-popup-responsive .swal2-html-container {
+                font-size: 0.85rem !important;
+            }
+
+            .swal-popup-responsive .swal2-title {
+                font-size: 1.1rem !important;
+            }
+        }
+
+        /* Additional adjustments for very small screens */
+        @media screen and (max-width: 360px) {
+            .faculty-title {
+                font-size: 1.2rem;
+            }
+
+            .teaching-load-table {
+                min-width: 700px;
+                font-size: 0.7rem;
+            }
+
+            .teaching-load-table th,
+            .teaching-load-table td {
+                padding: 6px 4px;
+                font-size: 0.65rem;
+            }
+        }
     </style>
 @endsection
 
@@ -2091,7 +2494,10 @@
                     allowOutsideClick: false,
                     allowEscapeKey: true,
                     showCloseButton: true,
-                    width: '750px'
+                    width: window.innerWidth <= 480 ? '95%' : '750px',
+                    customClass: {
+                        popup: 'swal-popup-responsive'
+                    }
                 });
             @else
                 Swal.fire({
