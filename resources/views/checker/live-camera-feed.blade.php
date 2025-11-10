@@ -371,7 +371,6 @@
                     autoplay 
                     playsinline 
                     muted 
-                    loop
                     style="width:100%; height:100%; object-fit: contain; display: none;"
                     onended="playNextRecording('{{ $camera->camera_id }}')"
                     onerror="handleRecordingError(this, '{{ $camera->camera_id }}')"
@@ -420,12 +419,14 @@
                 <div>No Recording</div>
             </div>
             
-            <!-- Playlist controls overlay -->
+            <!-- Playlist controls overlay (disabled per request) -->
+            <!--
             <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 10px; z-index: 10;">
                 <button onclick="playPreviousRecordingDetail()" style="background: rgba(139,0,0,0.8); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">⏮️ Previous</button>
                 <button onclick="playNextRecordingDetail()" style="background: rgba(139,0,0,0.8); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">Next ⏭️</button>
                 <button onclick="restartPlaylistDetail()" style="background: rgba(139,0,0,0.8); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">🔄 Restart</button>
             </div>
+            -->
             
             <div style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; z-index: 10; display: none;" id="recording-info-detail">
                 <span id="recording-counter-detail">0 / 0</span>
@@ -802,6 +803,50 @@
         return { recordings: filteredRecordings, hasActiveSchedule: true };
     }
     
+    // Parse a recording start_time into a Date in Asia/Manila local interpretation
+    function parseRecordingStart(startTime) {
+        if (!startTime) return null;
+        if (typeof startTime === 'string') {
+            if (startTime.includes('T')) {
+                const utc = new Date(startTime);
+                return new Date(
+                    utc.getUTCFullYear(),
+                    utc.getUTCMonth(),
+                    utc.getUTCDate(),
+                    utc.getUTCHours(),
+                    utc.getUTCMinutes(),
+                    utc.getUTCSeconds() || 0
+                );
+            }
+            if (startTime.match(/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}/)) {
+                const [d, t] = startTime.split(' ');
+                const [y, m, day] = d.split('-').map(Number);
+                const [hh, mm, ss] = t.split(':').map(Number);
+                return new Date(y, m - 1, day, hh, mm, ss || 0);
+            }
+        }
+        return new Date(startTime);
+    }
+    
+    // Find index of recording closest to now
+    function findClosestRecordingIndex(recordingList) {
+        if (!recordingList || recordingList.length === 0) return 0;
+        const now = new Date();
+        let closestIdx = 0;
+        let closestDiff = Infinity;
+        for (let i = 0; i < recordingList.length; i++) {
+            const r = recordingList[i];
+            const dt = parseRecordingStart(r.start_time);
+            if (!dt) continue;
+            const diff = Math.abs(now - dt);
+            if (diff < closestDiff) {
+                closestDiff = diff;
+                closestIdx = i;
+            }
+        }
+        return closestIdx;
+    }
+    
     // Load recordings for a camera (grid view)
     function loadCameraRecordings(cameraId, preservePlayback = false) {
         const cameraRecordings = recordingsByCamera[cameraId] || [];
@@ -848,7 +893,13 @@
         // Check if video is currently playing and we want to preserve playback
         const isPlaying = !video.paused && !video.ended && video.currentTime > 0;
         const currentSrc = video.src;
-        const currentIndex = preservePlayback && isPlaying ? parseInt(video.dataset.currentIndex) || 0 : 0;
+        let currentIndex = 0;
+        if (preservePlayback && isPlaying) {
+            currentIndex = parseInt(video.dataset.currentIndex) || 0;
+        } else {
+            // Start at the recording closest to the current time
+            currentIndex = findClosestRecordingIndex(filteredRecordings);
+        }
         
         // If preserving playback and video is playing, only update playlist without interrupting
         if (preservePlayback && isPlaying && currentSrc) {
@@ -861,6 +912,24 @@
                 if (counter) counter.textContent = `${currentSrcInPlaylist + 1} / ${playlist.length}`;
                 console.log(`[loadCameraRecordings] Preserved playback for camera ${cameraId}, updated playlist`);
                 return;
+            }
+        } else if (preservePlayback && currentSrc) {
+            const currentSrcInPlaylist = playlist.indexOf(currentSrc);
+            if (currentSrcInPlaylist !== -1) {
+                video.dataset.playlist = JSON.stringify(playlist);
+                video.dataset.currentIndex = currentSrcInPlaylist.toString();
+                if (playlist.length > currentSrcInPlaylist + 1) {
+                    const nextIndex = currentSrcInPlaylist + 1;
+                    video.dataset.currentIndex = String(nextIndex);
+                    video.src = playlist[nextIndex];
+                    video.load();
+                    if (counter) counter.textContent = `${nextIndex + 1} / ${playlist.length}`;
+                    video.muted = true;
+                    const pp = video.play(); if (pp) pp.catch(()=>{});
+                    return;
+                } else {
+                    return;
+                }
             }
         }
         
@@ -904,14 +973,9 @@
             video.muted = true;
             video.play().catch(e => console.log('Play blocked:', e.message));
         } else {
-            // Loop back to start
-            video.dataset.currentIndex = '0';
-            video.src = playlist[0];
-            video.load();
-            const counter = document.getElementById(`recording-counter-${cameraId}`);
-            if (counter) counter.textContent = `1 / ${playlist.length}`;
-            video.muted = true;
-            video.play().catch(e => console.log('Play blocked:', e.message));
+            // Stop at last and wait for new recordings
+            video.dataset.currentIndex = String(currentIndex);
+            try { video.pause(); } catch (e) {}
         }
     }
     
@@ -981,12 +1045,29 @@
                 console.log(`[loadDetailRecordings] Preserved playback, updated playlist`);
                 return;
             }
+        } else if (preservePlayback && currentSrc) {
+            const currentSrcInPlaylist = newPlaylist.indexOf(currentSrc);
+            if (currentSrcInPlaylist !== -1) {
+                currentDetailPlaylist = newPlaylist;
+                currentDetailIndex = currentSrcInPlaylist;
+                if (newPlaylist.length > currentSrcInPlaylist + 1) {
+                    currentDetailIndex = currentSrcInPlaylist + 1;
+                    if (counter) counter.textContent = `${currentDetailIndex + 1} / ${currentDetailPlaylist.length}`;
+                    video.src = currentDetailPlaylist[currentDetailIndex];
+                    video.load();
+                    const pp = video.play(); if (pp) pp.catch(()=>{});
+                    return;
+                } else {
+                    return;
+                }
+            }
         }
         
         // Normal load: set new playlist and start from beginning (or preserved index)
         currentDetailPlaylist = newPlaylist;
-        currentDetailIndex = preservePlayback && isPlaying && currentSrc ? 
-            Math.max(0, Math.min(currentDetailIndex, newPlaylist.length - 1)) : 0;
+        currentDetailIndex = (preservePlayback && isPlaying && currentSrc)
+            ? Math.max(0, Math.min(currentDetailIndex, newPlaylist.length - 1))
+            : findClosestRecordingIndex(filteredRecordings);
         
         video.src = currentDetailPlaylist[currentDetailIndex];
         video.load();
@@ -1012,7 +1093,10 @@
         if (currentDetailIndex < currentDetailPlaylist.length - 1) {
             currentDetailIndex++;
         } else {
-            currentDetailIndex = 0; // Loop back
+            // Stop at last; wait for next recording to arrive
+            const video = document.getElementById('recording-player-detail');
+            if (video) { try { video.pause(); } catch(e) {} }
+            return;
         }
         
         const video = document.getElementById('recording-player-detail');

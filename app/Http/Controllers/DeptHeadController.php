@@ -462,7 +462,7 @@ public function recognitionLogs(Request $request)
         });
     }
 
-    $logs = $query->orderBy('recognition_time', 'desc')->get();
+    $logs = $query->orderBy('recognition_time', 'desc')->paginate(50);
 
     // Return JSON for AJAX requests
     if ($request->ajax() || $request->wantsJson()) {
