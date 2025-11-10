@@ -1239,7 +1239,7 @@
                 <!-- Cameras - Removed due to missing admin blade file -->
                 <!-- Rooms - Removed due to missing admin blade file -->
                 <div class="sub-nav-item @yield('live-camera-active')"
-                    onclick="window.location.href='{{ route('admin.live.camera.feed') }}'">Live Camera Feed</div>
+                    onclick="window.location.href='{{ route('admin.live.camera.feed') }}'">Camera Feed</div>
                 <div class="sub-nav-item @yield('recognition-logs-active')"
                     onclick="window.location.href='{{ route('admin.recognition.logs') }}'">Recognition Logs</div>
             </div>

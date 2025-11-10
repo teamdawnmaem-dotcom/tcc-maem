@@ -1232,7 +1232,7 @@
                 <div class="sub-nav-item @yield('cameras-active')"
                     onclick="window.location.href='{{ route('deptHead.camera.management') }}'">Cameras</div>
                 <div class="sub-nav-item @yield('live-camera-active')"
-                    onclick="window.location.href='{{ route('deptHead.live.camera.feed') }}'">Live Camera Feed</div>
+                    onclick="window.location.href='{{ route('deptHead.live.camera.feed') }}'">Camera Feed</div>
                 <div class="sub-nav-item @yield('recognition-logs-active')"
                     onclick="window.location.href='{{ route('deptHead.recognition.logs') }}'">Recognition Logs</div>
             </div>

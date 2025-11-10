@@ -1,6 +1,6 @@
 @extends('layouts.appAdmin')
 
-@section('title', 'Live Camera Feed - Tagoloan Community College')
+@section('title', 'Camera Feed - Tagoloan Community College')
 @section('monitoring-active', 'active')
 @section('live-camera-active', 'active')
 
@@ -318,8 +318,8 @@
 @section('content')
 <div class="faculty-header">
 	<div class="faculty-title-group">
-		<div class="faculty-title">Live Camera</div>
-		<div class="faculty-subtitle">Feed</div>
+		<div class="faculty-title">Camera Feed</div>
+		<div class="faculty-subtitle"></div>
 	</div>
 </div>
 
