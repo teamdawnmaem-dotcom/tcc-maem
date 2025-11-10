@@ -846,6 +846,7 @@
                     <option value="Present">Present</option>
                     <option value="Absent">Absent</option>
                     <option value="Late">Late</option>
+                    <option value="Wrong room">Present (Wrong room)</option>
                     <option value="On Leave">On Leave</option>
                     <option value="With Pass Slip">With Pass Slip</option>
                 </select>
@@ -1046,6 +1047,7 @@
                     option.textContent = `${instructor.faculty_fname} ${instructor.faculty_lname}`;
                     instructorSelect.appendChild(option);
                 });
+                // Keep Department list as predefined (no dynamic overwrite)
 
                 // Load rooms from room table
                 const roomsResponse = await fetch('/api/rooms');
@@ -1092,6 +1094,46 @@
                         option.textContent = subject;
                         subjectSelect.appendChild(option);
                     });
+                }
+
+                // Load statuses and remarks from attendance records (available values only)
+                try {
+                    const attendanceResp = await fetch('/api/attendance-records?days=30');
+                    if (attendanceResp.ok) {
+                        const attendance = await attendanceResp.json();
+                        const statuses = [...new Set(attendance.map(r => r.record_status).filter(Boolean))].sort();
+                        const remarks = [...new Set(attendance.map(r => r.record_remarks).filter(Boolean))].sort();
+                        
+                        const statusSelect = document.getElementById('statusFilter');
+                        if (statusSelect) {
+                            while (statusSelect.options.length > 1) statusSelect.remove(1);
+                            statuses.forEach(s => {
+                                const opt = document.createElement('option');
+                                opt.value = s;
+                                opt.textContent = s;
+                                statusSelect.appendChild(opt);
+                            });
+                        }
+                        const remarksSelect = document.getElementById('remarksFilter');
+                        if (remarksSelect) {
+                            while (remarksSelect.options.length > 1) remarksSelect.remove(1);
+                            remarks.forEach(r => {
+                                const opt = document.createElement('option');
+                                opt.value = r;
+                                opt.textContent = r;
+                                remarksSelect.appendChild(opt);
+                            });
+                            // Ensure "Wrong room" option exists (special LIKE filter)
+                            if (![...remarksSelect.options].some(o => o.value === 'Wrong room')) {
+                                const opt = document.createElement('option');
+                                opt.value = 'Wrong room';
+                                opt.textContent = 'Wrong room';
+                                remarksSelect.appendChild(opt);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Unable to load dynamic statuses/remarks:', e.message);
                 }
 
                 return true; // Indicate successful completion

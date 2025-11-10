@@ -109,7 +109,11 @@ public function attendanceRecords(Request $request)
     
     // Remarks filter
     if ($request->remarks) {
-        $query->where('record_remarks', $request->remarks);
+        if (strtolower(trim($request->remarks)) === 'wrong room') {
+            $query->where('record_remarks', 'like', '%Wrong room%');
+        } else {
+            $query->where('record_remarks', $request->remarks);
+        }
     }
     
     // Search filter
@@ -423,8 +427,29 @@ public function recognitionLogs(Request $request)
     if ($request->end_date) {
         $query->whereDate('recognition_time', '<=', $request->end_date);
     }
-    if ($request->status) {
-        $query->where('status', $request->status);
+    if ($request->status_category) {
+        $cat = strtolower(trim($request->status_category));
+        if ($cat === 'recognized_scheduled') {
+            $query->whereRaw('LOWER(status) LIKE ?', ['%recognized%'])
+                  ->whereRaw('LOWER(status) LIKE ?', ['%scheduled%'])
+                  ->whereRaw('LOWER(status) NOT LIKE ?', ['%not%'])
+                  ->whereRaw('LOWER(status) NOT LIKE ?', ['%wrong room%']);
+        } elseif ($cat === 'recognized_not_scheduled') {
+            $query->where(function($q) {
+                $q->whereRaw('LOWER(status) LIKE ?', ['%not scheduled%'])
+                  ->orWhere(function($qq){
+                      $qq->whereRaw('LOWER(status) LIKE ?', ['%recognized%'])
+                         ->whereRaw('LOWER(status) LIKE ?', ['%not%'])
+                         ->whereRaw('LOWER(status) LIKE ?', ['%scheduled%']);
+                  });
+            });
+        } elseif ($cat === 'recognized_wrong_room') {
+            $query->whereRaw('LOWER(status) LIKE ?', ['%wrong room%']);
+        } elseif ($cat === 'unknown') {
+            $query->whereRaw('LOWER(status) LIKE ?', ['%unknown%']);
+        }
+    } elseif ($request->status) {
+        $query->whereRaw('LOWER(status) = ?', [strtolower($request->status)]);
     }
     if ($request->faculty_id) {
         $query->where('faculty_id', $request->faculty_id);

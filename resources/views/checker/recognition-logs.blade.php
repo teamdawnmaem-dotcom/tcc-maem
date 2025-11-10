@@ -254,6 +254,11 @@
         font-size: 0.64rem;
         font-weight: bold;
     }
+    /* New status color badges */
+    .status-recognized-scheduled { background: #28a745; color: #fff; padding: 3.2px 6.4px; border-radius: 3.2px; font-size: 0.64rem; font-weight: bold; }
+    .status-unknown { background: #dc3545; color: #fff; padding: 3.2px 6.4px; border-radius: 3.2px; font-size: 0.64rem; font-weight: bold; }
+    .status-recognized-not-scheduled { background: #ff9800; color: #212529; padding: 3.2px 6.4px; border-radius: 3.2px; font-size: 0.64rem; font-weight: bold; }
+    .status-recognized-wrong { background: #6c757d; color: #fff; padding: 3.2px 6.4px; border-radius: 3.2px; font-size: 0.64rem; font-weight: bold; }
 
     .no-records {
         text-align: center;
@@ -327,8 +332,10 @@
             <label class="filter-label">Status</label>
             <select class="filter-select" id="statusFilter">
                 <option value="">All Status</option>
-                <option value="recognized">Recognized</option>
-                <option value="unknown_face">Unknown Face</option>
+                <option value="recognized_scheduled">Recognized (Scheduled)</option>
+                <option value="recognized_not_scheduled">Recognized (Not Scheduled)</option>
+                <option value="recognized_wrong_room">Recognized (Wrong room)</option>
+                <option value="unknown">Unknown</option>
             </select>
         </div>
         <div class="filter-group">
@@ -375,8 +382,9 @@
     </div>
 </div>
 
+<div id="paginationContainer" style="padding: 12px; display: none; justify-content: flex-end; align-items: center;"></div>
+
 <div class="recognition-logs-table-container">
-    <div id="paginationContainer" style="padding: 12px; display: none; justify-content: flex-end; align-items: center;"></div>
     <table class="recognition-logs-table">
         <thead>
             <tr>
@@ -488,7 +496,7 @@ function displayLogs(logs) {
             <td>${log.room_name || 'N/A'}</td>
             <td>${log.building_no || 'N/A'}</td>
             <td>${log.faculty_name || 'Unknown'}</td>
-            <td><span class="status-${log.status}">${log.status}</span></td>
+            <td><span class="${statusClass(log.status)}">${log.status}</span></td>
         </tr>
         `;
     }).join('');
@@ -556,6 +564,16 @@ function renderPagination(paginated) {
     });
 }
 
+// Map raw status text to badge class
+function statusClass(statusText) {
+    if (!statusText) return 'status-recognized';
+    const s = String(statusText).toLowerCase();
+    if (s.includes('unknown')) return 'status-unknown';
+    if (s.includes('recognized') && s.includes('wrong room')) return 'status-recognized-wrong';
+    if (s.includes('recognized') && s.includes('not') && s.includes('scheduled')) return 'status-recognized-not-scheduled';
+    if (s.includes('recognized') && s.includes('scheduled') && !s.includes('not')) return 'status-recognized-scheduled';
+    return 'status-recognized';
+}
 // Format datetime to readable format (e.g., "September 30, 2025 - 4:11:17pm")
 function formatDateTime(dateTimeString) {
     if (!dateTimeString) return 'N/A';
@@ -704,7 +722,7 @@ function applyFilters() {
     currentFilters = {
         start_date: document.getElementById('startDate').value,
         end_date: document.getElementById('endDate').value,
-        status: document.getElementById('statusFilter').value,
+        status_category: document.getElementById('statusFilter').value,
         faculty_id: document.getElementById('instructorFilter').value,
         room_name: document.getElementById('roomFilter').value,
         building_no: document.getElementById('buildingFilter').value,
@@ -786,7 +804,7 @@ function populateFiltersFromURL() {
     const urlParams = new URLSearchParams(window.location.search);
     document.getElementById('startDate').value = urlParams.get('start_date') || '';
     document.getElementById('endDate').value = urlParams.get('end_date') || '';
-    document.getElementById('statusFilter').value = urlParams.get('status') || '';
+    document.getElementById('statusFilter').value = urlParams.get('status_category') || '';
     document.getElementById('instructorFilter').value = urlParams.get('faculty_id') || '';
     document.getElementById('roomFilter').value = urlParams.get('room_name') || '';
     document.getElementById('buildingFilter').value = urlParams.get('building_no') || '';
@@ -797,7 +815,7 @@ function populateFiltersFromURL() {
     currentFilters = {
         start_date: urlParams.get('start_date') || '',
         end_date: urlParams.get('end_date') || '',
-        status: urlParams.get('status') || '',
+        status_category: urlParams.get('status_category') || '',
         faculty_id: urlParams.get('faculty_id') || '',
         room_name: urlParams.get('room_name') || '',
         building_no: urlParams.get('building_no') || '',
