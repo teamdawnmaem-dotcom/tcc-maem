@@ -169,7 +169,9 @@ def fetch_today_schedule():
                 "faculty_id": s.get("faculty_id"),
                 "time_in": s.get("teaching_load_time_in"),
                 "time_out": s.get("teaching_load_time_out"),
-                "teaching_load_class_section": s.get("teaching_load_class_section")
+                "teaching_load_class_section": s.get("teaching_load_class_section"),
+                "room_no": room,  # Store room_no for wrong room detection
+                "room_name": s.get("room_name", room)  # Store room_name for remarks
             }
             _schedules_cache.setdefault(room, []).append(entry)
         return schedules
@@ -205,6 +207,37 @@ def get_current_schedule_for_room(room_no: str):
             return s
     return None
 
+def get_faculty_schedule_for_current_time(faculty_id: int):
+    """Get the scheduled room and teaching load for a faculty at the current time and day of week.
+    Returns the schedule dict if found, else None."""
+    import datetime
+    import pytz
+    tz = pytz.timezone("Asia/Manila")
+    now = datetime.datetime.now(tz)
+    now_min = now.hour * 60 + now.minute
+    day_of_week = now.strftime("%A")  # "Monday", "Tuesday", etc.
+    
+    # Search through all schedules to find matching faculty schedule
+    for room_no, schedules in _schedules_cache.items():
+        for s in schedules:
+            if int(s.get("faculty_id")) == int(faculty_id):
+                start = _to_minutes(s.get("time_in"))
+                end = _to_minutes(s.get("time_out"))
+                if start is None or end is None:
+                    continue
+                if start <= now_min <= end:
+                    # Return the schedule with room information
+                    return {
+                        "teaching_load_id": s.get("teaching_load_id"),
+                        "faculty_id": s.get("faculty_id"),
+                        "time_in": s.get("time_in"),
+                        "time_out": s.get("time_out"),
+                        "teaching_load_class_section": s.get("teaching_load_class_section"),
+                        "scheduled_room_no": room_no,
+                        "scheduled_room_name": s.get("room_name", room_no)
+                    }
+    return None
+
 # -------------------
 # Leave/Pass slip checking
 # -------------------
@@ -220,11 +253,16 @@ def check_faculty_status(faculty_id: int, date: str, time_in: str, time_out: str
             "time_in": time_in,
             "time_out": time_out
         }
-        leave_response = requests.post(leave_url, json=leave_payload, headers=headers, timeout=5)
-        if leave_response.status_code == 200:
-            leave_data = leave_response.json()
-            if leave_data.get("on_leave", False):
-                return "On leave"
+        try:
+            leave_response = requests.post(leave_url, json=leave_payload, headers=headers, timeout=10)
+            if leave_response.status_code == 200:
+                leave_data = leave_response.json()
+                if leave_data.get("on_leave", False):
+                    return "On leave"
+        except requests.exceptions.Timeout:
+            print(f"⚠️  Timeout checking leave status (non-critical, continuing...)")
+        except requests.exceptions.RequestException as e:
+            print(f"⚠️  Error checking leave status: {e}")
         
         # Check pass slip status
         pass_url = f"{API_BASE}/faculty-pass-status"
@@ -234,11 +272,16 @@ def check_faculty_status(faculty_id: int, date: str, time_in: str, time_out: str
             "time_in": time_in,
             "time_out": time_out
         }
-        pass_response = requests.post(pass_url, json=pass_payload, headers=headers, timeout=5)
-        if pass_response.status_code == 200:
-            pass_data = pass_response.json()
-            if pass_data.get("has_pass", False):
-                return "With pass slip"
+        try:
+            pass_response = requests.post(pass_url, json=pass_payload, headers=headers, timeout=10)
+            if pass_response.status_code == 200:
+                pass_data = pass_response.json()
+                if pass_data.get("has_pass", False):
+                    return "With pass slip"
+        except requests.exceptions.Timeout:
+            print(f"⚠️  Timeout checking pass slip status (non-critical, continuing...)")
+        except requests.exceptions.RequestException as e:
+            print(f"⚠️  Error checking pass slip status: {e}")
         
         return None
     except Exception as e:
@@ -431,20 +474,53 @@ def get_recognition_times(camera_id: int, faculty_id: int, teaching_load_id: int
 def record_presence_tick(camera_id: int, detected_faculty_id: int):
     """Accumulate presence seconds for the faculty assigned to this room and post attendance at 30 mins.
     This should be called by the recognition loop whenever a face match is confirmed.
+    Also handles wrong room detection - if faculty has a schedule for current time but is in wrong room.
     """
     cam = _cameras_cache.get(int(camera_id))
     if not cam:
         return
-    room_no = str(cam.get("room_no"))
-    sched = get_current_schedule_for_room(room_no)
-    if not sched:
-        return
-    # Only accumulate if the detected faculty matches the scheduled faculty
-    if int(detected_faculty_id) != int(sched.get("faculty_id")):
-        return
-
-    load_id = int(sched.get("teaching_load_id"))
-    key = (room_no, load_id)
+    actual_room_no = str(cam.get("room_no"))
+    actual_room_name = cam.get("room_name", actual_room_no)
+    
+    # Check if faculty has a schedule for current time (may be in different room)
+    faculty_schedule = get_faculty_schedule_for_current_time(detected_faculty_id)
+    
+    # Check if there's a schedule in the actual room where faculty was detected
+    sched = get_current_schedule_for_room(actual_room_no)
+    
+    # Determine if this is a wrong room scenario
+    is_wrong_room = False
+    scheduled_room_name = None
+    scheduled_room_no = None
+    
+    if faculty_schedule:
+        # Faculty has a schedule for current time
+        scheduled_room_no = str(faculty_schedule.get("scheduled_room_no"))
+        scheduled_room_name = faculty_schedule.get("scheduled_room_name", scheduled_room_no)
+        
+        # Check if they're in the wrong room
+        if scheduled_room_no != actual_room_no:
+            is_wrong_room = True
+            print(f"DEBUG: Faculty {detected_faculty_id} detected in wrong room. Scheduled: {scheduled_room_name}, Actual: {actual_room_name}")
+            # Use the scheduled teaching load for tracking
+            load_id = int(faculty_schedule.get("teaching_load_id"))
+            key = (scheduled_room_no, load_id)  # Use scheduled room for key
+        else:
+            # They're in the correct room
+            if sched and int(detected_faculty_id) == int(sched.get("faculty_id")):
+                load_id = int(sched.get("teaching_load_id"))
+                key = (actual_room_no, load_id)
+            else:
+                return  # No matching schedule in this room
+    else:
+        # No schedule for this faculty at current time
+        if not sched:
+            return
+        # Only accumulate if the detected faculty matches the scheduled faculty
+        if int(detected_faculty_id) != int(sched.get("faculty_id")):
+            return
+        load_id = int(sched.get("teaching_load_id"))
+        key = (actual_room_no, load_id)
     
     # Get current frame for snapshot capture
     current_frame = get_shared_frame(camera_id)
@@ -458,8 +534,26 @@ def record_presence_tick(camera_id: int, detected_faculty_id: int):
     tz = pytz.timezone("Asia/Manila")
     now_ts = datetime.datetime.now(tz).timestamp()
     if not acc:
-        acc = {"seconds": 0.0, "last_ts": now_ts, "faculty_id": detected_faculty_id}
+        acc = {
+            "seconds": 0.0, 
+            "last_ts": now_ts, 
+            "faculty_id": detected_faculty_id,
+            "actual_room_no": actual_room_no,  # Track actual room where detected
+            "actual_room_name": actual_room_name,
+            "is_wrong_room": is_wrong_room,
+            "scheduled_room_no": scheduled_room_no,
+            "scheduled_room_name": scheduled_room_name
+        }
         _presence_accumulator[key] = acc
+    else:
+        # Update room tracking info
+        acc["actual_room_no"] = actual_room_no
+        acc["actual_room_name"] = actual_room_name
+        acc["is_wrong_room"] = is_wrong_room
+        if scheduled_room_no:
+            acc["scheduled_room_no"] = scheduled_room_no
+            acc["scheduled_room_name"] = scheduled_room_name
+    
     # Add elapsed since last tick, capped to a reasonable frame gap
     delta = max(0.0, min(5.0, now_ts - acc["last_ts"]))
     acc["seconds"] += delta
@@ -468,7 +562,10 @@ def record_presence_tick(camera_id: int, detected_faculty_id: int):
     # Don't post attendance immediately when 30 minutes is reached
     # Attendance will be posted when the schedule ends via check_schedule_end_and_mark_absent()
     # Just accumulate the presence time for later evaluation
-    print(f"DEBUG: Accumulated {acc['seconds']} seconds for faculty {detected_faculty_id} in room {room_no}")
+    if is_wrong_room:
+        print(f"DEBUG: Accumulated {acc['seconds']} seconds for faculty {detected_faculty_id} in WRONG ROOM (Scheduled: {scheduled_room_name}, Actual: {actual_room_name})")
+    else:
+        print(f"DEBUG: Accumulated {acc['seconds']} seconds for faculty {detected_faculty_id} in room {actual_room_no}")
 
 def check_schedule_end_and_mark_absent():
     """Check if any schedules have ended and mark absent if 30min threshold not met."""
@@ -512,19 +609,54 @@ def check_schedule_end_and_mark_absent():
                     print(f"DEBUG: Faculty only accumulated {accumulated_time} seconds (need {PRESENCE_THRESHOLD})")
                 else:
                     # Sufficient presence accumulated (≥30 minutes)
+                    # Check if faculty was in wrong room (for logging purposes only)
+                    is_wrong_room = acc.get("is_wrong_room", False)
+                    
+                    # Get actual room name - try from accumulator first, then from camera cache
+                    actual_room_name = acc.get("actual_room_name")
+                    if not actual_room_name or actual_room_name == "":
+                        # Fallback: get from camera cache using actual room number
+                        actual_room_no = acc.get("actual_room_no", room_no)
+                        for cam_id, cam_data in _cameras_cache.items():
+                            if str(cam_data.get("room_no")) == str(actual_room_no):
+                                actual_room_name = cam_data.get("room_name", f"Room {actual_room_no}")
+                                break
+                        # Final fallback
+                        if not actual_room_name or actual_room_name == "":
+                            actual_room_name = f"Room {actual_room_no}"
+                    
                     # Check if late threshold was reached (not recognized in first 15 minutes)
                     late_info = _late_tracking.get(key, {})
                     late_threshold_reached = late_info.get("late_threshold_reached", False)
-                    print(f"DEBUG: Faculty accumulated {acc['seconds']} seconds. Late threshold reached: {late_threshold_reached}")
                     
-                    if late_threshold_reached:
-                        record_status = "Late"
-                        record_remarks = "Late"
-                        print(f"DEBUG: Faculty accumulated {acc['seconds']} seconds but was late (not recognized in first 15 min)")
+                    if is_wrong_room:
+                        # Faculty was in wrong room but accumulated 30 mins
+                        # Include wrong room information in remarks
+                        print(f"DEBUG: Faculty accumulated {acc['seconds']} seconds in WRONG ROOM. Scheduled: {sched.get('room_name', room_no)}, Actual: {actual_room_name}")
+                        print(f"DEBUG: Wrong room details - is_wrong_room={is_wrong_room}, actual_room_name='{actual_room_name}'")
+                        
+                        if late_threshold_reached:
+                            record_status = "Late"
+                            record_remarks = f'Late(Wrong room, "{actual_room_name}")'
+                            print(f"DEBUG: Faculty accumulated {acc['seconds']} seconds in WRONG ROOM but was late (not recognized in first 15 min)")
+                            print(f"DEBUG: Set remarks to: '{record_remarks}'")
+                        else:
+                            record_status = "Present"
+                            record_remarks = f'Present(Wrong room, "{actual_room_name}")'
+                            print(f"DEBUG: Faculty accumulated {acc['seconds']} seconds in WRONG ROOM and was on time")
+                            print(f"DEBUG: Set remarks to: '{record_remarks}'")
                     else:
-                        record_status = "Present"
-                        record_remarks = "Present"
-                        print(f"DEBUG: Faculty accumulated {acc['seconds']} seconds and was on time")
+                        # Faculty in correct room
+                        print(f"DEBUG: Faculty accumulated {acc['seconds']} seconds. Late threshold reached: {late_threshold_reached}")
+                        
+                        if late_threshold_reached:
+                            record_status = "Late"
+                            record_remarks = "Late"
+                            print(f"DEBUG: Faculty accumulated {acc['seconds']} seconds but was late (not recognized in first 15 min)")
+                        else:
+                            record_status = "Present"
+                            record_remarks = "Present"
+                            print(f"DEBUG: Faculty accumulated {acc['seconds']} seconds and was on time")
                 
                 # Ensure remarks is never empty or None
                 if not record_remarks or record_remarks.strip() == "":
@@ -533,12 +665,21 @@ def check_schedule_end_and_mark_absent():
                 
                 print(f"DEBUG: Schedule ended - Status: {record_status}, Remarks: {record_remarks}")
                 
-                # Find camera for this room
+                # Find camera - use actual room camera for wrong room scenarios, scheduled room camera otherwise
                 camera_id = None
-                for cam_id, cam_data in _cameras_cache.items():
-                    if str(cam_data.get("room_no")) == str(room_no):
-                        camera_id = cam_id
-                        break
+                if acc and acc.get("is_wrong_room", False):
+                    # For wrong room scenarios, use the camera where faculty was actually detected
+                    actual_room_no = acc.get("actual_room_no", room_no)
+                    for cam_id, cam_data in _cameras_cache.items():
+                        if str(cam_data.get("room_no")) == str(actual_room_no):
+                            camera_id = cam_id
+                            break
+                else:
+                    # For normal scenarios, use the scheduled room's camera
+                    for cam_id, cam_data in _cameras_cache.items():
+                        if str(cam_data.get("room_no")) == str(room_no):
+                            camera_id = cam_id
+                            break
                 
                 if camera_id:
                     # Get time fields - check if there was any recognition at all
@@ -552,18 +693,25 @@ def check_schedule_end_and_mark_absent():
                     time_fields = get_attendance_time_fields(camera_id, faculty_id, load_id, was_detected=has_recognition)
                     
                     print(f"DEBUG: Before payload creation - record_status='{record_status}', record_remarks='{record_remarks}'")
+                    print(f"DEBUG: record_remarks type: {type(record_remarks)}, length: {len(record_remarks) if record_remarks else 0}")
                     
                     # Final validation before payload creation
-                    if not record_remarks or record_remarks.strip() == "":
-                        record_remarks = record_status  # Use the same as status
-                        print(f"DEBUG: WARNING - Empty remarks detected before payload creation, setting to '{record_remarks}'")
+                    # Only override if truly empty, preserve wrong room remarks
+                    if not record_remarks or (isinstance(record_remarks, str) and record_remarks.strip() == ""):
+                        # Only use status as fallback if remarks are completely empty
+                        # Don't override if it contains wrong room information
+                        if not record_remarks or record_remarks.strip() == "":
+                            record_remarks = record_status  # Use the same as status
+                            print(f"DEBUG: WARNING - Empty remarks detected before payload creation, setting to '{record_remarks}'")
+                        else:
+                            print(f"DEBUG: Remarks preserved: '{record_remarks}'")
                     
                     payload = {
                         "faculty_id": int(faculty_id),
                         "teaching_load_id": load_id,
                         "camera_id": camera_id,
                         "record_status": record_status,
-                        "record_remarks": record_remarks,
+                        "record_remarks": str(record_remarks),  # Ensure it's a string
                         "teaching_load_class_section": sched.get("teaching_load_class_section"),
                         **time_fields
                     }
@@ -572,6 +720,7 @@ def check_schedule_end_and_mark_absent():
                     print(f"DEBUG: Time fields: {time_fields}")
                     print(f"DEBUG: Full payload: {payload}")
                     print(f"DEBUG: Payload record_remarks type: {type(payload['record_remarks'])}, value: '{payload['record_remarks']}'")
+                    print(f"DEBUG: Payload record_remarks length: {len(payload['record_remarks']) if payload.get('record_remarks') else 0}")
                     
                     threading.Thread(target=_post_attendance_dedup, args=(payload,), daemon=True).start()
                 
@@ -1474,7 +1623,7 @@ def draw_face_overlay(frame, face_location, faculty_id, distance, is_scheduled, 
 		return None
 
 def log_recognition_event(camera_id, faculty_id, faculty_name, status, distance, teaching_load_id=None):
-	"""Log recognition event to database."""
+	"""Log recognition event to database. Format matches _recognition_results structure."""
 	try:
 		cam = _cameras_cache.get(camera_id)
 		if not cam:
@@ -1486,34 +1635,79 @@ def log_recognition_event(camera_id, faculty_id, faculty_name, status, distance,
 		
 		def post_log():
 			try:
+				# Get current recognition results to match the format
+				recognition_result = _recognition_results.get(camera_id, {})
+				
+				# Use recognition results data if available, otherwise use provided parameters
+				result_faculty_id = recognition_result.get("faculty_id") if recognition_result else faculty_id
+				result_status = recognition_result.get("status") if recognition_result else status
+				result_distance = recognition_result.get("distance") if recognition_result else distance
+				result_teaching_load_id = recognition_result.get("teaching_load_id") if recognition_result else teaching_load_id
+				result_timestamp = recognition_result.get("timestamp") if recognition_result else None
+				result_last_seen = recognition_result.get("last_seen") if recognition_result else None
+				result_room_no = recognition_result.get("room_no") if recognition_result else cam.get("room_no")
+				
+				# Use recognition results values, fallback to parameters if not available
+				log_faculty_id = result_faculty_id if result_faculty_id is not None else faculty_id
+				log_status = result_status if result_status else status
+				log_distance = result_distance if result_distance is not None else distance
+				log_teaching_load_id = result_teaching_load_id if result_teaching_load_id is not None else teaching_load_id
+				
+				# Get timestamp from recognition results or use current time
+				import pytz
+				tz = pytz.timezone("Asia/Manila")
+				if result_timestamp:
+					# Use ISO timestamp from recognition results
+					recognition_time = result_timestamp
+				elif result_last_seen:
+					# Use last_seen timestamp
+					recognition_time = result_last_seen
+				else:
+					# Fallback to current time
+					now_ph = datetime.datetime.now(tz)
+					recognition_time = now_ph.isoformat()
+				
+				# Get display-friendly information for database
 				# Only try to get detailed information if we have a valid teaching_load_id
 				# and the faculty_id is not None/Unknown
-				if teaching_load_id and faculty_id and faculty_id != "Unknown" and faculty_id != "unknown_face":
+				if log_teaching_load_id and log_faculty_id and log_faculty_id != "Unknown" and log_faculty_id != "unknown_face":
 					# Get detailed information from teaching load and related data
 					teaching_load_url = f"{API_BASE}/teaching-load-details"
 					payload = {
-						"teaching_load_id": teaching_load_id,
-						"faculty_id": faculty_id,
+						"teaching_load_id": log_teaching_load_id,
+						"faculty_id": log_faculty_id,
 						"camera_id": camera_id
 					}
 					
-					# Try to get detailed information
-					headers = get_request_headers()
-					details_response = requests.post(teaching_load_url, json=payload, headers=headers, timeout=3)
-					if details_response.status_code == 200:
-						details = details_response.json()
-						room_name = details.get("room_name", cam.get("room_name", f"Room {cam.get('room_no')}"))
-						building_no = details.get("building_no", cam.get("room_building_no", "Unknown"))
-						camera_name = details.get("camera_name", f"Camera {camera_id}")
-						faculty_full_name = details.get("faculty_full_name", faculty_name or "Unknown")
-					else:
-						# Fallback to basic information
+					# Try to get detailed information with timeout handling
+					try:
+						headers = get_request_headers()
+						details_response = requests.post(teaching_load_url, json=payload, headers=headers, timeout=3)
+						if details_response.status_code == 200:
+							details = details_response.json()
+							room_name = details.get("room_name", cam.get("room_name", f"Room {cam.get('room_no')}"))
+							building_no = details.get("building_no", cam.get("room_building_no", "Unknown"))
+							camera_name = details.get("camera_name", f"Camera {camera_id}")
+							faculty_full_name = details.get("faculty_full_name", faculty_name or "Unknown")
+						else:
+							# Fallback to basic information on non-200 response
+							room_name = cam.get("room_name", f"Room {cam.get('room_no')}")
+							building_no = cam.get("room_building_no", "Unknown")
+							camera_name = f"Camera {camera_id}"
+							# Always try to get faculty full name, even for unscheduled faculty
+							if log_faculty_id and log_faculty_id != "Unknown" and log_faculty_id != "unknown_face":
+								faculty_full_name = get_faculty_name(log_faculty_id)
+							else:
+								faculty_full_name = faculty_name or "Unknown"
+					except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+						# Fallback to basic information on timeout or connection error
+						print(f"Timeout/connection error getting teaching load details, using fallback: {e}")
 						room_name = cam.get("room_name", f"Room {cam.get('room_no')}")
 						building_no = cam.get("room_building_no", "Unknown")
 						camera_name = f"Camera {camera_id}"
 						# Always try to get faculty full name, even for unscheduled faculty
-						if faculty_id and faculty_id != "Unknown" and faculty_id != "unknown_face":
-							faculty_full_name = get_faculty_name(faculty_id)
+						if log_faculty_id and log_faculty_id != "Unknown" and log_faculty_id != "unknown_face":
+							faculty_full_name = get_faculty_name(log_faculty_id)
 						else:
 							faculty_full_name = faculty_name or "Unknown"
 				else:
@@ -1522,39 +1716,80 @@ def log_recognition_event(camera_id, faculty_id, faculty_name, status, distance,
 					building_no = cam.get("room_building_no", "Unknown")
 					camera_name = f"Camera {camera_id}"
 					# Always try to get faculty full name, even for unscheduled faculty
-					if faculty_id and faculty_id != "Unknown" and faculty_id != "unknown_face":
-						faculty_full_name = get_faculty_name(faculty_id)
+					if log_faculty_id and log_faculty_id != "Unknown" and log_faculty_id != "unknown_face":
+						faculty_full_name = get_faculty_name(log_faculty_id)
 					else:
 						faculty_full_name = faculty_name or "Unknown"
 				
-				# Prepare log data with Philippine timezone
-				import pytz
-				tz = pytz.timezone("Asia/Manila")
-				now_ph = datetime.datetime.now(tz)
+				# Convert ISO timestamp to database format (YYYY-MM-DD HH:MM:SS)
+				# Parse ISO timestamp if it's a string
+				if isinstance(recognition_time, str):
+					try:
+						# Parse ISO format timestamp
+						if 'T' in recognition_time:
+							dt = datetime.datetime.fromisoformat(recognition_time.replace('Z', '+00:00'))
+						else:
+							dt = datetime.datetime.fromisoformat(recognition_time)
+						# Convert to Asia/Manila timezone if needed
+						if dt.tzinfo is None:
+							dt = tz.localize(dt)
+						else:
+							dt = dt.astimezone(tz)
+						recognition_time_db = dt.strftime("%Y-%m-%d %H:%M:%S")
+					except:
+						# Fallback to current time if parsing fails
+						now_ph = datetime.datetime.now(tz)
+						recognition_time_db = now_ph.strftime("%Y-%m-%d %H:%M:%S")
+				else:
+					# If it's already a datetime object
+					if isinstance(recognition_time, datetime.datetime):
+						if recognition_time.tzinfo is None:
+							recognition_time = tz.localize(recognition_time)
+						else:
+							recognition_time = recognition_time.astimezone(tz)
+						recognition_time_db = recognition_time.strftime("%Y-%m-%d %H:%M:%S")
+					else:
+						now_ph = datetime.datetime.now(tz)
+						recognition_time_db = now_ph.strftime("%Y-%m-%d %H:%M:%S")
 				
+				# Prepare log data matching recognition results structure
+				# Include both recognition results format fields and display-friendly fields
 				log_data = {
-					"recognition_time": now_ph.strftime("%Y-%m-%d %H:%M:%S"),
+					# Recognition results format fields (matching _recognition_results)
+					"camera_id": camera_id,
+					"room_no": str(result_room_no) if result_room_no else str(cam.get("room_no")),
+					"last_seen": result_last_seen if result_last_seen else recognition_time,
+					"faculty_id": log_faculty_id,
+					"status": log_status,
+					"distance": log_distance,
+					"teaching_load_id": log_teaching_load_id,
+					"timestamp": recognition_time,
+					# Display-friendly fields for database (kept for compatibility)
+					"recognition_time": recognition_time_db,
 					"camera_name": camera_name,
 					"room_name": room_name,
 					"building_no": building_no,
-					"faculty_name": faculty_full_name,
-					"status": status,
-					"distance": distance,
-					"faculty_id": faculty_id,
-					"camera_id": camera_id,
-					"teaching_load_id": teaching_load_id
+					"faculty_name": faculty_full_name
 				}
 				
 				# Post recognition log (use public endpoint, no API key needed)
+				# Use increased timeout and handle timeouts gracefully
 				headers = {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json'
 				}
-				response = requests.post(f"{API_BASE}/recognition-logs", json=log_data, headers=headers, timeout=5)
-				if response.status_code not in [200, 201]:
-					print(f"Failed to log recognition event: {response.status_code} - {response.text[:200] if hasattr(response, 'text') else 'No response'}")
+				try:
+					response = requests.post(f"{API_BASE}/recognition-logs", json=log_data, headers=headers, timeout=15)  # Increased timeout
+					if response.status_code not in [200, 201]:
+						print(f"Failed to log recognition event: {response.status_code} - {response.text[:200] if hasattr(response, 'text') else 'No response'}")
+				except requests.exceptions.Timeout:
+					print(f"⚠️  Timeout posting recognition log (non-critical, continuing...)")
+				except requests.exceptions.RequestException as e:
+					print(f"⚠️  Error posting recognition log (non-critical): {e}")
 			except Exception as e:
 				print(f"Error posting recognition log: {e}")
+				import traceback
+				traceback.print_exc()
 		
 		# Post asynchronously to avoid blocking recognition
 		threading.Thread(target=post_log, daemon=True).start()
@@ -1592,25 +1827,50 @@ def process_frame_for_recognition(frame, camera_id, scale_factor=1.0):
 			# Match faculty with optimized function
 			best_match, best_distance = match_faculty_optimized(face_encoding)
 			
-			# Check if this is the scheduled faculty
+			# Check if this is the scheduled faculty for this room
 			is_scheduled = sched and best_match and int(best_match) == int(sched.get("faculty_id"))
 			
 			# Get faculty full name for display
 			faculty_full_name = get_faculty_name(best_match)
 			
-			# Record presence tick for scheduled faculty
-			if is_scheduled:
+			# Record presence tick for scheduled faculty (handles wrong room scenarios)
+			if best_match and best_match != "Unknown" and best_match != "unknown_face":
 				record_presence_tick(camera_id, best_match)
 			
-			# Log recognition event
+			# Determine status and teaching_load_id for logging
 			faculty_name = faculty_full_name if best_match else "Unknown"
-			status = "recognized" if best_match else "unknown_face"
 			
-			# Only use teaching_load_id if the detected faculty matches the scheduled faculty
-			# This prevents logging the scheduled faculty's info for unknown faces or wrong faculty
-			teaching_load_id = None
-			if sched and best_match and is_scheduled:
+			# Determine status based on recognition and scheduling
+			if not best_match or best_match == "Unknown" or best_match == "unknown_face":
+				status = "Unknown"
+				teaching_load_id = None
+			elif is_scheduled:
+				# Correct faculty in correct room
+				status = "recognized(Scheduled)"
 				teaching_load_id = sched.get("teaching_load_id")
+			else:
+				# Check if faculty has a teaching load scheduled for current time frame
+				faculty_schedule = None
+				if best_match and best_match != "Unknown" and best_match != "unknown_face":
+					faculty_schedule = get_faculty_schedule_for_current_time(best_match)
+				
+				if faculty_schedule:
+					# Faculty has a teaching load scheduled for current time
+					scheduled_room_no = str(faculty_schedule.get("scheduled_room_no"))
+					if scheduled_room_no != room_no:
+						# They have a schedule but are in wrong room
+						actual_room_name = cam.get("room_name", f"Room {room_no}")
+						status = f'recognized(Wrong room, "{actual_room_name}")'
+						teaching_load_id = faculty_schedule.get("teaching_load_id")
+					else:
+						# They have a schedule for this room but is_scheduled is False
+						# This shouldn't normally happen, but treat as not scheduled
+						status = "recognized(Not Scheduled)"
+						teaching_load_id = None
+				else:
+					# No teaching load scheduled for current time frame
+					status = "recognized(Not Scheduled)"
+					teaching_load_id = None
 			
 			# Add to recognition logs for multiple face tracking
 			add_recognition_log(
@@ -1711,12 +1971,44 @@ def process_frame_for_recognition(frame, camera_id, scale_factor=1.0):
 			import pytz
 			tz = pytz.timezone("Asia/Manila")
 			now = datetime.datetime.now(tz)
+			
+			# Determine status for recognition results (match the logging status)
+			result_faculty_id = first_face["faculty_id"]
+			result_status = "Unknown"
+			result_teaching_load_id = None
+			
+			if result_faculty_id and result_faculty_id != "Unknown" and result_faculty_id != "unknown_face":
+				# Check if scheduled for this room
+				if sched and int(result_faculty_id) == int(sched.get("faculty_id")):
+					result_status = "recognized(Scheduled)"
+					result_teaching_load_id = sched.get("teaching_load_id")
+				else:
+					# Check if faculty has a teaching load scheduled for current time frame
+					faculty_schedule = get_faculty_schedule_for_current_time(result_faculty_id)
+					if faculty_schedule:
+						# Faculty has a teaching load scheduled for current time
+						scheduled_room_no = str(faculty_schedule.get("scheduled_room_no"))
+						if scheduled_room_no != room_no:
+							# They have a schedule but are in wrong room
+							actual_room_name = cam.get("room_name", f"Room {room_no}")
+							result_status = f'recognized(Wrong room, "{actual_room_name}")'
+							result_teaching_load_id = faculty_schedule.get("teaching_load_id")
+						else:
+							# They have a schedule for this room but is_scheduled is False
+							# This shouldn't normally happen, but treat as not scheduled
+							result_status = "recognized(Not Scheduled)"
+							result_teaching_load_id = None
+					else:
+						# No teaching load scheduled for current time frame
+						result_status = "recognized(Not Scheduled)"
+						result_teaching_load_id = None
+			
 			_recognition_results[camera_id].update({
 				"last_seen": now.isoformat(),
-				"faculty_id": first_face["faculty_id"],
-				"status": "recognized" if first_face["faculty_id"] else "unknown_face",
-				"distance": first_face["distance"] if first_face["faculty_id"] else None,
-				"teaching_load_id": sched.get("teaching_load_id") if sched else None,
+				"faculty_id": result_faculty_id,
+				"status": result_status,
+				"distance": first_face["distance"] if result_faculty_id else None,
+				"teaching_load_id": result_teaching_load_id,
 				"timestamp": now.isoformat()
 			})
 		
@@ -1747,7 +2039,7 @@ class RTSPVideoTrack(VideoStreamTrack):
                 "room_no": self.room_no,
                 "last_seen": None,
                 "faculty_id": None,
-                "status": "idle",
+                "status": "Unknown",
                 "distance": None,
                 "teaching_load_id": None,
                 "timestamp": None
@@ -1881,50 +2173,103 @@ def get_attendance_time_fields(camera_id: int, faculty_id: int, teaching_load_id
 # Attendance dedup
 # -------------------
 def _post_attendance_dedup(payload):
-    try:
-        # Validate payload before processing
-        if "record_remarks" not in payload or not payload["record_remarks"] or payload["record_remarks"].strip() == "":
-            # Use the record_status as the default remarks if remarks are empty
-            default_remarks = payload.get("record_status", "Absent")
-            payload["record_remarks"] = default_remarks
-            print(f"DEBUG: WARNING - Empty remarks in payload, setting to '{default_remarks}'")
-        
-        print(f"DEBUG: Final payload validation - record_remarks='{payload.get('record_remarks', 'MISSING')}'")
-        
-        # Check if attendance already exists
-        headers = get_request_headers()
-        check_response = requests.post(ATTENDANCE_CHECK_ENDPOINT, json={
-            "faculty_id": payload["faculty_id"],
-            "teaching_load_id": payload["teaching_load_id"]
-        }, headers=headers, timeout=5)
-        
-        print(f"Check response status: {check_response.status_code}")
-        if check_response.status_code == 200:
-            check_data = check_response.json()
-            exists = check_data.get("exists", False)
-            print(f"Attendance already exists: {exists}")
-            if exists:
-                print("Attendance already recorded, skipping...")
-                return
-        
-        print(f"Posting attendance with payload: {payload}")
-        
-        # Post attendance
-        headers = get_request_headers()
-        post_response = requests.post(ATTENDANCE_ENDPOINT, json=payload, headers=headers, timeout=6)
-        print(f"Attendance posted with status: {post_response.status_code}")
-        
-        if post_response.status_code not in [200, 201]:
-            print(f"Error response: {post_response.text}")
-            print(f"Error status code: {post_response.status_code}")
-        else:
-            print("Attendance successfully posted to database")
-            print(f"Response: {post_response.text}")
+    """Post attendance with retry logic and increased timeouts."""
+    import time
+    max_retries = 3
+    retry_delay = 2  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            # Validate payload before processing
+            # Only set default if remarks are truly missing or empty
+            # Preserve wrong room remarks (they contain "Wrong room" in the string)
+            record_remarks = payload.get("record_remarks", "")
             
-    except Exception as e:
-        print(f"post_attendance_dedup error: {e}")
-        import traceback
-        traceback.print_exc()
+            if not record_remarks or (isinstance(record_remarks, str) and record_remarks.strip() == ""):
+                # Use the record_status as the default remarks if remarks are empty
+                default_remarks = payload.get("record_status", "Absent")
+                payload["record_remarks"] = default_remarks
+                print(f"DEBUG: WARNING - Empty remarks in payload, setting to '{default_remarks}'")
+            else:
+                # Ensure remarks is a string and preserve it
+                payload["record_remarks"] = str(record_remarks)
+                print(f"DEBUG: Preserving remarks in payload: '{payload['record_remarks']}'")
+            
+            print(f"DEBUG: Final payload validation - record_remarks='{payload.get('record_remarks', 'MISSING')}'")
+            print(f"DEBUG: Final payload validation - record_remarks type: {type(payload.get('record_remarks'))}, length: {len(payload.get('record_remarks', ''))}")
+            
+            # Check if attendance already exists (with increased timeout and retry)
+            headers = get_request_headers()
+            check_response = None
+            try:
+                check_response = requests.post(ATTENDANCE_CHECK_ENDPOINT, json={
+                    "faculty_id": payload["faculty_id"],
+                    "teaching_load_id": payload["teaching_load_id"]
+                }, headers=headers, timeout=15)  # Increased timeout
+                
+                print(f"Check response status: {check_response.status_code}")
+                if check_response.status_code == 200:
+                    check_data = check_response.json()
+                    exists = check_data.get("exists", False)
+                    print(f"Attendance already exists: {exists}")
+                    if exists:
+                        print("Attendance already recorded, skipping...")
+                        return
+            except requests.exceptions.Timeout:
+                print(f"⚠️  Timeout checking attendance (attempt {attempt + 1}/{max_retries}), will try to post anyway...")
+                # Continue to posting even if check times out
+            except requests.exceptions.RequestException as e:
+                print(f"⚠️  Error checking attendance (attempt {attempt + 1}/{max_retries}): {e}")
+                # Continue to posting even if check fails
+            
+            print(f"Posting attendance with payload: {payload}")
+            
+            # Post attendance with increased timeout
+            headers = get_request_headers()
+            post_response = requests.post(ATTENDANCE_ENDPOINT, json=payload, headers=headers, timeout=20)  # Increased timeout
+            print(f"Attendance posted with status: {post_response.status_code}")
+            
+            if post_response.status_code not in [200, 201]:
+                print(f"Error response: {post_response.text}")
+                print(f"Error status code: {post_response.status_code}")
+                # If it's a client error (4xx), don't retry
+                if 400 <= post_response.status_code < 500:
+                    print("Client error, not retrying...")
+                    return
+                # For server errors (5xx), retry
+                if attempt < max_retries - 1:
+                    print(f"Server error, retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                    continue
+            else:
+                print("✅ Attendance successfully posted to database")
+                print(f"Response: {post_response.text}")
+                return  # Success, exit function
+                
+        except requests.exceptions.Timeout as e:
+            print(f"⚠️  Timeout posting attendance (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                print(f"Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+            else:
+                print("❌ Max retries reached, giving up on posting attendance")
+                print(f"Failed payload: {payload}")
+        except requests.exceptions.RequestException as e:
+            print(f"⚠️  Request error posting attendance (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                print(f"Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+            else:
+                print("❌ Max retries reached, giving up on posting attendance")
+                print(f"Failed payload: {payload}")
+        except Exception as e:
+            print(f"❌ Unexpected error in post_attendance_dedup: {e}")
+            import traceback
+            traceback.print_exc()
+            return  # Don't retry on unexpected errors
 
 # -------------------
 # Background camera processing (runs without WebRTC)

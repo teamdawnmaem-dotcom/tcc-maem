@@ -376,6 +376,7 @@
 </div>
 
 <div class="recognition-logs-table-container">
+    <div id="paginationContainer" style="padding: 12px; display: none; justify-content: flex-end; align-items: center;"></div>
     <table class="recognition-logs-table">
         <thead>
             <tr>
@@ -456,6 +457,7 @@ async function loadLogs() {
         
         if (result.success && result.data) {
             displayLogs(result.data);
+            renderPagination(result.data);
         }
     } catch (error) {
         console.error('Error loading logs:', error);
@@ -467,12 +469,15 @@ async function loadLogs() {
 function displayLogs(logs) {
     const tableBody = document.getElementById('logsTableBody');
     
-    if (logs.length === 0) {
+    const items = Array.isArray(logs) ? logs : (logs && logs.data ? logs.data : []);
+
+    if (items.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="6" class="no-records">No records found</td></tr>';
         return;
     }
     
-    tableBody.innerHTML = logs.map(log => {
+    const limited = items.slice(0, 50);
+    tableBody.innerHTML = limited.map(log => {
         // Format the recognition time to readable format
         const formattedTime = formatDateTime(log.recognition_time);
         
@@ -487,6 +492,68 @@ function displayLogs(logs) {
         </tr>
         `;
     }).join('');
+}
+
+// Render pagination controls from Laravel paginator JSON
+function renderPagination(paginated) {
+    const container = document.getElementById('paginationContainer');
+    if (!container) return;
+    
+    // If JSON came as array, hide container
+    if (!paginated || !paginated.links) {
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+    
+    container.style.display = 'flex';
+    const links = paginated.links; // Laravel returns [{url,label,active}]
+    
+    container.innerHTML = links.map(link => {
+        const isDisabled = link.url === null;
+        const isActive = !!link.active;
+        const labelText = link.label
+            .replace('&laquo; Previous', '«')
+            .replace('Next &raquo;', '»');
+        
+        return `
+            <button
+                ${isDisabled ? 'disabled' : ''}
+                data-url="${link.url || ''}"
+                data-label="${labelText}"
+                style="
+                    margin-left: 6px;
+                    padding: 6px 10px;
+                    border-radius: 6px;
+                    border: 1px solid ${isActive ? '#8B0000' : '#e9ecef'};
+                    background: ${isActive ? '#8B0000' : '#ffffff'};
+                    color: ${isActive ? '#ffffff' : '#495057'};
+                    cursor: ${isDisabled ? 'not-allowed' : 'pointer'};
+                "
+            >${labelText}</button>
+        `;
+    }).join('');
+    
+    // Attach click handlers
+    Array.from(container.querySelectorAll('button[data-url]')).forEach(btn => {
+        btn.addEventListener('click', () => {
+            const url = btn.getAttribute('data-url');
+            if (!url) return;
+            const urlObj = new URL(url, window.location.origin);
+            const nextPage = urlObj.searchParams.get('page') || '1';
+            
+            // Keep current filters, change page
+            currentFilters.page = nextPage;
+            
+            // Update URL without reload
+            const loc = new URL(window.location);
+            loc.searchParams.set('page', nextPage);
+            window.history.pushState({}, '', loc);
+            
+            // Load that page
+            loadLogs();
+        });
+    });
 }
 
 // Format datetime to readable format (e.g., "September 30, 2025 - 4:11:17pm")
@@ -641,7 +708,8 @@ function applyFilters() {
         faculty_id: document.getElementById('instructorFilter').value,
         room_name: document.getElementById('roomFilter').value,
         building_no: document.getElementById('buildingFilter').value,
-        camera_id: document.getElementById('cameraFilter').value
+        camera_id: document.getElementById('cameraFilter').value,
+        page: 1
     };
     
     // Remove empty filters
@@ -691,6 +759,7 @@ function searchLogs() {
     
     // Update current filters with search
     currentFilters.search = searchValue;
+    currentFilters.page = 1;
     
     // Remove search from filters if empty
     if (!currentFilters.search) {
@@ -704,6 +773,7 @@ function searchLogs() {
     } else {
         url.searchParams.delete('search');
     }
+    url.searchParams.set('page', '1');
     window.history.pushState({}, '', url);
     
     // Load filtered data
@@ -732,7 +802,8 @@ function populateFiltersFromURL() {
         room_name: urlParams.get('room_name') || '',
         building_no: urlParams.get('building_no') || '',
         camera_id: urlParams.get('camera_id') || '',
-        search: urlParams.get('search') || ''
+        search: urlParams.get('search') || '',
+        page: urlParams.get('page') || ''
     };
     
     // Remove empty filters

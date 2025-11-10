@@ -80,9 +80,30 @@ class AttendanceRemarksService
 
         // If no leave or pass slip found, preserve the original remarks
         // Don't update remarks if they already contain attendance status (Present/Late/Absent)
+        // Also preserve remarks that contain special information like "Wrong room"
         $currentRemarks = $record->record_remarks;
-        if (empty($currentRemarks) || !in_array($currentRemarks, ['Present', 'Late', 'Absent'])) {
-            // Only clear remarks if they were empty or not a standard attendance status
+        
+        // Check if remarks start with standard status or contain special information
+        $shouldPreserve = false;
+        if (!empty($currentRemarks)) {
+            // Check if it's an exact match to standard status
+            if (in_array($currentRemarks, ['Present', 'Late', 'Absent'])) {
+                $shouldPreserve = true;
+            }
+            // Check if it starts with Present, Late, or Absent (handles "Present(Wrong room, ...)" etc.)
+            elseif (preg_match('/^(Present|Late|Absent)/i', $currentRemarks)) {
+                $shouldPreserve = true;
+            }
+            // Check if it contains special information like "Wrong room"
+            elseif (stripos($currentRemarks, 'Wrong room') !== false || 
+                    stripos($currentRemarks, 'On leave') !== false || 
+                    stripos($currentRemarks, 'With pass slip') !== false) {
+                $shouldPreserve = true;
+            }
+        }
+        
+        // Only clear remarks if they should not be preserved
+        if (!$shouldPreserve) {
             $record->update(['record_remarks' => '']);
         }
     }

@@ -431,8 +431,19 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Sync ALL recognition logs
-            $localLogs = RecognitionLog::all();
+            // Get existing recognition log IDs from cloud (limit by recent days to reduce payload)
+            $existingCloudIds = $this->getExistingCloudIds('recognition-logs', 'log_id', ['days' => 7]);
+            
+            // Get local logs and only include those NOT present on cloud
+            $localLogs = RecognitionLog::all()->filter(function ($log) use ($existingCloudIds) {
+                return !in_array($log->log_id, $existingCloudIds);
+            });
+            
+            if ($localLogs->isEmpty()) {
+                Log::info('No new recognition logs to sync to cloud');
+                return $synced;
+            }
+            
             $payload = $localLogs->map(function ($log) {
                 return [
                     'log_id' => $log->log_id,
@@ -448,15 +459,15 @@ class CloudSyncService
                     'teaching_load_id' => $log->teaching_load_id,
                 ];
             })->values()->all();
+            
             $resp = $this->pushBulkToCloud('recognition-logs', $payload);
             $upserted = $resp['data']['upserted'] ?? 0;
-            Log::info('Bulk recognition-logs result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($localLogs)]);
+            Log::info('Selective recognition-logs sync result', ['upserted' => $upserted, 'to_send' => count($payload)]);
             
             if ($resp['success'] && $upserted > 0) {
-                // Only return synced IDs if records were actually upserted
                 $synced = $localLogs->pluck('log_id')->all();
             } elseif ($resp['success'] && $upserted == 0) {
-                Log::warning("Recognition logs sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
+                Log::warning("Recognition logs sync returned success but 0 records were upserted (nothing new).");
             }
         } catch (\Exception $e) {
             Log::error("Error syncing recognition logs: " . $e->getMessage());
@@ -744,7 +755,19 @@ class CloudSyncService
         $synced = [];
         
         try {
-            $localLogs = ActivityLog::all();
+            // Get existing activity log IDs from cloud (recent window)
+            $existingCloudIds = $this->getExistingCloudIds('activity-logs', 'logs_id', ['days' => 30]);
+            
+            // Only send logs that don't exist on cloud
+            $localLogs = ActivityLog::all()->filter(function ($log) use ($existingCloudIds) {
+                return !in_array($log->logs_id, $existingCloudIds);
+            });
+            
+            if ($localLogs->isEmpty()) {
+                Log::info('No new activity logs to sync to cloud');
+                return $synced;
+            }
+            
             $payload = $localLogs->map(function ($log) {
                 return [
                     'logs_id' => $log->logs_id,
@@ -755,8 +778,12 @@ class CloudSyncService
                     'logs_module' => $log->logs_module,
                 ];
             })->values()->all();
+            
             $resp = $this->pushBulkToCloud('activity-logs', $payload);
-            if ($resp['success']) {
+            $upserted = $resp['data']['upserted'] ?? 0;
+            Log::info('Selective activity-logs sync result', ['upserted' => $upserted, 'to_send' => count($payload)]);
+            
+            if ($resp['success'] && $upserted > 0) {
                 $synced = $localLogs->pluck('logs_id')->all();
             }
         } catch (\Exception $e) {
@@ -2081,6 +2108,12 @@ class CloudSyncService
                 return $synced;
             }
             
+            // Filter out logs that already exist locally
+            $existingLocalIds = $this->getExistingLocalIds('tbl_recognition_logs', 'log_id');
+            $cloudLogs = array_values(array_filter($cloudLogs, function ($log) use ($existingLocalIds) {
+                return !in_array($log['log_id'] ?? null, $existingLocalIds);
+            }));
+            
             foreach ($cloudLogs as $cloudLog) {
                 try {
                     DB::table('tbl_recognition_logs')->upsert([
@@ -2194,6 +2227,12 @@ class CloudSyncService
             if (empty($cloudLogs)) {
                 return $synced;
             }
+            
+            // Filter out logs that already exist locally
+            $existingLocalIds = $this->getExistingLocalIds('tbl_activity_logs', 'logs_id');
+            $cloudLogs = array_values(array_filter($cloudLogs, function ($log) use ($existingLocalIds) {
+                return !in_array($log['logs_id'] ?? null, $existingLocalIds);
+            }));
             
             foreach ($cloudLogs as $cloudLog) {
                 try {
