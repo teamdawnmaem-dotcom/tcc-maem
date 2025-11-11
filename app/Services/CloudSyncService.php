@@ -56,15 +56,20 @@ class CloudSyncService
             $results['synced']['cameras'] = $this->syncCameras();
             $results['synced']['faculties'] = $this->syncFaculties();
             $results['synced']['teaching_loads'] = $this->syncTeachingLoads();
-            $results['synced']['attendance_records'] = $this->syncAttendanceRecords();
             $results['synced']['leaves'] = $this->syncLeaves();
             $results['synced']['passes'] = $this->syncPasses();
+            $results['synced']['official_matters'] = $this->syncOfficialMatters();
+            $results['synced']['attendance_records'] = $this->syncAttendanceRecords();
             $results['synced']['recognition_logs'] = $this->syncRecognitionLogs();
             $results['synced']['stream_recordings'] = $this->syncStreamRecordings();
             $results['synced']['activity_logs'] = $this->syncActivityLogs();
             $results['synced']['teaching_load_archives'] = $this->syncTeachingLoadArchives();
             $results['synced']['attendance_record_archives'] = $this->syncAttendanceRecordArchives();
-            $results['synced']['official_matters'] = $this->syncOfficialMatters();
+            
+            // Final pass: Sync any deletions that happened during the sync process
+            // This ensures deletions are synced even if they occur while sync is running
+            Log::info('Performing final deletion sync to catch deletions that occurred during sync...');
+            $this->syncAllDeletionsToCloud();
             
             // Calculate summary
             foreach ($results['synced'] as $key => $value) {
@@ -1842,15 +1847,20 @@ class CloudSyncService
             $results['synced']['cameras'] = $this->syncCamerasFromCloud();
             $results['synced']['faculties'] = $this->syncFacultiesFromCloud();
             $results['synced']['teaching_loads'] = $this->syncTeachingLoadsFromCloud();
-            $results['synced']['attendance_records'] = $this->syncAttendanceRecordsFromCloud();
             $results['synced']['leaves'] = $this->syncLeavesFromCloud();
             $results['synced']['passes'] = $this->syncPassesFromCloud();
+            $results['synced']['official_matters'] = $this->syncOfficialMattersFromCloud();
+            $results['synced']['attendance_records'] = $this->syncAttendanceRecordsFromCloud();
             $results['synced']['recognition_logs'] = $this->syncRecognitionLogsFromCloud();
             $results['synced']['stream_recordings'] = $this->syncStreamRecordingsFromCloud();
             $results['synced']['activity_logs'] = $this->syncActivityLogsFromCloud();
             $results['synced']['teaching_load_archives'] = $this->syncTeachingLoadArchivesFromCloud();
             $results['synced']['attendance_record_archives'] = $this->syncAttendanceRecordArchivesFromCloud();
-            $results['synced']['official_matters'] = $this->syncOfficialMattersFromCloud();
+            
+            // Final pass: Process any deletions from cloud that happened during the sync process
+            // This ensures deletions are processed even if they occur while sync is running
+            Log::info('Performing final deletion processing from cloud to catch deletions that occurred during sync...');
+            $this->processAllDeletionsFromCloud();
             
             // Calculate summary
             foreach ($results['synced'] as $key => $value) {
@@ -2175,6 +2185,108 @@ class CloudSyncService
         ];
         
         return $mapping[$tableName] ?? null;
+    }
+    
+    /**
+     * Sync all deletions to cloud (final pass to catch deletions that occurred during sync)
+     * This ensures deletions are synced even if they happen while sync is running
+     */
+    protected function syncAllDeletionsToCloud()
+    {
+        try {
+            // Define all tables and their endpoints
+            $tables = [
+                'tbl_user' => 'users',
+                'tbl_subject' => 'subjects',
+                'tbl_room' => 'rooms',
+                'tbl_camera' => 'cameras',
+                'tbl_faculty' => 'faculties',
+                'tbl_teaching_load' => 'teaching-loads',
+                'tbl_attendance_record' => 'attendance-records',
+                'tbl_official_matters' => 'official-matters',
+                'tbl_recognition_logs' => 'recognition-logs',
+                'tbl_stream_recordings' => 'stream-recordings',
+                'tbl_activity_logs' => 'activity-logs',
+                'tbl_teaching_load_archive' => 'teaching-load-archives',
+                'tbl_attendance_record_archive' => 'attendance-record-archives',
+            ];
+            
+            // Sync deletions for each table
+            foreach ($tables as $tableName => $endpoint) {
+                $deletedIds = $this->getDeletedIds($tableName);
+                if (!empty($deletedIds)) {
+                    $this->syncDeletionsToCloud($endpoint, $deletedIds);
+                }
+            }
+            
+            // Special handling for leaves and passes (they share the same table)
+            $deletedIds = $this->getDeletedIds('tbl_leave_pass');
+            if (!empty($deletedIds)) {
+                $leaveDeletedIds = [];
+                $passDeletedIds = [];
+                
+                foreach ($deletedIds as $id) {
+                    $cacheKey = "sync_deletion:tbl_leave_pass:{$id}";
+                    $deletionData = Cache::get($cacheKey);
+                    $lpType = $deletionData['metadata']['lp_type'] ?? null;
+                    
+                    if ($lpType === 'Leave') {
+                        $leaveDeletedIds[] = $id;
+                    } elseif ($lpType === 'Pass') {
+                        $passDeletedIds[] = $id;
+                    }
+                }
+                
+                if (!empty($leaveDeletedIds)) {
+                    $this->syncDeletionsToCloud('leaves', $leaveDeletedIds);
+                }
+                
+                if (!empty($passDeletedIds)) {
+                    $this->syncDeletionsToCloud('passes', $passDeletedIds);
+                }
+            }
+            
+            Log::info('Final deletion sync completed');
+        } catch (\Exception $e) {
+            Log::error("Error in final deletion sync: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Process all deletions from cloud (final pass to catch deletions that occurred during sync)
+     * This ensures deletions are processed even if they happen while sync is running
+     */
+    protected function processAllDeletionsFromCloud()
+    {
+        try {
+            // Define all tables, their endpoints, and primary keys
+            $tables = [
+                ['endpoint' => 'users', 'table' => 'tbl_user', 'idKey' => 'user_id'],
+                ['endpoint' => 'subjects', 'table' => 'tbl_subject', 'idKey' => 'subject_id'],
+                ['endpoint' => 'rooms', 'table' => 'tbl_room', 'idKey' => 'room_no'],
+                ['endpoint' => 'cameras', 'table' => 'tbl_camera', 'idKey' => 'camera_id'],
+                ['endpoint' => 'faculties', 'table' => 'tbl_faculty', 'idKey' => 'faculty_id'],
+                ['endpoint' => 'teaching-loads', 'table' => 'tbl_teaching_load', 'idKey' => 'teaching_load_id'],
+                ['endpoint' => 'attendance-records', 'table' => 'tbl_attendance_record', 'idKey' => 'record_id'],
+                ['endpoint' => 'leaves', 'table' => 'tbl_leave_pass', 'idKey' => 'lp_id'],
+                ['endpoint' => 'passes', 'table' => 'tbl_leave_pass', 'idKey' => 'lp_id'],
+                ['endpoint' => 'official-matters', 'table' => 'tbl_official_matters', 'idKey' => 'om_id'],
+                ['endpoint' => 'recognition-logs', 'table' => 'tbl_recognition_logs', 'idKey' => 'recognition_log_id'],
+                ['endpoint' => 'stream-recordings', 'table' => 'tbl_stream_recordings', 'idKey' => 'recording_id'],
+                ['endpoint' => 'activity-logs', 'table' => 'tbl_activity_logs', 'idKey' => 'logs_id'],
+                ['endpoint' => 'teaching-load-archives', 'table' => 'tbl_teaching_load_archive', 'idKey' => 'archive_id'],
+                ['endpoint' => 'attendance-record-archives', 'table' => 'tbl_attendance_record_archive', 'idKey' => 'archive_id'],
+            ];
+            
+            // Process deletions for each table
+            foreach ($tables as $config) {
+                $this->processDeletionsFromCloud($config['endpoint'], $config['table'], $config['idKey']);
+            }
+            
+            Log::info('Final deletion processing from cloud completed');
+        } catch (\Exception $e) {
+            Log::error("Error in final deletion processing from cloud: " . $e->getMessage());
+        }
     }
     
     /**
