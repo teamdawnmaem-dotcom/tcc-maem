@@ -3240,6 +3240,11 @@ class CloudSyncService
                     return true;
                 }
                 
+                // Check if local has a newer version (to prevent overwriting local updates)
+                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$lpId], $cloudLeave, 'leave', $lpId)) {
+                    return false;
+                }
+                
                 // If in local, compare data to see if it changed (ignore image path differences)
                 $localData = [
                     'lp_id' => $existingLocalRecords[$lpId]['lp_id'],
@@ -3441,6 +3446,11 @@ class CloudSyncService
                 // If not in local, needs to be synced (new record)
                 if (!isset($existingLocalRecords[$lpId])) {
                     return true;
+                }
+                
+                // Check if local has a newer version (to prevent overwriting local updates)
+                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$lpId], $cloudPass, 'pass', $lpId)) {
+                    return false;
                 }
                 
                 // If in local, compare data to see if it changed (ignore image path differences)
@@ -4169,6 +4179,11 @@ class CloudSyncService
                 // If not in local, needs to be synced (new record)
                 if (!isset($existingLocalRecords[$omId])) {
                     return true;
+                }
+                
+                // Check if local has a newer version (to prevent overwriting local updates)
+                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$omId], $cloudOM, 'official_matter', $omId)) {
+                    return false;
                 }
                 
                 // If in local, compare data to see if it changed (ignore attachment path differences)
