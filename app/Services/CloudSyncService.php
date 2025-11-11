@@ -94,6 +94,9 @@ class CloudSyncService
             $deletedIds = $this->getDeletedIds('tbl_room');
             $this->syncDeletionsToCloud('rooms', $deletedIds);
             
+            // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
+            $cloudDeletedIds = $this->getDeletedIdsFromCloud('rooms');
+            
             // Get existing cloud records with their data for comparison
             $existingCloudRecords = $this->getExistingCloudRecords('rooms', 'room_no');
             
@@ -105,9 +108,15 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed
-            $roomsToSync = $localRooms->filter(function ($room) use ($existingCloudRecords) {
+            // Filter: only sync new records or records that have changed, and skip records deleted in cloud
+            $roomsToSync = $localRooms->filter(function ($room) use ($existingCloudRecords, $cloudDeletedIds) {
                 $roomNo = $room->room_no;
+                
+                // Skip if this record was deleted in cloud (prevent restoring deleted records)
+                if (in_array($roomNo, $cloudDeletedIds)) {
+                    Log::debug("Skipping room {$roomNo} - was deleted in cloud");
+                    return false;
+                }
                 
                 // If not in cloud, needs to be synced (new record)
                 if (!isset($existingCloudRecords[$roomNo])) {
@@ -161,6 +170,9 @@ class CloudSyncService
             $deletedIds = $this->getDeletedIds('tbl_camera');
             $this->syncDeletionsToCloud('cameras', $deletedIds);
             
+            // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
+            $cloudDeletedIds = $this->getDeletedIdsFromCloud('cameras');
+            
             // Get existing cloud records with their data for comparison
             $existingCloudRecords = $this->getExistingCloudRecords('cameras', 'camera_id');
             
@@ -172,9 +184,15 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed
-            $camerasToSync = $localCameras->filter(function ($camera) use ($existingCloudRecords) {
+            // Filter: only sync new records or records that have changed, and skip records deleted in cloud
+            $camerasToSync = $localCameras->filter(function ($camera) use ($existingCloudRecords, $cloudDeletedIds) {
                 $cameraId = $camera->camera_id;
+                
+                // Skip if this record was deleted in cloud (prevent restoring deleted records)
+                if (in_array($cameraId, $cloudDeletedIds)) {
+                    Log::debug("Skipping camera {$cameraId} - was deleted in cloud");
+                    return false;
+                }
                 
                 // If not in cloud, needs to be synced (new record)
                 if (!isset($existingCloudRecords[$cameraId])) {
@@ -237,6 +255,9 @@ class CloudSyncService
             $deletedIds = $this->getDeletedIds('tbl_faculty');
             $this->syncDeletionsToCloud('faculties', $deletedIds);
             
+            // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
+            $cloudDeletedIds = $this->getDeletedIdsFromCloud('faculties');
+            
             // Get existing cloud records with their data for comparison
             $existingCloudRecords = $this->getExistingCloudRecords('faculties', 'faculty_id');
             
@@ -248,9 +269,15 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed
-            $facultiesToSync = $localFaculties->filter(function ($faculty) use ($existingCloudRecords) {
+            // Filter: only sync new records or records that have changed, and skip records deleted in cloud
+            $facultiesToSync = $localFaculties->filter(function ($faculty) use ($existingCloudRecords, $cloudDeletedIds) {
                 $facultyId = $faculty->faculty_id;
+                
+                // Skip if this record was deleted in cloud (prevent restoring deleted records)
+                if (in_array($facultyId, $cloudDeletedIds)) {
+                    Log::debug("Skipping faculty {$facultyId} - was deleted in cloud");
+                    return false;
+                }
                 
                 // If not in cloud, needs to be synced (new record)
                 if (!isset($existingCloudRecords[$facultyId])) {
@@ -315,6 +342,9 @@ class CloudSyncService
             $deletedIds = $this->getDeletedIds('tbl_teaching_load');
             $this->syncDeletionsToCloud('teaching-loads', $deletedIds);
             
+            // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
+            $cloudDeletedIds = $this->getDeletedIdsFromCloud('teaching-loads');
+            
             // Get existing cloud records with their data for comparison
             $existingCloudRecords = $this->getExistingCloudRecords('teaching-loads', 'teaching_load_id');
             
@@ -326,9 +356,15 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed
-            $loadsToSync = $localLoads->filter(function ($load) use ($existingCloudRecords) {
+            // Filter: only sync new records or records that have changed, and skip records deleted in cloud
+            $loadsToSync = $localLoads->filter(function ($load) use ($existingCloudRecords, $cloudDeletedIds) {
                 $loadId = $load->teaching_load_id;
+                
+                // Skip if this record was deleted in cloud (prevent restoring deleted records)
+                if (in_array($loadId, $cloudDeletedIds)) {
+                    Log::debug("Skipping teaching load {$loadId} - was deleted in cloud");
+                    return false;
+                }
                 
                 // If not in cloud, needs to be synced (new record)
                 if (!isset($existingCloudRecords[$loadId])) {
@@ -402,6 +438,9 @@ class CloudSyncService
             $deletedIds = $this->getDeletedIds('tbl_attendance_record');
             $this->syncDeletionsToCloud('attendance-records', $deletedIds);
             
+            // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
+            $cloudDeletedIds = $this->getDeletedIdsFromCloud('attendance-records');
+            
             // Get existing cloud records with their data for comparison (last 30 days for performance)
             $existingCloudRecords = $this->getExistingCloudRecords('attendance-records', 'record_id', ['days' => 30]);
             
@@ -413,9 +452,15 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed
-            $recordsToSync = $localRecords->filter(function ($record) use ($existingCloudRecords) {
+            // Filter: only sync new records or records that have changed, and skip records deleted in cloud
+            $recordsToSync = $localRecords->filter(function ($record) use ($existingCloudRecords, $cloudDeletedIds) {
                 $recordId = $record->record_id;
+                
+                // Skip if this record was deleted in cloud (prevent restoring deleted records)
+                if (in_array($recordId, $cloudDeletedIds)) {
+                    Log::debug("Skipping attendance record {$recordId} - was deleted in cloud");
+                    return false;
+                }
                 
                 // If not in cloud, needs to be synced (new record)
                 if (!isset($existingCloudRecords[$recordId])) {
@@ -501,6 +546,9 @@ class CloudSyncService
             }
             $this->syncDeletionsToCloud('leaves', $leaveDeletedIds);
             
+            // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
+            $cloudDeletedIds = $this->getDeletedIdsFromCloud('leaves');
+            
             // Get existing cloud records with their data for comparison (last 90 days for performance)
             $existingCloudRecords = $this->getExistingCloudRecords('leaves', 'lp_id', ['days' => 90]);
             
@@ -512,9 +560,15 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed
-            $leavesToSync = $localLeaves->filter(function ($leave) use ($existingCloudRecords) {
+            // Filter: only sync new records or records that have changed, and skip records deleted in cloud
+            $leavesToSync = $localLeaves->filter(function ($leave) use ($existingCloudRecords, $cloudDeletedIds) {
                 $lpId = $leave->lp_id;
+                
+                // Skip if this record was deleted in cloud (prevent restoring deleted records)
+                if (in_array($lpId, $cloudDeletedIds)) {
+                    Log::debug("Skipping leave {$lpId} - was deleted in cloud");
+                    return false;
+                }
                 
                 // If not in cloud, needs to be synced (new record)
                 if (!isset($existingCloudRecords[$lpId])) {
@@ -592,6 +646,9 @@ class CloudSyncService
             }
             $this->syncDeletionsToCloud('passes', $passDeletedIds);
             
+            // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
+            $cloudDeletedIds = $this->getDeletedIdsFromCloud('passes');
+            
             // Get existing cloud records with their data for comparison (last 90 days for performance)
             $existingCloudRecords = $this->getExistingCloudRecords('passes', 'lp_id', ['days' => 90]);
             
@@ -603,9 +660,15 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed
-            $passesToSync = $localPasses->filter(function ($pass) use ($existingCloudRecords) {
+            // Filter: only sync new records or records that have changed, and skip records deleted in cloud
+            $passesToSync = $localPasses->filter(function ($pass) use ($existingCloudRecords, $cloudDeletedIds) {
                 $lpId = $pass->lp_id;
+                
+                // Skip if this record was deleted in cloud (prevent restoring deleted records)
+                if (in_array($lpId, $cloudDeletedIds)) {
+                    Log::debug("Skipping pass {$lpId} - was deleted in cloud");
+                    return false;
+                }
                 
                 // If not in cloud, needs to be synced (new record)
                 if (!isset($existingCloudRecords[$lpId])) {
@@ -676,12 +739,24 @@ class CloudSyncService
             $deletedIds = $this->getDeletedIds('tbl_recognition_logs');
             $this->syncDeletionsToCloud('recognition-logs', $deletedIds);
             
+            // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
+            $cloudDeletedIds = $this->getDeletedIdsFromCloud('recognition-logs');
+            
             // Get existing recognition log IDs from cloud (limit by recent days to reduce payload)
             $existingCloudIds = $this->getExistingCloudIds('recognition-logs', 'log_id', ['days' => 7]);
             
             // Get local logs and only include those NOT present on cloud (append-only, no updates needed)
-            $localLogs = RecognitionLog::all()->filter(function ($log) use ($existingCloudIds) {
-                return !in_array($log->log_id, $existingCloudIds);
+            // Also skip records that were deleted in cloud
+            $localLogs = RecognitionLog::all()->filter(function ($log) use ($existingCloudIds, $cloudDeletedIds) {
+                $logId = $log->log_id;
+                
+                // Skip if this record was deleted in cloud (prevent restoring deleted records)
+                if (in_array($logId, $cloudDeletedIds)) {
+                    Log::debug("Skipping recognition log {$logId} - was deleted in cloud");
+                    return false;
+                }
+                
+                return !in_array($logId, $existingCloudIds);
             });
             
             if ($localLogs->isEmpty()) {
@@ -734,12 +809,24 @@ class CloudSyncService
             $deletedIds = $this->getDeletedIds('tbl_stream_recordings');
             $this->syncDeletionsToCloud('stream-recordings', $deletedIds);
             
+            // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
+            $cloudDeletedIds = $this->getDeletedIdsFromCloud('stream-recordings');
+            
             // Get existing stream recording IDs from cloud (last 7 days)
             $existingCloudIds = $this->getExistingCloudIds('stream-recordings', 'recording_id', ['days' => 7]);
             
             // Get all local stream recordings and filter out existing ones (append-only, no updates needed)
-            $localRecordings = StreamRecording::all()->filter(function ($recording) use ($existingCloudIds) {
-                return !in_array($recording->recording_id, $existingCloudIds);
+            // Also skip records that were deleted in cloud
+            $localRecordings = StreamRecording::all()->filter(function ($recording) use ($existingCloudIds, $cloudDeletedIds) {
+                $recordingId = $recording->recording_id;
+                
+                // Skip if this record was deleted in cloud (prevent restoring deleted records)
+                if (in_array($recordingId, $cloudDeletedIds)) {
+                    Log::debug("Skipping stream recording {$recordingId} - was deleted in cloud");
+                    return false;
+                }
+                
+                return !in_array($recordingId, $existingCloudIds);
             });
             
             if ($localRecordings->isEmpty()) {
@@ -908,6 +995,9 @@ class CloudSyncService
             $deletedIds = $this->getDeletedIds('tbl_subject');
             $this->syncDeletionsToCloud('subjects', $deletedIds);
             
+            // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
+            $cloudDeletedIds = $this->getDeletedIdsFromCloud('subjects');
+            
             // Get existing cloud records with their data for comparison
             $existingCloudRecords = $this->getExistingCloudRecords('subjects', 'subject_id');
             
@@ -919,9 +1009,15 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed
-            $subjectsToSync = $localSubjects->filter(function ($subject) use ($existingCloudRecords) {
+            // Filter: only sync new records or records that have changed, and skip records deleted in cloud
+            $subjectsToSync = $localSubjects->filter(function ($subject) use ($existingCloudRecords, $cloudDeletedIds) {
                 $subjectId = $subject->subject_id;
+                
+                // Skip if this record was deleted in cloud (prevent restoring deleted records)
+                if (in_array($subjectId, $cloudDeletedIds)) {
+                    Log::debug("Skipping subject {$subjectId} - was deleted in cloud");
+                    return false;
+                }
                 
                 // If not in cloud, needs to be synced (new record)
                 if (!isset($existingCloudRecords[$subjectId])) {
@@ -985,6 +1081,9 @@ class CloudSyncService
             $deletedIds = $this->getDeletedIds('tbl_user');
             $this->syncDeletionsToCloud('users', $deletedIds);
             
+            // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
+            $cloudDeletedIds = $this->getDeletedIdsFromCloud('users');
+            
             // Get existing cloud records with their data for comparison
             $existingCloudRecords = $this->getExistingCloudRecords('users', 'user_id');
             
@@ -996,9 +1095,15 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed
-            $usersToSync = $localUsers->filter(function ($user) use ($existingCloudRecords) {
+            // Filter: only sync new records or records that have changed, and skip records deleted in cloud
+            $usersToSync = $localUsers->filter(function ($user) use ($existingCloudRecords, $cloudDeletedIds) {
                 $userId = $user->user_id;
+                
+                // Skip if this record was deleted in cloud (prevent restoring deleted records)
+                if (in_array($userId, $cloudDeletedIds)) {
+                    Log::debug("Skipping user {$userId} - was deleted in cloud");
+                    return false;
+                }
                 
                 // If not in cloud, needs to be synced (new record)
                 if (!isset($existingCloudRecords[$userId])) {
@@ -1068,12 +1173,24 @@ class CloudSyncService
             $deletedIds = $this->getDeletedIds('tbl_activity_logs');
             $this->syncDeletionsToCloud('activity-logs', $deletedIds);
             
+            // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
+            $cloudDeletedIds = $this->getDeletedIdsFromCloud('activity-logs');
+            
             // Get existing activity log IDs from cloud (recent window)
             $existingCloudIds = $this->getExistingCloudIds('activity-logs', 'logs_id', ['days' => 30]);
             
             // Only send logs that don't exist on cloud (append-only, no updates needed)
-            $localLogs = ActivityLog::all()->filter(function ($log) use ($existingCloudIds) {
-                return !in_array($log->logs_id, $existingCloudIds);
+            // Also skip records that were deleted in cloud
+            $localLogs = ActivityLog::all()->filter(function ($log) use ($existingCloudIds, $cloudDeletedIds) {
+                $logId = $log->logs_id;
+                
+                // Skip if this record was deleted in cloud (prevent restoring deleted records)
+                if (in_array($logId, $cloudDeletedIds)) {
+                    Log::debug("Skipping activity log {$logId} - was deleted in cloud");
+                    return false;
+                }
+                
+                return !in_array($logId, $existingCloudIds);
             });
             
             if ($localLogs->isEmpty()) {
@@ -1121,12 +1238,24 @@ class CloudSyncService
             $deletedIds = $this->getDeletedIds('tbl_teaching_load_archive');
             $this->syncDeletionsToCloud('teaching-load-archives', $deletedIds);
             
+            // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
+            $cloudDeletedIds = $this->getDeletedIdsFromCloud('teaching-load-archives');
+            
             // Get existing teaching load archive IDs from cloud
             $existingCloudIds = $this->getExistingCloudIds('teaching-load-archives', 'archive_id');
             
             // Get all local teaching load archives and filter out existing ones (append-only, no updates needed)
-            $localArchives = TeachingLoadArchive::all()->filter(function ($archive) use ($existingCloudIds) {
-                return !in_array($archive->archive_id, $existingCloudIds);
+            // Also skip records that were deleted in cloud
+            $localArchives = TeachingLoadArchive::all()->filter(function ($archive) use ($existingCloudIds, $cloudDeletedIds) {
+                $archiveId = $archive->archive_id;
+                
+                // Skip if this record was deleted in cloud (prevent restoring deleted records)
+                if (in_array($archiveId, $cloudDeletedIds)) {
+                    Log::debug("Skipping teaching load archive {$archiveId} - was deleted in cloud");
+                    return false;
+                }
+                
+                return !in_array($archiveId, $existingCloudIds);
             });
             
             if ($localArchives->isEmpty()) {
@@ -1182,12 +1311,24 @@ class CloudSyncService
             $deletedIds = $this->getDeletedIds('tbl_attendance_record_archive');
             $this->syncDeletionsToCloud('attendance-record-archives', $deletedIds);
             
+            // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
+            $cloudDeletedIds = $this->getDeletedIdsFromCloud('attendance-record-archives');
+            
             // Get existing attendance record archive IDs from cloud
             $existingCloudIds = $this->getExistingCloudIds('attendance-record-archives', 'archive_id');
             
             // Get all local attendance record archives and filter out existing ones (append-only, no updates needed)
-            $localArchives = AttendanceRecordArchive::all()->filter(function ($archive) use ($existingCloudIds) {
-                return !in_array($archive->archive_id, $existingCloudIds);
+            // Also skip records that were deleted in cloud
+            $localArchives = AttendanceRecordArchive::all()->filter(function ($archive) use ($existingCloudIds, $cloudDeletedIds) {
+                $archiveId = $archive->archive_id;
+                
+                // Skip if this record was deleted in cloud (prevent restoring deleted records)
+                if (in_array($archiveId, $cloudDeletedIds)) {
+                    Log::debug("Skipping attendance record archive {$archiveId} - was deleted in cloud");
+                    return false;
+                }
+                
+                return !in_array($archiveId, $existingCloudIds);
             });
             
             if ($localArchives->isEmpty()) {
@@ -3430,6 +3571,9 @@ class CloudSyncService
             $deletedIds = $this->getDeletedIds('tbl_official_matters');
             $this->syncDeletionsToCloud('official-matters', $deletedIds);
             
+            // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
+            $cloudDeletedIds = $this->getDeletedIdsFromCloud('official-matters');
+            
             // Get existing cloud records with their data for comparison
             $existingCloudRecords = $this->getExistingCloudRecords('official-matters', 'om_id', ['days' => 90]);
             
@@ -3441,9 +3585,15 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed
-            $mattersToSync = $localOfficialMatters->filter(function ($om) use ($existingCloudRecords) {
+            // Filter: only sync new records or records that have changed, and skip records deleted in cloud
+            $mattersToSync = $localOfficialMatters->filter(function ($om) use ($existingCloudRecords, $cloudDeletedIds) {
                 $omId = $om->om_id;
+                
+                // Skip if this record was deleted in cloud (prevent restoring deleted records)
+                if (in_array($omId, $cloudDeletedIds)) {
+                    Log::debug("Skipping official matter {$omId} - was deleted in cloud");
+                    return false;
+                }
                 
                 // If not in cloud, needs to be synced (new record)
                 if (!isset($existingCloudRecords[$omId])) {
