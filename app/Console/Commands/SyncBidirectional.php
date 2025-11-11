@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Services\CloudSyncService;
+use Illuminate\Support\Facades\Log;
 
 class SyncBidirectional extends Command
 {
@@ -19,7 +20,7 @@ class SyncBidirectional extends Command
      *
      * @var string
      */
-    protected $description = 'Sync data bidirectionally (local to cloud, then cloud to local)';
+    protected $description = 'Sync data bidirectionally (local to cloud and cloud to local in parallel)';
 
     protected $cloudSyncService;
 
@@ -41,7 +42,184 @@ class SyncBidirectional extends Command
      */
     public function handle()
     {
-        $this->info('🔄 Starting bidirectional sync...');
+        $this->info('🔄 Starting bidirectional sync (parallel mode)...');
+        $this->newLine();
+        
+        $startTime = microtime(true);
+        
+        try {
+            // Run both syncs in parallel using separate processes
+            $this->info('📤📥 Running both syncs in parallel...');
+            
+            // Use proc_open to run both syncs in parallel
+            $descriptorspec = [
+                0 => ['pipe', 'r'],  // stdin
+                1 => ['pipe', 'w'],  // stdout
+                2 => ['pipe', 'w']   // stderr
+            ];
+            
+            // Start local-to-cloud sync process
+            $processToCloud = proc_open(
+                PHP_BINARY . ' ' . base_path('artisan') . ' sync:cloud 2>&1',
+                $descriptorspec,
+                $pipesToCloud
+            );
+            
+            // Start cloud-to-local sync process
+            $processFromCloud = proc_open(
+                PHP_BINARY . ' ' . base_path('artisan') . ' sync:cloud --from-cloud 2>&1',
+                $descriptorspec,
+                $pipesFromCloud
+            );
+            
+            // Close stdin pipes (we don't need to write to them)
+            if (isset($pipesToCloud[0])) fclose($pipesToCloud[0]);
+            if (isset($pipesFromCloud[0])) fclose($pipesFromCloud[0]);
+            
+            // Read output from both processes
+            $outputToCloud = '';
+            $errorToCloud = '';
+            $outputFromCloud = '';
+            $errorFromCloud = '';
+            
+            // Set pipes to non-blocking mode
+            if (isset($pipesToCloud[1])) stream_set_blocking($pipesToCloud[1], false);
+            if (isset($pipesToCloud[2])) stream_set_blocking($pipesToCloud[2], false);
+            if (isset($pipesFromCloud[1])) stream_set_blocking($pipesFromCloud[1], false);
+            if (isset($pipesFromCloud[2])) stream_set_blocking($pipesFromCloud[2], false);
+            
+            // Wait for both processes to complete
+            while (true) {
+                // Check if processes are still running
+                $statusToCloud = proc_get_status($processToCloud);
+                $statusFromCloud = proc_get_status($processFromCloud);
+                
+                // Read available output from stdout
+                if (isset($pipesToCloud[1]) && !feof($pipesToCloud[1])) {
+                    $chunk = fread($pipesToCloud[1], 8192);
+                    if ($chunk !== false && $chunk !== '') {
+                        $outputToCloud .= $chunk;
+                    }
+                }
+                
+                if (isset($pipesFromCloud[1]) && !feof($pipesFromCloud[1])) {
+                    $chunk = fread($pipesFromCloud[1], 8192);
+                    if ($chunk !== false && $chunk !== '') {
+                        $outputFromCloud .= $chunk;
+                    }
+                }
+                
+                // Read available output from stderr
+                if (isset($pipesToCloud[2]) && !feof($pipesToCloud[2])) {
+                    $chunk = fread($pipesToCloud[2], 8192);
+                    if ($chunk !== false && $chunk !== '') {
+                        $errorToCloud .= $chunk;
+                    }
+                }
+                
+                if (isset($pipesFromCloud[2]) && !feof($pipesFromCloud[2])) {
+                    $chunk = fread($pipesFromCloud[2], 8192);
+                    if ($chunk !== false && $chunk !== '') {
+                        $errorFromCloud .= $chunk;
+                    }
+                }
+                
+                // If both processes have finished, break
+                if ((!$statusToCloud || !$statusToCloud['running']) && 
+                    (!$statusFromCloud || !$statusFromCloud['running'])) {
+                    break;
+                }
+                
+                // Small delay to prevent CPU spinning
+                usleep(100000); // 0.1 second
+            }
+            
+            // Read any remaining output
+            if (isset($pipesToCloud[1])) {
+                $remaining = stream_get_contents($pipesToCloud[1]);
+                if ($remaining !== false) $outputToCloud .= $remaining;
+            }
+            if (isset($pipesFromCloud[1])) {
+                $remaining = stream_get_contents($pipesFromCloud[1]);
+                if ($remaining !== false) $outputFromCloud .= $remaining;
+            }
+            if (isset($pipesToCloud[2])) {
+                $remaining = stream_get_contents($pipesToCloud[2]);
+                if ($remaining !== false) $errorToCloud .= $remaining;
+            }
+            if (isset($pipesFromCloud[2])) {
+                $remaining = stream_get_contents($pipesFromCloud[2]);
+                if ($remaining !== false) $errorFromCloud .= $remaining;
+            }
+            
+            // Close pipes
+            if (isset($pipesToCloud[1])) fclose($pipesToCloud[1]);
+            if (isset($pipesToCloud[2])) fclose($pipesToCloud[2]);
+            if (isset($pipesFromCloud[1])) fclose($pipesFromCloud[1]);
+            if (isset($pipesFromCloud[2])) fclose($pipesFromCloud[2]);
+            
+            // Get exit codes
+            $exitCodeToCloud = proc_close($processToCloud);
+            $exitCodeFromCloud = proc_close($processFromCloud);
+            
+            $endTime = microtime(true);
+            $duration = round($endTime - $startTime, 2);
+            
+            // Display results
+            $this->newLine();
+            $this->info('📤 Local to Cloud Results:');
+            if ($exitCodeToCloud === 0) {
+                $this->info('✅ Local to cloud completed successfully');
+            } else {
+                $this->error('❌ Local to cloud failed (exit code: ' . $exitCodeToCloud . ')');
+                if (!empty($outputToCloud)) {
+                    $this->line('Output:');
+                    $this->line($outputToCloud);
+                }
+                if (!empty($errorToCloud)) {
+                    $this->line('Errors:');
+                    $this->line($errorToCloud);
+                }
+            }
+            
+            $this->newLine();
+            $this->info('📥 Cloud to Local Results:');
+            if ($exitCodeFromCloud === 0) {
+                $this->info('✅ Cloud to local completed successfully');
+            } else {
+                $this->error('❌ Cloud to local failed (exit code: ' . $exitCodeFromCloud . ')');
+                if (!empty($outputFromCloud)) {
+                    $this->line('Output:');
+                    $this->line($outputFromCloud);
+                }
+                if (!empty($errorFromCloud)) {
+                    $this->line('Errors:');
+                    $this->line($errorFromCloud);
+                }
+            }
+            
+            $this->newLine();
+            $this->info("⏱️  Total sync duration: {$duration} seconds");
+            $this->info('✨ Bidirectional sync completed!');
+            
+            return Command::SUCCESS;
+            
+        } catch (\Exception $e) {
+            // Fallback to sequential sync if parallel execution fails
+            $this->warn('⚠️  Parallel execution failed, falling back to sequential sync...');
+            $this->warn("Error: {$e->getMessage()}");
+            $this->newLine();
+            
+            return $this->runSequentialSync();
+        }
+    }
+    
+    /**
+     * Fallback to sequential sync if parallel execution fails
+     */
+    private function runSequentialSync()
+    {
+        $this->info('🔄 Running sequential sync (fallback mode)...');
         $this->newLine();
         
         // Step 1: Local to Cloud

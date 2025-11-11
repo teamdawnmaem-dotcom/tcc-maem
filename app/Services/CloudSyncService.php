@@ -22,6 +22,7 @@ use App\Models\ActivityLog;
 use App\Models\TeachingLoadArchive;
 use App\Models\AttendanceRecordArchive;
 use App\Models\OfficialMatter;
+use App\Services\AttendanceRemarksService;
 
 class CloudSyncService
 {
@@ -128,6 +129,11 @@ class CloudSyncService
                     return true;
                 }
                 
+                // Check if cloud has a newer version (to prevent overwriting cloud updates)
+                if ($this->shouldSkipDueToNewerVersion($room, $existingCloudRecords[$roomNo], 'room', $roomNo)) {
+                    return false;
+                }
+                
                 // If in cloud, compare data to see if it changed
                 $localData = [
                     'room_no' => $room->room_no,
@@ -202,6 +208,11 @@ class CloudSyncService
                 // If not in cloud, needs to be synced (new record)
                 if (!isset($existingCloudRecords[$cameraId])) {
                     return true;
+                }
+                
+                // Check if cloud has a newer version (to prevent overwriting cloud updates)
+                if ($this->shouldSkipDueToNewerVersion($camera, $existingCloudRecords[$cameraId], 'camera', $cameraId)) {
+                    return false;
                 }
                 
                 // If in cloud, compare data to see if it changed
@@ -289,6 +300,11 @@ class CloudSyncService
                     return true;
                 }
                 
+                // Check if cloud has a newer version (to prevent overwriting cloud updates)
+                if ($this->shouldSkipDueToNewerVersion($faculty, $existingCloudRecords[$facultyId], 'faculty', $facultyId)) {
+                    return false;
+                }
+                
                 // If in cloud, compare data to see if it changed (ignore images path differences)
                 $localData = [
                     'faculty_id' => $faculty->faculty_id,
@@ -374,6 +390,11 @@ class CloudSyncService
                 // If not in cloud, needs to be synced (new record)
                 if (!isset($existingCloudRecords[$loadId])) {
                     return true;
+                }
+                
+                // Check if cloud has a newer version (to prevent overwriting cloud updates)
+                if ($this->shouldSkipDueToNewerVersion($load, $existingCloudRecords[$loadId], 'teaching_load', $loadId)) {
+                    return false;
                 }
                 
                 // If in cloud, compare data to see if it changed
@@ -470,6 +491,11 @@ class CloudSyncService
                 // If not in cloud, needs to be synced (new record)
                 if (!isset($existingCloudRecords[$recordId])) {
                     return true;
+                }
+                
+                // Check if cloud has a newer version (to prevent overwriting cloud updates)
+                if ($this->shouldSkipDueToNewerVersion($record, $existingCloudRecords[$recordId], 'attendance_record', $recordId)) {
+                    return false;
                 }
                 
                 // If in cloud, compare data to see if it changed (ignore snapshot paths)
@@ -580,6 +606,26 @@ class CloudSyncService
                     return true;
                 }
                 
+                // Check if cloud has a newer version (to prevent overwriting cloud updates)
+                $cloudUpdatedAt = $existingCloudRecords[$lpId]['updated_at'] ?? null;
+                $localUpdatedAt = $leave->updated_at ? $this->formatDateTime($leave->updated_at) : null;
+                
+                if ($cloudUpdatedAt && $localUpdatedAt) {
+                    try {
+                        $cloudTime = \Carbon\Carbon::parse($cloudUpdatedAt);
+                        $localTime = \Carbon\Carbon::parse($localUpdatedAt);
+                        
+                        // If cloud is newer, skip syncing to avoid overwriting cloud's updates
+                        if ($cloudTime->gt($localTime)) {
+                            Log::debug("Skipping leave {$lpId} - cloud has newer version (cloud: {$cloudUpdatedAt}, local: {$localUpdatedAt})");
+                            return false;
+                        }
+                    } catch (\Exception $e) {
+                        // If date parsing fails, continue with normal comparison
+                        Log::debug("Could not compare timestamps for leave {$lpId}: " . $e->getMessage());
+                    }
+                }
+                
                 // If in cloud, compare data to see if it changed (ignore image path differences)
                 $localData = [
                     'lp_id' => $leave->lp_id,
@@ -678,6 +724,26 @@ class CloudSyncService
                 // If not in cloud, needs to be synced (new record)
                 if (!isset($existingCloudRecords[$lpId])) {
                     return true;
+                }
+                
+                // Check if cloud has a newer version (to prevent overwriting cloud updates)
+                $cloudUpdatedAt = $existingCloudRecords[$lpId]['updated_at'] ?? null;
+                $localUpdatedAt = $pass->updated_at ? $this->formatDateTime($pass->updated_at) : null;
+                
+                if ($cloudUpdatedAt && $localUpdatedAt) {
+                    try {
+                        $cloudTime = \Carbon\Carbon::parse($cloudUpdatedAt);
+                        $localTime = \Carbon\Carbon::parse($localUpdatedAt);
+                        
+                        // If cloud is newer, skip syncing to avoid overwriting cloud's updates
+                        if ($cloudTime->gt($localTime)) {
+                            Log::debug("Skipping pass {$lpId} - cloud has newer version (cloud: {$cloudUpdatedAt}, local: {$localUpdatedAt})");
+                            return false;
+                        }
+                    } catch (\Exception $e) {
+                        // If date parsing fails, continue with normal comparison
+                        Log::debug("Could not compare timestamps for pass {$lpId}: " . $e->getMessage());
+                    }
                 }
                 
                 // If in cloud, compare data to see if it changed (ignore image path differences)
@@ -1029,6 +1095,11 @@ class CloudSyncService
                     return true;
                 }
                 
+                // Check if cloud has a newer version (to prevent overwriting cloud updates)
+                if ($this->shouldSkipDueToNewerVersion($subject, $existingCloudRecords[$subjectId], 'subject', $subjectId)) {
+                    return false;
+                }
+                
                 // If in cloud, compare data to see if it changed
                 $localData = [
                     'subject_id' => $subject->subject_id,
@@ -1113,6 +1184,11 @@ class CloudSyncService
                 // If not in cloud, needs to be synced (new record)
                 if (!isset($existingCloudRecords[$userId])) {
                     return true;
+                }
+                
+                // Check if cloud has a newer version (to prevent overwriting cloud updates)
+                if ($this->shouldSkipDueToNewerVersion($user, $existingCloudRecords[$userId], 'user', $userId)) {
+                    return false;
                 }
                 
                 // If in cloud, compare data to see if it changed
@@ -2018,6 +2094,76 @@ class CloudSyncService
     }
     
     /**
+     * Check if cloud record is newer than local record based on updated_at timestamp
+     * Returns: 1 if cloud is newer, -1 if local is newer, 0 if same or cannot determine
+     */
+    protected function compareRecordTimestamps($localUpdatedAt, $cloudUpdatedAt)
+    {
+        if (empty($localUpdatedAt) || empty($cloudUpdatedAt)) {
+            return 0; // Cannot determine if one is missing
+        }
+        
+        try {
+            $localTime = \Carbon\Carbon::parse($localUpdatedAt);
+            $cloudTime = \Carbon\Carbon::parse($cloudUpdatedAt);
+            
+            if ($cloudTime->gt($localTime)) {
+                return 1; // Cloud is newer
+            } elseif ($localTime->gt($cloudTime)) {
+                return -1; // Local is newer
+            } else {
+                return 0; // Same timestamp
+            }
+        } catch (\Exception $e) {
+            Log::debug("Could not compare timestamps: " . $e->getMessage());
+            return 0; // Cannot determine on error
+        }
+    }
+    
+    /**
+     * Check if we should skip syncing a record because the other side has a newer version
+     * Used during local-to-cloud sync to prevent overwriting cloud updates
+     */
+    protected function shouldSkipDueToNewerVersion($localRecord, $cloudRecord, $recordType, $recordId)
+    {
+        $localUpdatedAt = is_object($localRecord) 
+            ? ($localRecord->updated_at ? $this->formatDateTime($localRecord->updated_at) : null)
+            : ($localRecord['updated_at'] ?? null);
+        
+        $cloudUpdatedAt = $cloudRecord['updated_at'] ?? null;
+        
+        $comparison = $this->compareRecordTimestamps($localUpdatedAt, $cloudUpdatedAt);
+        
+        if ($comparison === 1) {
+            // Cloud is newer, skip syncing to avoid overwriting cloud's updates
+            Log::debug("Skipping {$recordType} {$recordId} - cloud has newer version (cloud: {$cloudUpdatedAt}, local: {$localUpdatedAt})");
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Check if we should skip syncing a record from cloud because local has a newer version
+     * Used during cloud-to-local sync to prevent overwriting local updates
+     */
+    protected function shouldSkipCloudRecordDueToNewerLocal($localRecord, $cloudRecord, $recordType, $recordId)
+    {
+        $localUpdatedAt = $localRecord['updated_at'] ?? null;
+        $cloudUpdatedAt = $cloudRecord['updated_at'] ?? null;
+        
+        $comparison = $this->compareRecordTimestamps($localUpdatedAt, $cloudUpdatedAt);
+        
+        if ($comparison === -1) {
+            // Local is newer, skip syncing from cloud to avoid overwriting local updates
+            Log::debug("Skipping {$recordType} {$recordId} from cloud - local has newer version (local: {$localUpdatedAt}, cloud: {$cloudUpdatedAt})");
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
      * Track a deleted record ID (to prevent it from being restored during sync)
      * This should be called when a record is deleted locally
      * @param string $tableName Table name (e.g., 'tbl_user', 'tbl_room')
@@ -2414,6 +2560,11 @@ class CloudSyncService
                     return true;
                 }
                 
+                // Check if local has a newer version (to prevent overwriting local updates)
+                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$userId], $cloudUser, 'user', $userId)) {
+                    return false;
+                }
+                
                 // If in local, compare data to see if it changed
                 $localData = [
                     'user_id' => $existingLocalRecords[$userId]['user_id'],
@@ -2503,6 +2654,11 @@ class CloudSyncService
                     return true;
                 }
                 
+                // Check if local has a newer version (to prevent overwriting local updates)
+                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$subjectId], $cloudSubject, 'subject', $subjectId)) {
+                    return false;
+                }
+                
                 // If in local, compare data to see if it changed
                 $localData = [
                     'subject_id' => $existingLocalRecords[$subjectId]['subject_id'],
@@ -2586,6 +2742,11 @@ class CloudSyncService
                     return true;
                 }
                 
+                // Check if local has a newer version (to prevent overwriting local updates)
+                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$roomNo], $cloudRoom, 'room', $roomNo)) {
+                    return false;
+                }
+                
                 // If in local, compare data to see if it changed
                 $localData = [
                     'room_no' => $existingLocalRecords[$roomNo]['room_no'],
@@ -2663,6 +2824,11 @@ class CloudSyncService
                 // If not in local, needs to be synced (new record)
                 if (!isset($existingLocalRecords[$cameraId])) {
                     return true;
+                }
+                
+                // Check if local has a newer version (to prevent overwriting local updates)
+                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$cameraId], $cloudCamera, 'camera', $cameraId)) {
+                    return false;
                 }
                 
                 // If in local, compare data to see if it changed
@@ -2752,6 +2918,11 @@ class CloudSyncService
                     return true;
                 }
                 
+                // Check if local has a newer version (to prevent overwriting local updates)
+                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$facultyId], $cloudFaculty, 'faculty', $facultyId)) {
+                    return false;
+                }
+                
                 // If in local, compare data to see if it changed (ignore images path differences)
                 $localData = [
                     'faculty_id' => $existingLocalRecords[$facultyId]['faculty_id'],
@@ -2839,6 +3010,11 @@ class CloudSyncService
                 // If not in local, needs to be synced (new record)
                 if (!isset($existingLocalRecords[$loadId])) {
                     return true;
+                }
+                
+                // Check if local has a newer version (to prevent overwriting local updates)
+                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$loadId], $cloudLoad, 'teaching_load', $loadId)) {
+                    return false;
                 }
                 
                 // If in local, compare data to see if it changed
@@ -2943,6 +3119,11 @@ class CloudSyncService
                 // If not in local, needs to be synced (new record)
                 if (!isset($existingLocalRecords[$recordId])) {
                     return true;
+                }
+                
+                // Check if local has a newer version (to prevent overwriting local updates)
+                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$recordId], $cloudRecord, 'attendance_record', $recordId)) {
+                    return false;
                 }
                 
                 // If in local, compare data to see if it changed (ignore snapshot paths)
@@ -3072,6 +3253,15 @@ class CloudSyncService
                 return $this->recordsAreDifferent($localData, $cloudLeave);
             });
             
+            // Store old records for attendance reconciliation
+            $oldRecordsMap = [];
+            foreach ($leavesToSync as $cloudLeave) {
+                $lpId = $cloudLeave['lp_id'] ?? null;
+                if ($lpId && isset($existingLocalRecords[$lpId])) {
+                    $oldRecordsMap[$lpId] = $existingLocalRecords[$lpId];
+                }
+            }
+            
             if (empty($leavesToSync)) {
                 Log::info('No new or changed leaves to sync from cloud to local');
                 return $synced;
@@ -3139,6 +3329,48 @@ class CloudSyncService
                             'updated_at' => $this->formatDateTime($cloudLeave['updated_at'] ?? null),
                         ]
                     ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'leave_start_date', 'leave_end_date', 'lp_image', 'updated_at']);
+                    
+                    // Check if date range changed and update attendance records if needed
+                    $isUpdate = isset($oldRecordsMap[$cloudLeave['lp_id']]);
+                    $oldRecord = $isUpdate ? $oldRecordsMap[$cloudLeave['lp_id']] : null;
+                    
+                    if ($isUpdate && $oldRecord && !empty($cloudLeave['faculty_id'])) {
+                        $oldStartDate = $oldRecord['leave_start_date'] ?? null;
+                        $oldEndDate = $oldRecord['leave_end_date'] ?? null;
+                        $newStartDate = $leaveStartDate;
+                        $newEndDate = $leaveEndDate;
+                        
+                        $dateRangeChanged = ($oldStartDate !== $newStartDate) || ($oldEndDate !== $newEndDate);
+                        
+                        if ($dateRangeChanged) {
+                            try {
+                                $remarksService = new AttendanceRemarksService();
+                                
+                                // First, remove old leave records that are no longer valid
+                                if ($oldStartDate && $oldEndDate) {
+                                    $remarksService->removeLeaveAbsencesInWindow($cloudLeave['faculty_id'], $oldStartDate, $oldEndDate);
+                                }
+                                
+                                // Then, reconcile the new leave period
+                                if ($newStartDate && $newEndDate) {
+                                    $remarksService->reconcileLeaveChange($cloudLeave['faculty_id'], $newStartDate, $newEndDate);
+                                }
+                                
+                                Log::info("Updated attendance records for leave {$cloudLeave['lp_id']} due to date range change");
+                            } catch (\Exception $e) {
+                                Log::error("Error updating attendance records for leave {$cloudLeave['lp_id']}: " . $e->getMessage());
+                            }
+                        }
+                    } elseif (!$isUpdate && !empty($cloudLeave['faculty_id']) && $leaveStartDate && $leaveEndDate) {
+                        // New leave record - create attendance records
+                        try {
+                            $remarksService = new AttendanceRemarksService();
+                            $remarksService->reconcileLeaveChange($cloudLeave['faculty_id'], $leaveStartDate, $leaveEndDate);
+                            Log::info("Created attendance records for new leave {$cloudLeave['lp_id']}");
+                        } catch (\Exception $e) {
+                            Log::error("Error creating attendance records for new leave {$cloudLeave['lp_id']}: " . $e->getMessage());
+                        }
+                    }
                     
                     $synced[] = $cloudLeave['lp_id'];
                     Log::info("Successfully synced leave {$cloudLeave['lp_id']} from cloud");
@@ -3226,6 +3458,15 @@ class CloudSyncService
                 return $this->recordsAreDifferent($localData, $cloudPass);
             });
             
+            // Store old records for attendance reconciliation
+            $oldRecordsMap = [];
+            foreach ($passesToSync as $cloudPass) {
+                $lpId = $cloudPass['lp_id'] ?? null;
+                if ($lpId && isset($existingLocalRecords[$lpId])) {
+                    $oldRecordsMap[$lpId] = $existingLocalRecords[$lpId];
+                }
+            }
+            
             if (empty($passesToSync)) {
                 Log::info('No new or changed passes to sync from cloud to local');
                 return $synced;
@@ -3283,6 +3524,56 @@ class CloudSyncService
                             'updated_at' => $this->formatDateTime($cloudPass['updated_at'] ?? null),
                         ]
                     ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'lp_image', 'updated_at']);
+                    
+                    // Check if date changed and update attendance records if needed
+                    $isUpdate = isset($oldRecordsMap[$cloudPass['lp_id']]);
+                    $oldRecord = $isUpdate ? $oldRecordsMap[$cloudPass['lp_id']] : null;
+                    
+                    if ($isUpdate && $oldRecord && !empty($cloudPass['faculty_id'])) {
+                        $oldDate = $oldRecord['pass_slip_date'] ?? null;
+                        $newDate = $passSlipDate;
+                        
+                        $dateChanged = ($oldDate !== $newDate);
+                        
+                        if ($dateChanged) {
+                            try {
+                                $remarksService = new AttendanceRemarksService();
+                                
+                                // First, reconcile the old date to remove old pass slip records
+                                if ($oldDate) {
+                                    $remarksService->reconcilePassChange($cloudPass['faculty_id'], $oldDate);
+                                }
+                                
+                                // Then, reconcile the new date
+                                if ($newDate) {
+                                    $remarksService->reconcilePassChange($cloudPass['faculty_id'], $newDate);
+                                }
+                                
+                                Log::info("Updated attendance records for pass {$cloudPass['lp_id']} due to date change");
+                            } catch (\Exception $e) {
+                                Log::error("Error updating attendance records for pass {$cloudPass['lp_id']}: " . $e->getMessage());
+                            }
+                        } elseif ($newDate) {
+                            // Date didn't change but pass might have been updated (e.g., time changed)
+                            // Reconcile to ensure attendance records are correct
+                            try {
+                                $remarksService = new AttendanceRemarksService();
+                                $remarksService->reconcilePassChange($cloudPass['faculty_id'], $newDate);
+                                Log::debug("Reconciled attendance records for pass {$cloudPass['lp_id']} (time or other field may have changed)");
+                            } catch (\Exception $e) {
+                                Log::error("Error reconciling attendance records for pass {$cloudPass['lp_id']}: " . $e->getMessage());
+                            }
+                        }
+                    } elseif (!$isUpdate && !empty($cloudPass['faculty_id']) && $passSlipDate) {
+                        // New pass record - create attendance records
+                        try {
+                            $remarksService = new AttendanceRemarksService();
+                            $remarksService->reconcilePassChange($cloudPass['faculty_id'], $passSlipDate);
+                            Log::info("Created attendance records for new pass {$cloudPass['lp_id']}");
+                        } catch (\Exception $e) {
+                            Log::error("Error creating attendance records for new pass {$cloudPass['lp_id']}: " . $e->getMessage());
+                        }
+                    }
                     
                     $synced[] = $cloudPass['lp_id'];
                     Log::info("Successfully synced pass {$cloudPass['lp_id']} from cloud");
@@ -3712,6 +4003,26 @@ class CloudSyncService
                     return true;
                 }
                 
+                // Check if cloud has a newer version (to prevent overwriting cloud updates)
+                $cloudUpdatedAt = $existingCloudRecords[$omId]['updated_at'] ?? null;
+                $localUpdatedAt = $om->updated_at ? $this->formatDateTime($om->updated_at) : null;
+                
+                if ($cloudUpdatedAt && $localUpdatedAt) {
+                    try {
+                        $cloudTime = \Carbon\Carbon::parse($cloudUpdatedAt);
+                        $localTime = \Carbon\Carbon::parse($localUpdatedAt);
+                        
+                        // If cloud is newer, skip syncing to avoid overwriting cloud's updates
+                        if ($cloudTime->gt($localTime)) {
+                            Log::debug("Skipping official matter {$omId} - cloud has newer version (cloud: {$cloudUpdatedAt}, local: {$localUpdatedAt})");
+                            return false;
+                        }
+                    } catch (\Exception $e) {
+                        // If date parsing fails, continue with normal comparison
+                        Log::debug("Could not compare timestamps for official matter {$omId}: " . $e->getMessage());
+                    }
+                }
+                
                 // If in cloud, compare data to see if it changed (ignore attachment path differences)
                 $localData = [
                     'om_id' => $om->om_id,
@@ -3882,6 +4193,43 @@ class CloudSyncService
             // Upsert only changed/new official matters
             foreach ($mattersToSync as $cloudOM) {
                 try {
+                    // Check if this is an update (record exists locally)
+                    $isUpdate = isset($existingLocalRecords[$cloudOM['om_id']]);
+                    $oldRecord = $isUpdate ? $existingLocalRecords[$cloudOM['om_id']] : null;
+                    
+                    // Check if date range, department, faculty, or remarks changed (affects attendance records)
+                    $dateRangeChanged = false;
+                    $facultyChanged = false;
+                    $departmentChanged = false;
+                    $remarksChanged = false;
+                    $needsAttendanceUpdate = false;
+                    
+                    if ($isUpdate && $oldRecord) {
+                        $oldStartDate = $oldRecord['om_start_date'] ?? null;
+                        $oldEndDate = $oldRecord['om_end_date'] ?? null;
+                        $oldFacultyId = $oldRecord['faculty_id'] ?? null;
+                        $oldDepartment = $oldRecord['om_department'] ?? null;
+                        $oldRemarks = $oldRecord['om_remarks'] ?? null;
+                        
+                        $newStartDate = $cloudOM['om_start_date'] ?? null;
+                        $newEndDate = $cloudOM['om_end_date'] ?? null;
+                        $newFacultyId = $cloudOM['faculty_id'] ?? null;
+                        $newDepartment = $cloudOM['om_department'] ?? null;
+                        $newRemarks = $cloudOM['om_remarks'] ?? null;
+                        
+                        $dateRangeChanged = ($oldStartDate !== $newStartDate) || ($oldEndDate !== $newEndDate);
+                        $facultyChanged = ($oldFacultyId != $newFacultyId);
+                        $departmentChanged = ($oldDepartment !== $newDepartment);
+                        $remarksChanged = ($oldRemarks !== $newRemarks);
+                        
+                        $needsAttendanceUpdate = $dateRangeChanged || $facultyChanged || $departmentChanged || $remarksChanged;
+                        
+                        // If attendance records need updating, remove old ones first (before updating the official matter)
+                        if ($needsAttendanceUpdate) {
+                            $this->removeAttendanceRecordsForOfficialMatterSync($oldRecord);
+                        }
+                    }
+                    
                     // Download attachment from cloud
                     $localAttachmentPath = $this->downloadOfficialMatterAttachment($cloudOM['om_attachment'] ?? null);
                     
@@ -3900,6 +4248,14 @@ class CloudSyncService
                         ]
                     ], ['om_id'], ['faculty_id', 'om_department', 'om_purpose', 'om_remarks', 'om_start_date', 'om_end_date', 'om_attachment', 'updated_at']);
                     
+                    // If this is an update and date range/faculty/department/remarks changed, create new attendance records
+                    if ($needsAttendanceUpdate) {
+                        $this->createAttendanceRecordsForOfficialMatterSync($cloudOM);
+                    } elseif (!$isUpdate) {
+                        // If this is a new record, create attendance records
+                        $this->createAttendanceRecordsForOfficialMatterSync($cloudOM);
+                    }
+                    
                     $synced[] = $cloudOM['om_id'];
                 } catch (\Exception $e) {
                     Log::error("Error syncing official matter {$cloudOM['om_id']} from cloud: " . $e->getMessage());
@@ -3914,6 +4270,182 @@ class CloudSyncService
         }
         
         return $synced;
+    }
+    
+    /**
+     * Remove attendance records for official matter during sync (before updating)
+     * This removes old attendance records based on old official matter data
+     */
+    protected function removeAttendanceRecordsForOfficialMatterSync(array $oldOfficialMatter)
+    {
+        try {
+            $omId = $oldOfficialMatter['om_id'] ?? null;
+            if (!$omId) {
+                return;
+            }
+            
+            // Get affected faculty IDs based on old data
+            $isDepartmentMode = !empty($oldOfficialMatter['om_department']);
+            $facultyIds = [];
+            
+            if ($isDepartmentMode) {
+                if (($oldOfficialMatter['om_department'] ?? null) === 'All Instructor') {
+                    $facultyIds = Faculty::pluck('faculty_id')->toArray();
+                } else {
+                    $facultyIds = Faculty::where('faculty_department', $oldOfficialMatter['om_department'] ?? null)
+                        ->pluck('faculty_id')
+                        ->toArray();
+                }
+            } else {
+                if ($oldOfficialMatter['faculty_id'] ?? null) {
+                    $facultyIds = [$oldOfficialMatter['faculty_id']];
+                }
+            }
+            
+            if (empty($facultyIds)) {
+                return;
+            }
+            
+            $startDate = $oldOfficialMatter['om_start_date'] ?? null;
+            $endDate = $oldOfficialMatter['om_end_date'] ?? null;
+            $remarks = $oldOfficialMatter['om_remarks'] ?? null;
+            
+            if (!$startDate || !$endDate || !$remarks) {
+                return;
+            }
+            
+            // Get record IDs before deletion (for tracking)
+            $recordIds = AttendanceRecord::whereIn('faculty_id', $facultyIds)
+                ->whereBetween('record_date', [$startDate, $endDate])
+                ->where('record_remarks', $remarks)
+                ->where('record_status', 'Absent')
+                ->pluck('record_id')
+                ->toArray();
+            
+            // Delete the records
+            if (!empty($recordIds)) {
+                AttendanceRecord::whereIn('record_id', $recordIds)->delete();
+                
+                // Track all deletions for sync
+                foreach ($recordIds as $recordId) {
+                    $this->trackDeletion('tbl_attendance_record', $recordId);
+                }
+                
+                Log::info("Removed " . count($recordIds) . " old attendance records for official matter {$omId} during sync");
+            }
+        } catch (\Exception $e) {
+            Log::error("Error removing attendance records for official matter sync: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Create attendance records for official matter during sync
+     * This creates new attendance records based on official matter data
+     */
+    protected function createAttendanceRecordsForOfficialMatterSync(array $officialMatter)
+    {
+        try {
+            $omId = $officialMatter['om_id'] ?? null;
+            if (!$omId) {
+                return;
+            }
+            
+            // Get the official matter record (should exist after upsert)
+            $localOM = DB::table('tbl_official_matters')->where('om_id', $omId)->first();
+            if (!$localOM) {
+                return;
+            }
+            
+            // Get affected faculty IDs
+            $isDepartmentMode = !empty($localOM->om_department);
+            $facultyIds = [];
+            
+            if ($isDepartmentMode) {
+                if ($localOM->om_department === 'All Instructor') {
+                    $facultyIds = Faculty::pluck('faculty_id')->toArray();
+                } else {
+                    $facultyIds = Faculty::where('faculty_department', $localOM->om_department)
+                        ->pluck('faculty_id')
+                        ->toArray();
+                }
+            } else {
+                if ($localOM->faculty_id) {
+                    $facultyIds = [$localOM->faculty_id];
+                }
+            }
+            
+            if (empty($facultyIds)) {
+                return;
+            }
+            
+            $startDate = $localOM->om_start_date;
+            $endDate = $localOM->om_end_date;
+            $remarks = $localOM->om_remarks;
+            
+            // Create new attendance records
+            $start = \Carbon\Carbon::parse($startDate);
+            $end = \Carbon\Carbon::parse($endDate);
+            $cursor = $start->copy();
+            $createdCount = 0;
+            $updatedCount = 0;
+            
+            while ($cursor->lte($end)) {
+                $date = $cursor->toDateString();
+                $dayOfWeek = $cursor->format('l');
+                
+                foreach ($facultyIds as $facultyId) {
+                    // Get all teaching loads for this faculty on this day
+                    $teachingLoads = TeachingLoad::where('faculty_id', $facultyId)
+                        ->where('teaching_load_day_of_week', $dayOfWeek)
+                        ->get();
+                    
+                    foreach ($teachingLoads as $teachingLoad) {
+                        // Check if attendance record already exists (might have been created by other means)
+                        $existingRecord = AttendanceRecord::where('faculty_id', $facultyId)
+                            ->where('teaching_load_id', $teachingLoad->teaching_load_id)
+                            ->whereDate('record_date', $date)
+                            ->first();
+                        
+                        // Find a valid camera assigned to the teaching load's room
+                        $cameraId = Camera::where('room_no', $teachingLoad->room_no)->value('camera_id');
+                        
+                        // If no camera is mapped to the room, skip creation to avoid FK violation
+                        if (!$cameraId) {
+                            continue;
+                        }
+                        
+                        if ($existingRecord) {
+                            // Update existing record - set remarks and status
+                            $existingRecord->update([
+                                'record_remarks' => $remarks,
+                                'record_status' => 'Absent',
+                            ]);
+                            $updatedCount++;
+                        } else {
+                            // Create new record
+                            AttendanceRecord::create([
+                                'faculty_id' => $facultyId,
+                                'teaching_load_id' => $teachingLoad->teaching_load_id,
+                                'camera_id' => $cameraId,
+                                'record_date' => $date,
+                                'record_time_in' => null,
+                                'record_time_out' => null,
+                                'time_duration_seconds' => 0,
+                                'record_status' => 'Absent',
+                                'record_remarks' => $remarks,
+                            ]);
+                            $createdCount++;
+                        }
+                    }
+                }
+                
+                $cursor->addDay();
+            }
+            
+            Log::info("Created {$createdCount} new and updated {$updatedCount} attendance records for official matter {$omId} during sync");
+        } catch (\Exception $e) {
+            Log::error("Error creating attendance records for official matter sync: " . $e->getMessage());
+        }
     }
 }
 
