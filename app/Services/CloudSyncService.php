@@ -666,6 +666,11 @@ class CloudSyncService
                 $newCount = count($leavesToSync->filter(function($l) use ($existingCloudRecords) { return !isset($existingCloudRecords[$l->lp_id]); }));
                 $updatedCount = count($leavesToSync) - $newCount;
                 Log::info('Synced ' . count($synced) . ' leaves to cloud (' . $newCount . ' new, ' . $updatedCount . ' updated)');
+                
+                // Trigger attendance record updates on cloud for synced leaves
+                if (!empty($synced)) {
+                    $this->triggerCloudAttendanceUpdateForLeaves($synced);
+                }
             }
         } catch (\Exception $e) {
             Log::error("Error syncing leaves: " . $e->getMessage());
@@ -790,6 +795,11 @@ class CloudSyncService
                 $newCount = count($passesToSync->filter(function($p) use ($existingCloudRecords) { return !isset($existingCloudRecords[$p->lp_id]); }));
                 $updatedCount = count($passesToSync) - $newCount;
                 Log::info('Synced ' . count($synced) . ' passes to cloud (' . $newCount . ' new, ' . $updatedCount . ' updated)');
+                
+                // Trigger attendance record updates on cloud for synced passes
+                if (!empty($synced)) {
+                    $this->triggerCloudAttendanceUpdateForPasses($synced);
+                }
             }
         } catch (\Exception $e) {
             Log::error("Error syncing passes: " . $e->getMessage());
@@ -4078,6 +4088,11 @@ class CloudSyncService
                 $newCount = count($mattersToSync->filter(function($om) use ($existingCloudRecords) { return !isset($existingCloudRecords[$om->om_id]); }));
                 $updatedCount = count($mattersToSync) - $newCount;
                 Log::info('Synced ' . count($synced) . ' official matters to cloud (' . $newCount . ' new, ' . $updatedCount . ' updated)');
+                
+                // Trigger attendance record updates on cloud for synced official matters
+                if (!empty($synced)) {
+                    $this->triggerCloudAttendanceUpdateForOfficialMatters($synced);
+                }
             } elseif ($resp['success'] && $upserted == 0) {
                 Log::warning("Official matters sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
             }
@@ -4460,6 +4475,137 @@ class CloudSyncService
             Log::info("Created {$createdCount} new and updated {$updatedCount} attendance records for official matter {$omId} during sync");
         } catch (\Exception $e) {
             Log::error("Error creating attendance records for official matter sync: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Trigger attendance record updates on cloud for synced leaves
+     * @param array $leaveIds Array of leave IDs that were synced
+     */
+    protected function triggerCloudAttendanceUpdateForLeaves(array $leaveIds)
+    {
+        try {
+            if (empty($leaveIds)) {
+                return;
+            }
+            
+            // Get leave details to determine which dates need attendance updates
+            $leaves = Leave::whereIn('lp_id', $leaveIds)->get();
+            
+            foreach ($leaves as $leave) {
+                if (!$leave->faculty_id || !$leave->leave_start_date || !$leave->leave_end_date) {
+                    continue;
+                }
+                
+                // Call cloud API to trigger attendance update for this leave
+                $this->callCloudAttendanceUpdateTrigger('leave', [
+                    'lp_id' => $leave->lp_id,
+                    'faculty_id' => $leave->faculty_id,
+                    'start_date' => $leave->leave_start_date,
+                    'end_date' => $leave->leave_end_date,
+                ]);
+            }
+            
+            Log::info("Triggered attendance updates on cloud for " . count($leaveIds) . " leaves");
+        } catch (\Exception $e) {
+            Log::error("Error triggering cloud attendance update for leaves: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Trigger attendance record updates on cloud for synced passes
+     * @param array $passIds Array of pass IDs that were synced
+     */
+    protected function triggerCloudAttendanceUpdateForPasses(array $passIds)
+    {
+        try {
+            if (empty($passIds)) {
+                return;
+            }
+            
+            // Get pass details to determine which dates need attendance updates
+            $passes = Pass::whereIn('lp_id', $passIds)->get();
+            
+            foreach ($passes as $pass) {
+                if (!$pass->faculty_id || !$pass->pass_slip_date) {
+                    continue;
+                }
+                
+                // Call cloud API to trigger attendance update for this pass
+                $this->callCloudAttendanceUpdateTrigger('pass', [
+                    'lp_id' => $pass->lp_id,
+                    'faculty_id' => $pass->faculty_id,
+                    'date' => $pass->pass_slip_date,
+                ]);
+            }
+            
+            Log::info("Triggered attendance updates on cloud for " . count($passIds) . " passes");
+        } catch (\Exception $e) {
+            Log::error("Error triggering cloud attendance update for passes: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Trigger attendance record updates on cloud for synced official matters
+     * @param array $omIds Array of official matter IDs that were synced
+     */
+    protected function triggerCloudAttendanceUpdateForOfficialMatters(array $omIds)
+    {
+        try {
+            if (empty($omIds)) {
+                return;
+            }
+            
+            // Get official matter details to determine which dates need attendance updates
+            $officialMatters = OfficialMatter::whereIn('om_id', $omIds)->get();
+            
+            foreach ($officialMatters as $om) {
+                if (!$om->om_start_date || !$om->om_end_date) {
+                    continue;
+                }
+                
+                // Call cloud API to trigger attendance update for this official matter
+                $this->callCloudAttendanceUpdateTrigger('official_matter', [
+                    'om_id' => $om->om_id,
+                    'faculty_id' => $om->faculty_id,
+                    'department' => $om->om_department,
+                    'start_date' => $om->om_start_date,
+                    'end_date' => $om->om_end_date,
+                    'remarks' => $om->om_remarks,
+                ]);
+            }
+            
+            Log::info("Triggered attendance updates on cloud for " . count($omIds) . " official matters");
+        } catch (\Exception $e) {
+            Log::error("Error triggering cloud attendance update for official matters: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Call cloud API to trigger attendance record updates
+     * @param string $type Type of record: 'leave', 'pass', or 'official_matter'
+     * @param array $data Data needed for attendance update
+     */
+    protected function callCloudAttendanceUpdateTrigger(string $type, array $data)
+    {
+        try {
+            $response = Http::timeout(30)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->cloudApiKey,
+                    'Accept' => 'application/json',
+                ])
+                ->post("{$this->cloudApiUrl}/sync/trigger-attendance-update", [
+                    'type' => $type,
+                    'data' => $data,
+                ]);
+            
+            if ($response->successful()) {
+                Log::debug("Successfully triggered attendance update on cloud for {$type} " . ($data['lp_id'] ?? $data['om_id'] ?? 'unknown'));
+            } else {
+                Log::warning("Failed to trigger attendance update on cloud for {$type}: " . $response->body());
+            }
+        } catch (\Exception $e) {
+            Log::error("Error calling cloud attendance update trigger for {$type}: " . $e->getMessage());
         }
     }
 }
