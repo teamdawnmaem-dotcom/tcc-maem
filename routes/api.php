@@ -155,4 +155,7 @@ Route::middleware('api.key')->prefix('sync')->group(function () {
 
     // Bulk upsert endpoint (generic)
     Route::post('/bulk/{resource}', [SyncReceiverController::class, 'receiveBulk']);
+    
+    // Trigger attendance record updates
+    Route::post('/trigger-attendance-update', [SyncReceiverController::class, 'triggerAttendanceUpdate']);
 });

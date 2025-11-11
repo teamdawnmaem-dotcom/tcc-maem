@@ -1220,4 +1220,155 @@ class SyncReceiverController extends Controller
             ], 500);
         }
     }
+    
+    /**
+     * Trigger attendance record updates when leaves, passes, or official matters are synced
+     * This is called by the local server after syncing leaves/passes/official matters to cloud
+     */
+    public function triggerAttendanceUpdate(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'type' => 'required|string|in:leave,pass,official_matter',
+                'data' => 'required|array',
+            ]);
+            
+            $type = $validated['type'];
+            $data = $validated['data'];
+            
+            // Use AttendanceRemarksService to update attendance records
+            $remarksService = app(\App\Services\AttendanceRemarksService::class);
+            
+            if ($type === 'leave') {
+                $lpId = $data['lp_id'] ?? null;
+                $facultyId = $data['faculty_id'] ?? null;
+                $startDate = $data['start_date'] ?? null;
+                $endDate = $data['end_date'] ?? null;
+                
+                if ($facultyId && $startDate && $endDate) {
+                    // Reconcile leave change to update attendance records
+                    $remarksService->reconcileLeaveChange($facultyId, $startDate, $endDate);
+                    Log::info("Triggered attendance update for leave {$lpId} (faculty: {$facultyId}, dates: {$startDate} to {$endDate})");
+                }
+                
+            } elseif ($type === 'pass') {
+                $lpId = $data['lp_id'] ?? null;
+                $facultyId = $data['faculty_id'] ?? null;
+                $date = $data['date'] ?? null;
+                
+                if ($facultyId && $date) {
+                    // Reconcile pass change to update attendance records
+                    $remarksService->reconcilePassChange($facultyId, $date);
+                    Log::info("Triggered attendance update for pass {$lpId} (faculty: {$facultyId}, date: {$date})");
+                }
+                
+            } elseif ($type === 'official_matter') {
+                $omId = $data['om_id'] ?? null;
+                $facultyId = $data['faculty_id'] ?? null;
+                $department = $data['department'] ?? null;
+                $startDate = $data['start_date'] ?? null;
+                $endDate = $data['end_date'] ?? null;
+                $remarks = $data['remarks'] ?? null;
+                
+                if ($startDate && $endDate && $remarks) {
+                    // Get affected faculty IDs
+                    $facultyIds = [];
+                    
+                    if (!empty($department)) {
+                        if ($department === 'All Instructor') {
+                            $facultyIds = DB::table('tbl_faculty')->pluck('faculty_id')->toArray();
+                        } else {
+                            $facultyIds = DB::table('tbl_faculty')
+                                ->where('faculty_department', $department)
+                                ->pluck('faculty_id')
+                                ->toArray();
+                        }
+                    } elseif ($facultyId) {
+                        $facultyIds = [$facultyId];
+                    }
+                    
+                    if (!empty($facultyIds)) {
+                        // Update attendance records for official matter
+                        // This mimics the logic in OfficialMatterController
+                        $start = \Carbon\Carbon::parse($startDate);
+                        $end = \Carbon\Carbon::parse($endDate);
+                        $cursor = $start->copy();
+                        
+                        while ($cursor->lte($end)) {
+                            $date = $cursor->toDateString();
+                            $dayOfWeek = $cursor->format('l');
+                            
+                            foreach ($facultyIds as $fId) {
+                                // Get teaching loads for this faculty on this day
+                                $teachingLoads = DB::table('tbl_teaching_load')
+                                    ->where('faculty_id', $fId)
+                                    ->where('teaching_load_day_of_week', $dayOfWeek)
+                                    ->get();
+                                
+                                foreach ($teachingLoads as $load) {
+                                    // Find camera for the room
+                                    $cameraId = DB::table('tbl_camera')
+                                        ->where('room_no', $load->room_no)
+                                        ->value('camera_id');
+                                    
+                                    if (!$cameraId) {
+                                        continue;
+                                    }
+                                    
+                                    // Check if attendance record exists
+                                    $existingRecord = DB::table('tbl_attendance_record')
+                                        ->where('faculty_id', $fId)
+                                        ->where('teaching_load_id', $load->teaching_load_id)
+                                        ->whereDate('record_date', $date)
+                                        ->first();
+                                    
+                                    if ($existingRecord) {
+                                        // Update existing record
+                                        DB::table('tbl_attendance_record')
+                                            ->where('record_id', $existingRecord->record_id)
+                                            ->update([
+                                                'record_remarks' => $remarks,
+                                                'record_status' => 'Absent',
+                                                'updated_at' => now(),
+                                            ]);
+                                    } else {
+                                        // Create new record
+                                        DB::table('tbl_attendance_record')->insert([
+                                            'faculty_id' => $fId,
+                                            'teaching_load_id' => $load->teaching_load_id,
+                                            'camera_id' => $cameraId,
+                                            'record_date' => $date,
+                                            'record_time_in' => null,
+                                            'record_time_out' => null,
+                                            'time_duration_seconds' => 0,
+                                            'record_status' => 'Absent',
+                                            'record_remarks' => $remarks,
+                                            'created_at' => now(),
+                                            'updated_at' => now(),
+                                        ]);
+                                    }
+                                }
+                            }
+                            
+                            $cursor->addDay();
+                        }
+                        
+                        Log::info("Triggered attendance update for official matter {$omId} (faculties: " . count($facultyIds) . ", dates: {$startDate} to {$endDate})");
+                    }
+                }
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => "Attendance records updated for {$type}",
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error triggering attendance update: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
