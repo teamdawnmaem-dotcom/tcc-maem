@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Room;
 use App\Models\ActivityLog;
+use App\Services\CloudSyncService;
 
 class RoomController extends Controller
 {
@@ -71,7 +72,12 @@ class RoomController extends Controller
     public function destroy($id)
     {
         $room = Room::findOrFail($id);
+        $roomNo = $room->room_no;
         $room->delete();
+
+        // Track deletion for sync
+        $syncService = app(CloudSyncService::class);
+        $syncService->trackDeletion('tbl_room', $roomNo);
 
         ActivityLog::create([
             'user_id' => auth()->id(),

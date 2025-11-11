@@ -13,7 +13,7 @@ echo ========================================
 echo.
 
 :loop
-php artisan schedule:run
+php artisan sync:bidirectional
 timeout /t 10 /nobreak >nul
 goto loop
 

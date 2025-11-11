@@ -6,6 +6,7 @@ use App\Models\Leave;
 use App\Models\Faculty;
 use App\Models\ActivityLog;
 use App\Services\AttendanceRemarksService;
+use App\Services\CloudSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -162,7 +163,13 @@ class LeaveController extends Controller
             Storage::disk('public')->delete($leave->lp_image);
         }
 
+        $lpId = $leave->lp_id;
+        $lpType = $leave->lp_type ?? 'Leave';
         $leave->delete();
+
+        // Track deletion for sync (include lp_type metadata for filtering)
+        $syncService = app(CloudSyncService::class);
+        $syncService->trackDeletion('tbl_leave_pass', $lpId, 90, ['lp_type' => $lpType]);
 
         // Reconcile attendance records after deletion: remove 'on leave' absences in the former window only
         $remarksService = new AttendanceRemarksService();

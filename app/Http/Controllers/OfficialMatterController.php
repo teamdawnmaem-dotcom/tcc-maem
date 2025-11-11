@@ -9,6 +9,7 @@ use App\Models\AttendanceRecord;
 use App\Models\Camera;
 use App\Models\TeachingLoad;
 use App\Services\AttendanceRemarksService;
+use App\Services\CloudSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
@@ -245,7 +246,12 @@ class OfficialMatterController extends Controller
             Storage::disk('public')->delete($officialMatter->om_attachment);
         }
 
+        $omId = $officialMatter->om_id;
         $officialMatter->delete();
+
+        // Track deletion for sync
+        $syncService = app(CloudSyncService::class);
+        $syncService->trackDeletion('tbl_official_matters', $omId);
 
         // Remove attendance records
         $this->removeAttendanceRecordsForOfficialMatter($facultyIds, $startDate, $endDate, $remarks);
@@ -361,10 +367,27 @@ class OfficialMatterController extends Controller
         $start = Carbon::parse($startDate);
         $end = Carbon::parse($endDate);
 
+        // Get record IDs before deletion (for tracking)
+        $recordIds = AttendanceRecord::whereIn('faculty_id', $facultyIds)
+            ->whereBetween('record_date', [$start, $end])
+            ->where('record_remarks', $remarks)
+            ->where('record_status', 'Absent')
+            ->pluck('record_id')
+            ->toArray();
+
+        // Delete the records
         AttendanceRecord::whereIn('faculty_id', $facultyIds)
             ->whereBetween('record_date', [$start, $end])
             ->where('record_remarks', $remarks)
             ->where('record_status', 'Absent')
             ->delete();
+        
+        // Track all deletions for sync
+        if (!empty($recordIds)) {
+            $syncService = app(CloudSyncService::class);
+            foreach ($recordIds as $recordId) {
+                $syncService->trackDeletion('tbl_attendance_record', $recordId);
+            }
+        }
     }
 }

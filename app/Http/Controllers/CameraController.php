@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Camera;
 use App\Models\Room;
 use App\Models\ActivityLog;
+use App\Services\CloudSyncService;
 
 class CameraController extends Controller
 {
@@ -133,7 +134,12 @@ public function update(Request $request, $id)
     public function destroy($id)
     {
         $camera = Camera::findOrFail($id);
+        $cameraId = $camera->camera_id;
         $camera->delete();
+
+        // Track deletion for sync
+        $syncService = app(CloudSyncService::class);
+        $syncService->trackDeletion('tbl_camera', $cameraId);
 
         ActivityLog::create([
             'user_id' => auth()->id(),

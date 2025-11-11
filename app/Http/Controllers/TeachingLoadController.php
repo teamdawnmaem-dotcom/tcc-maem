@@ -8,6 +8,7 @@ use App\Models\Faculty;
 use App\Models\Room;
 use App\Models\Camera;
 use App\Models\ActivityLog;
+use App\Services\CloudSyncService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Subject;
@@ -358,7 +359,12 @@ public function apiTodaySchedule()
     public function destroy($id)
     {
         $load = TeachingLoad::findOrFail($id);
+        $loadId = $load->teaching_load_id;
         $load->delete();
+
+        // Track deletion for sync
+        $syncService = app(CloudSyncService::class);
+        $syncService->trackDeletion('tbl_teaching_load', $loadId);
 
     // Log the action
     $faculty = Faculty::find($load->faculty_id);
@@ -665,11 +671,30 @@ public function apiTodaySchedule()
                         ]);
                     }
                     
+                    // Get attendance record IDs before deletion (for tracking)
+                    $attendanceRecordIds = AttendanceRecord::where('teaching_load_id', $load->teaching_load_id)
+                        ->pluck('record_id')
+                        ->toArray();
+                    
                     // Delete the original attendance records after archiving
                     AttendanceRecord::where('teaching_load_id', $load->teaching_load_id)->delete();
+                    
+                    // Track attendance record deletions for sync
+                    if (!empty($attendanceRecordIds)) {
+                        $syncService = app(CloudSyncService::class);
+                        foreach ($attendanceRecordIds as $recordId) {
+                            $syncService->trackDeletion('tbl_attendance_record', $recordId);
+                        }
+                    }
 
                     // Delete the original teaching load
+                    $loadId = $load->teaching_load_id;
                     $load->delete();
+                    
+                    // Track deletion for sync
+                    $syncService = app(CloudSyncService::class);
+                    $syncService->trackDeletion('tbl_teaching_load', $loadId);
+                    
                     $archivedCount++;
 
                 } catch (\Exception $e) {
@@ -810,7 +835,7 @@ public function apiTodaySchedule()
                 'logs_module' => 'Teaching Load Management',
             ]);
 
-            // Delete from archive
+            // Delete from archive (restore operation - don't track as deletion since it's being restored)
             $archivedLoad->delete();
 
             return response()->json([
@@ -837,10 +862,28 @@ public function apiTodaySchedule()
             $courseCode = $archivedLoad->teaching_load_course_code;
             $subject = $archivedLoad->teaching_load_subject;
             
+            // Get archived attendance record IDs before deletion (for tracking)
+            $archivedAttendanceIds = AttendanceRecordArchive::where('teaching_load_id', $archivedLoad->archive_id)
+                ->pluck('archive_id')
+                ->toArray();
+            
             // Delete corresponding archived attendance records
             AttendanceRecordArchive::where('teaching_load_id', $archivedLoad->archive_id)->delete();
             
+            // Track archived attendance record deletions for sync
+            if (!empty($archivedAttendanceIds)) {
+                $syncService = app(CloudSyncService::class);
+                foreach ($archivedAttendanceIds as $attendanceArchiveId) {
+                    $syncService->trackDeletion('tbl_attendance_record_archive', $attendanceArchiveId);
+                }
+            }
+            
+            $teachingLoadArchiveId = $archivedLoad->archive_id;
             $archivedLoad->delete();
+
+            // Track deletion for sync
+            $syncService = app(CloudSyncService::class);
+            $syncService->trackDeletion('tbl_teaching_load_archive', $teachingLoadArchiveId);
 
             // Log the action
             ActivityLog::create([
