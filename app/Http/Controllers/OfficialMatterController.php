@@ -185,14 +185,18 @@ class OfficialMatterController extends Controller
         }
 
         // Update the official matter
-        $officialMatter->update([
+        $updateData = [
             'faculty_id' => $newIsDepartmentMode ? null : $validated['faculty_id'],
             'om_department' => $newIsDepartmentMode ? $validated['om_department'] : null,
             'om_purpose' => $validated['om_purpose'],
             'om_remarks' => $validated['om_remarks'],
             'om_start_date' => $validated['om_start_date'],
             'om_end_date' => $validated['om_end_date'],
-        ]);
+        ];
+        if (isset($validated['om_attachment'])) {
+            $updateData['om_attachment'] = $validated['om_attachment'];
+        }
+        $officialMatter->update($updateData);
 
         // Remove old attendance records
         $this->removeAttendanceRecordsForOfficialMatter(
