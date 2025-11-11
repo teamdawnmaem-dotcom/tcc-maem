@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Subject;
 use App\Models\ActivityLog;
+use App\Services\CloudSyncService;
 use Illuminate\Support\Facades\Auth;
 
 class SubjectController extends Controller
@@ -60,7 +61,12 @@ class SubjectController extends Controller
     {
         $subject = Subject::findOrFail($id);
         $code = $subject->subject_code;
+        $subjectId = $subject->subject_id;
         $subject->delete();
+
+        // Track deletion for sync
+        $syncService = app(CloudSyncService::class);
+        $syncService->trackDeletion('tbl_subject', $subjectId);
 
         ActivityLog::create([
             'user_id' => Auth::id(),

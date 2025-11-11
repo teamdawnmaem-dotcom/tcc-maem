@@ -6,6 +6,7 @@ use App\Models\Pass;
 use App\Models\Faculty;
 use App\Models\ActivityLog;
 use App\Services\AttendanceRemarksService;
+use App\Services\CloudSyncService;
 use Illuminate\Http\Request;
 
 class PassController extends Controller
@@ -141,7 +142,13 @@ class PassController extends Controller
         $pass = Pass::findOrFail($id);
         $facultyId = $pass->faculty_id;
         $date = $pass->pass_slip_date;
+        $lpId = $pass->lp_id;
+        $lpType = $pass->lp_type ?? 'Pass';
         $pass->delete();
+
+        // Track deletion for sync (include lp_type metadata for filtering)
+        $syncService = app(CloudSyncService::class);
+        $syncService->trackDeletion('tbl_leave_pass', $lpId, 90, ['lp_type' => $lpType]);
 
         // Reconcile attendance for the date after deletion
         $remarksService = new AttendanceRemarksService();

@@ -7,6 +7,7 @@ use App\Models\AttendanceRecordArchive;
 use App\Models\AttendanceRecord;
 use App\Models\TeachingLoadArchive;
 use App\Models\ActivityLog;
+use App\Services\CloudSyncService;
 use Illuminate\Support\Facades\Auth;
 
 class AttendanceRecordArchiveController extends Controller
@@ -128,8 +129,13 @@ class AttendanceRecordArchiveController extends Controller
         try {
             $archivedRecord = AttendanceRecordArchive::findOrFail($archiveId);
             $recordDate = $archivedRecord->record_date;
+            $archiveIdValue = $archivedRecord->archive_id;
             
             $archivedRecord->delete();
+
+            // Track deletion for sync
+            $syncService = app(CloudSyncService::class);
+            $syncService->trackDeletion('tbl_attendance_record_archive', $archiveIdValue);
 
             // Log the action
             ActivityLog::create([
@@ -196,8 +202,19 @@ class AttendanceRecordArchiveController extends Controller
                 'logs_module' => 'Attendance Records Management',
             ]);
 
+            // Get all record IDs before deletion (for tracking)
+            $recordIds = AttendanceRecord::pluck('record_id')->toArray();
+            
             // Delete original records after archiving
             AttendanceRecord::query()->delete();
+            
+            // Track all deletions for sync
+            if (!empty($recordIds)) {
+                $syncService = app(CloudSyncService::class);
+                foreach ($recordIds as $recordId) {
+                    $syncService->trackDeletion('tbl_attendance_record', $recordId);
+                }
+            }
 
             return redirect()->route('admin.attendance.records.archived')
                 ->with('success', 'All attendance records archived successfully.');

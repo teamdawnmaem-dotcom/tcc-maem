@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use GuzzleHttp\Client;
 use App\Models\Faculty;
 use App\Models\Room;
@@ -89,21 +90,47 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing room IDs from cloud
-            $existingCloudIds = $this->getExistingCloudIds('rooms', 'room_no');
+            // First, sync deletions to cloud (notify cloud about locally deleted records)
+            $deletedIds = $this->getDeletedIds('tbl_room');
+            $this->syncDeletionsToCloud('rooms', $deletedIds);
             
-            // Get all local rooms and filter out existing ones
-            $localRooms = Room::all()->filter(function ($room) use ($existingCloudIds) {
-                return !in_array($room->room_no, $existingCloudIds);
-            });
+            // Get existing cloud records with their data for comparison
+            $existingCloudRecords = $this->getExistingCloudRecords('rooms', 'room_no');
+            
+            // Get all local rooms
+            $localRooms = Room::all();
             
             if ($localRooms->isEmpty()) {
-                Log::info('No new rooms to sync to cloud');
+                Log::info('No rooms to sync to cloud');
                 return $synced;
             }
             
-            // Bulk upsert only missing rooms
-            $payload = $localRooms->map(function ($room) {
+            // Filter: only sync new records or records that have changed
+            $roomsToSync = $localRooms->filter(function ($room) use ($existingCloudRecords) {
+                $roomNo = $room->room_no;
+                
+                // If not in cloud, needs to be synced (new record)
+                if (!isset($existingCloudRecords[$roomNo])) {
+                    return true;
+                }
+                
+                // If in cloud, compare data to see if it changed
+                $localData = [
+                    'room_no' => $room->room_no,
+                    'room_name' => $room->room_name,
+                    'room_building_no' => $room->room_building_no,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $existingCloudRecords[$roomNo]);
+            });
+            
+            if ($roomsToSync->isEmpty()) {
+                Log::info('No new or changed rooms to sync to cloud');
+                return $synced;
+            }
+            
+            // Bulk upsert only changed/new rooms
+            $payload = $roomsToSync->map(function ($room) {
                 return [
                     'room_no' => $room->room_no,
                     'room_name' => $room->room_name,
@@ -112,8 +139,8 @@ class CloudSyncService
             })->values()->all();
             $resp = $this->pushBulkToCloud('rooms', $payload);
             if ($resp['success']) {
-                $synced = $localRooms->pluck('room_no')->all();
-                Log::info('Synced ' . count($synced) . ' new rooms to cloud');
+                $synced = $roomsToSync->pluck('room_no')->all();
+                Log::info('Synced ' . count($synced) . ' rooms to cloud (' . count($roomsToSync->filter(function($r) use ($existingCloudRecords) { return !isset($existingCloudRecords[$r->room_no]); })) . ' new, ' . count($roomsToSync->filter(function($r) use ($existingCloudRecords) { return isset($existingCloudRecords[$r->room_no]); })) . ' updated)');
             }
         } catch (\Exception $e) {
             Log::error("Error syncing rooms: " . $e->getMessage());
@@ -130,20 +157,50 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing camera IDs from cloud
-            $existingCloudIds = $this->getExistingCloudIds('cameras', 'camera_id');
+            // First, sync deletions to cloud (notify cloud about locally deleted records)
+            $deletedIds = $this->getDeletedIds('tbl_camera');
+            $this->syncDeletionsToCloud('cameras', $deletedIds);
             
-            // Get all local cameras and filter out existing ones
-            $localCameras = Camera::all()->filter(function ($camera) use ($existingCloudIds) {
-                return !in_array($camera->camera_id, $existingCloudIds);
-            });
+            // Get existing cloud records with their data for comparison
+            $existingCloudRecords = $this->getExistingCloudRecords('cameras', 'camera_id');
+            
+            // Get all local cameras
+            $localCameras = Camera::all();
             
             if ($localCameras->isEmpty()) {
-                Log::info('No new cameras to sync to cloud');
+                Log::info('No cameras to sync to cloud');
                 return $synced;
             }
             
-            $payload = $localCameras->map(function ($camera) {
+            // Filter: only sync new records or records that have changed
+            $camerasToSync = $localCameras->filter(function ($camera) use ($existingCloudRecords) {
+                $cameraId = $camera->camera_id;
+                
+                // If not in cloud, needs to be synced (new record)
+                if (!isset($existingCloudRecords[$cameraId])) {
+                    return true;
+                }
+                
+                // If in cloud, compare data to see if it changed
+                $localData = [
+                    'camera_id' => $camera->camera_id,
+                    'camera_name' => $camera->camera_name,
+                    'camera_ip_address' => $camera->camera_ip_address,
+                    'camera_username' => $camera->camera_username,
+                    'camera_password' => $camera->camera_password,
+                    'camera_live_feed' => $camera->camera_live_feed,
+                    'room_no' => $camera->room_no,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $existingCloudRecords[$cameraId]);
+            });
+            
+            if ($camerasToSync->isEmpty()) {
+                Log::info('No new or changed cameras to sync to cloud');
+                return $synced;
+            }
+            
+            $payload = $camerasToSync->map(function ($camera) {
                 return [
                     'camera_id' => $camera->camera_id,
                     'camera_name' => $camera->camera_name,
@@ -156,8 +213,10 @@ class CloudSyncService
             })->values()->all();
             $resp = $this->pushBulkToCloud('cameras', $payload);
             if ($resp['success']) {
-                $synced = $localCameras->pluck('camera_id')->all();
-                Log::info('Synced ' . count($synced) . ' new cameras to cloud');
+                $synced = $camerasToSync->pluck('camera_id')->all();
+                $newCount = count($camerasToSync->filter(function($c) use ($existingCloudRecords) { return !isset($existingCloudRecords[$c->camera_id]); }));
+                $updatedCount = count($camerasToSync) - $newCount;
+                Log::info('Synced ' . count($synced) . ' cameras to cloud (' . $newCount . ' new, ' . $updatedCount . ' updated)');
             }
         } catch (\Exception $e) {
             Log::error("Error syncing cameras: " . $e->getMessage());
@@ -174,20 +233,48 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing faculty IDs from cloud
-            $existingCloudIds = $this->getExistingCloudIds('faculties', 'faculty_id');
+            // First, sync deletions to cloud (notify cloud about locally deleted records)
+            $deletedIds = $this->getDeletedIds('tbl_faculty');
+            $this->syncDeletionsToCloud('faculties', $deletedIds);
             
-            // Get all local faculties and filter out existing ones
-            $localFaculties = Faculty::all()->filter(function ($faculty) use ($existingCloudIds) {
-                return !in_array($faculty->faculty_id, $existingCloudIds);
-            });
+            // Get existing cloud records with their data for comparison
+            $existingCloudRecords = $this->getExistingCloudRecords('faculties', 'faculty_id');
+            
+            // Get all local faculties
+            $localFaculties = Faculty::all();
             
             if ($localFaculties->isEmpty()) {
-                Log::info('No new faculties to sync to cloud');
+                Log::info('No faculties to sync to cloud');
                 return $synced;
             }
             
-            $payload = $localFaculties->map(function ($faculty) {
+            // Filter: only sync new records or records that have changed
+            $facultiesToSync = $localFaculties->filter(function ($faculty) use ($existingCloudRecords) {
+                $facultyId = $faculty->faculty_id;
+                
+                // If not in cloud, needs to be synced (new record)
+                if (!isset($existingCloudRecords[$facultyId])) {
+                    return true;
+                }
+                
+                // If in cloud, compare data to see if it changed (ignore images path differences)
+                $localData = [
+                    'faculty_id' => $faculty->faculty_id,
+                    'faculty_fname' => $faculty->faculty_fname,
+                    'faculty_lname' => $faculty->faculty_lname,
+                    'faculty_department' => $faculty->faculty_department,
+                    'faculty_face_embedding' => $faculty->faculty_face_embedding,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $existingCloudRecords[$facultyId]);
+            });
+            
+            if ($facultiesToSync->isEmpty()) {
+                Log::info('No new or changed faculties to sync to cloud');
+                return $synced;
+            }
+            
+            $payload = $facultiesToSync->map(function ($faculty) {
                 // Sync faculty images to cloud and update paths
                 $cloudImages = $this->syncFacultyImages($faculty->faculty_images);
                 
@@ -204,8 +291,10 @@ class CloudSyncService
             })->values()->all();
             $resp = $this->pushBulkToCloud('faculties', $payload);
             if ($resp['success']) {
-                $synced = $localFaculties->pluck('faculty_id')->all();
-                Log::info('Synced ' . count($synced) . ' new faculties to cloud');
+                $synced = $facultiesToSync->pluck('faculty_id')->all();
+                $newCount = count($facultiesToSync->filter(function($f) use ($existingCloudRecords) { return !isset($existingCloudRecords[$f->faculty_id]); }));
+                $updatedCount = count($facultiesToSync) - $newCount;
+                Log::info('Synced ' . count($synced) . ' faculties to cloud (' . $newCount . ' new, ' . $updatedCount . ' updated)');
             }
         } catch (\Exception $e) {
             Log::error("Error syncing faculties: " . $e->getMessage());
@@ -222,20 +311,52 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing teaching load IDs from cloud
-            $existingCloudIds = $this->getExistingCloudIds('teaching-loads', 'teaching_load_id');
+            // First, sync deletions to cloud (notify cloud about locally deleted records)
+            $deletedIds = $this->getDeletedIds('tbl_teaching_load');
+            $this->syncDeletionsToCloud('teaching-loads', $deletedIds);
             
-            // Get all local teaching loads and filter out existing ones
-            $localLoads = TeachingLoad::all()->filter(function ($load) use ($existingCloudIds) {
-                return !in_array($load->teaching_load_id, $existingCloudIds);
-            });
+            // Get existing cloud records with their data for comparison
+            $existingCloudRecords = $this->getExistingCloudRecords('teaching-loads', 'teaching_load_id');
+            
+            // Get all local teaching loads
+            $localLoads = TeachingLoad::all();
             
             if ($localLoads->isEmpty()) {
-                Log::info('No new teaching loads to sync to cloud');
+                Log::info('No teaching loads to sync to cloud');
                 return $synced;
             }
             
-            $payload = $localLoads->map(function ($load) {
+            // Filter: only sync new records or records that have changed
+            $loadsToSync = $localLoads->filter(function ($load) use ($existingCloudRecords) {
+                $loadId = $load->teaching_load_id;
+                
+                // If not in cloud, needs to be synced (new record)
+                if (!isset($existingCloudRecords[$loadId])) {
+                    return true;
+                }
+                
+                // If in cloud, compare data to see if it changed
+                $localData = [
+                    'teaching_load_id' => $load->teaching_load_id,
+                    'faculty_id' => $load->faculty_id,
+                    'teaching_load_course_code' => $load->teaching_load_course_code,
+                    'teaching_load_subject' => $load->teaching_load_subject,
+                    'teaching_load_day_of_week' => $load->teaching_load_day_of_week,
+                    'teaching_load_class_section' => $load->teaching_load_class_section,
+                    'teaching_load_time_in' => $load->teaching_load_time_in,
+                    'teaching_load_time_out' => $load->teaching_load_time_out,
+                    'room_no' => $load->room_no,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $existingCloudRecords[$loadId]);
+            });
+            
+            if ($loadsToSync->isEmpty()) {
+                Log::info('No new or changed teaching loads to sync to cloud');
+                return $synced;
+            }
+            
+            $payload = $loadsToSync->map(function ($load) {
                 return [
                     'teaching_load_id' => $load->teaching_load_id,
                     'faculty_id' => $load->faculty_id,
@@ -252,12 +373,13 @@ class CloudSyncService
             })->values()->all();
             $resp = $this->pushBulkToCloud('teaching-loads', $payload);
             $upserted = $resp['data']['upserted'] ?? 0;
-            Log::info('Bulk teaching-loads result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($localLoads)]);
+            Log::info('Bulk teaching-loads result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($loadsToSync)]);
             
             if ($resp['success'] && $upserted > 0) {
-                // Only return synced IDs if records were actually upserted
-                $synced = $localLoads->pluck('teaching_load_id')->all();
-                Log::info('Synced ' . count($synced) . ' new teaching loads to cloud');
+                $synced = $loadsToSync->pluck('teaching_load_id')->all();
+                $newCount = count($loadsToSync->filter(function($l) use ($existingCloudRecords) { return !isset($existingCloudRecords[$l->teaching_load_id]); }));
+                $updatedCount = count($loadsToSync) - $newCount;
+                Log::info('Synced ' . count($synced) . ' teaching loads to cloud (' . $newCount . ' new, ' . $updatedCount . ' updated)');
             } elseif ($resp['success'] && $upserted == 0) {
                 Log::warning("Teaching loads sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
             }
@@ -276,20 +398,53 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing attendance record IDs from cloud (last 30 days)
-            $existingCloudIds = $this->getExistingCloudIds('attendance-records', 'record_id', ['days' => 30]);
+            // First, sync deletions to cloud (notify cloud about locally deleted records)
+            $deletedIds = $this->getDeletedIds('tbl_attendance_record');
+            $this->syncDeletionsToCloud('attendance-records', $deletedIds);
             
-            // Get all local attendance records and filter out existing ones
-            $localRecords = AttendanceRecord::all()->filter(function ($record) use ($existingCloudIds) {
-                return !in_array($record->record_id, $existingCloudIds);
-            });
+            // Get existing cloud records with their data for comparison (last 30 days for performance)
+            $existingCloudRecords = $this->getExistingCloudRecords('attendance-records', 'record_id', ['days' => 30]);
+            
+            // Get all local attendance records
+            $localRecords = AttendanceRecord::all();
             
             if ($localRecords->isEmpty()) {
-                Log::info('No new attendance records to sync to cloud');
+                Log::info('No attendance records to sync to cloud');
                 return $synced;
             }
             
-            $payload = $localRecords->map(function ($record) {
+            // Filter: only sync new records or records that have changed
+            $recordsToSync = $localRecords->filter(function ($record) use ($existingCloudRecords) {
+                $recordId = $record->record_id;
+                
+                // If not in cloud, needs to be synced (new record)
+                if (!isset($existingCloudRecords[$recordId])) {
+                    return true;
+                }
+                
+                // If in cloud, compare data to see if it changed (ignore snapshot paths)
+                $localData = [
+                    'record_id' => $record->record_id,
+                    'record_date' => $this->formatDateTime($record->record_date),
+                    'faculty_id' => $record->faculty_id,
+                    'teaching_load_id' => $record->teaching_load_id,
+                    'record_time_in' => $record->record_time_in,
+                    'record_time_out' => $record->record_time_out,
+                    'time_duration_seconds' => $record->time_duration_seconds,
+                    'record_status' => $record->record_status,
+                    'record_remarks' => $record->record_remarks,
+                    'camera_id' => $record->camera_id,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $existingCloudRecords[$recordId]);
+            });
+            
+            if ($recordsToSync->isEmpty()) {
+                Log::info('No new or changed attendance records to sync to cloud');
+                return $synced;
+            }
+            
+            $payload = $recordsToSync->map(function ($record) {
                 // Sync snapshot images to cloud and update paths
                 $cloudTimeInSnapshot = $this->syncAttendanceSnapshot($record->time_in_snapshot);
                 $cloudTimeOutSnapshot = $this->syncAttendanceSnapshot($record->time_out_snapshot);
@@ -311,8 +466,10 @@ class CloudSyncService
             })->values()->all();
             $resp = $this->pushBulkToCloud('attendance-records', $payload);
             if ($resp['success']) {
-                $synced = $localRecords->pluck('record_id')->all();
-                Log::info('Synced ' . count($synced) . ' new attendance records to cloud');
+                $synced = $recordsToSync->pluck('record_id')->all();
+                $newCount = count($recordsToSync->filter(function($r) use ($existingCloudRecords) { return !isset($existingCloudRecords[$r->record_id]); }));
+                $updatedCount = count($recordsToSync) - $newCount;
+                Log::info('Synced ' . count($synced) . ' attendance records to cloud (' . $newCount . ' new, ' . $updatedCount . ' updated)');
             }
         } catch (\Exception $e) {
             Log::error("Error syncing attendance records: " . $e->getMessage());
@@ -330,20 +487,59 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing leave IDs from cloud (last 90 days)
-            $existingCloudIds = $this->getExistingCloudIds('leaves', 'lp_id', ['days' => 90]);
+            // First, sync deletions to cloud (notify cloud about locally deleted records)
+            $deletedIds = $this->getDeletedIds('tbl_leave_pass');
+            // Filter for leaves only (lp_type = 'Leave') using metadata stored in cache
+            $leaveDeletedIds = [];
+            foreach ($deletedIds as $id) {
+                $cacheKey = "sync_deletion:tbl_leave_pass:{$id}";
+                $deletionData = Cache::get($cacheKey);
+                $lpType = $deletionData['metadata']['lp_type'] ?? null;
+                if ($lpType === 'Leave') {
+                    $leaveDeletedIds[] = $id;
+                }
+            }
+            $this->syncDeletionsToCloud('leaves', $leaveDeletedIds);
             
-            // Get all local leaves and filter out existing ones
-            $localLeaves = Leave::all()->filter(function ($leave) use ($existingCloudIds) {
-                return !in_array($leave->lp_id, $existingCloudIds);
-            });
+            // Get existing cloud records with their data for comparison (last 90 days for performance)
+            $existingCloudRecords = $this->getExistingCloudRecords('leaves', 'lp_id', ['days' => 90]);
+            
+            // Get all local leaves
+            $localLeaves = Leave::all();
             
             if ($localLeaves->isEmpty()) {
-                Log::info('No new leaves to sync to cloud');
+                Log::info('No leaves to sync to cloud');
                 return $synced;
             }
             
-            $payload = $localLeaves->map(function ($leave) {
+            // Filter: only sync new records or records that have changed
+            $leavesToSync = $localLeaves->filter(function ($leave) use ($existingCloudRecords) {
+                $lpId = $leave->lp_id;
+                
+                // If not in cloud, needs to be synced (new record)
+                if (!isset($existingCloudRecords[$lpId])) {
+                    return true;
+                }
+                
+                // If in cloud, compare data to see if it changed (ignore image path differences)
+                $localData = [
+                    'lp_id' => $leave->lp_id,
+                    'faculty_id' => $leave->faculty_id,
+                    'lp_type' => $leave->lp_type,
+                    'lp_purpose' => $leave->lp_purpose,
+                    'leave_start_date' => $leave->leave_start_date,
+                    'leave_end_date' => $leave->leave_end_date,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $existingCloudRecords[$lpId]);
+            });
+            
+            if ($leavesToSync->isEmpty()) {
+                Log::info('No new or changed leaves to sync to cloud');
+                return $synced;
+            }
+            
+            $payload = $leavesToSync->map(function ($leave) {
                 // Sync leave image to cloud and update path
                 $cloudImagePath = $this->syncLeaveImage($leave->lp_image);
                 
@@ -361,8 +557,10 @@ class CloudSyncService
             })->values()->all();
             $resp = $this->pushBulkToCloud('leaves', $payload);
             if ($resp['success']) {
-                $synced = $localLeaves->pluck('lp_id')->all();
-                Log::info('Synced ' . count($synced) . ' new leaves to cloud');
+                $synced = $leavesToSync->pluck('lp_id')->all();
+                $newCount = count($leavesToSync->filter(function($l) use ($existingCloudRecords) { return !isset($existingCloudRecords[$l->lp_id]); }));
+                $updatedCount = count($leavesToSync) - $newCount;
+                Log::info('Synced ' . count($synced) . ' leaves to cloud (' . $newCount . ' new, ' . $updatedCount . ' updated)');
             }
         } catch (\Exception $e) {
             Log::error("Error syncing leaves: " . $e->getMessage());
@@ -380,20 +578,61 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing pass IDs from cloud (last 90 days)
-            $existingCloudIds = $this->getExistingCloudIds('passes', 'lp_id', ['days' => 90]);
+            // First, sync deletions to cloud (notify cloud about locally deleted records)
+            $deletedIds = $this->getDeletedIds('tbl_leave_pass');
+            // Filter for passes only (lp_type = 'Pass') using metadata stored in cache
+            $passDeletedIds = [];
+            foreach ($deletedIds as $id) {
+                $cacheKey = "sync_deletion:tbl_leave_pass:{$id}";
+                $deletionData = Cache::get($cacheKey);
+                $lpType = $deletionData['metadata']['lp_type'] ?? null;
+                if ($lpType === 'Pass') {
+                    $passDeletedIds[] = $id;
+                }
+            }
+            $this->syncDeletionsToCloud('passes', $passDeletedIds);
             
-            // Get all local passes and filter out existing ones
-            $localPasses = Pass::all()->filter(function ($pass) use ($existingCloudIds) {
-                return !in_array($pass->lp_id, $existingCloudIds);
-            });
+            // Get existing cloud records with their data for comparison (last 90 days for performance)
+            $existingCloudRecords = $this->getExistingCloudRecords('passes', 'lp_id', ['days' => 90]);
+            
+            // Get all local passes
+            $localPasses = Pass::all();
             
             if ($localPasses->isEmpty()) {
-                Log::info('No new passes to sync to cloud');
+                Log::info('No passes to sync to cloud');
                 return $synced;
             }
             
-            $payload = $localPasses->map(function ($pass) {
+            // Filter: only sync new records or records that have changed
+            $passesToSync = $localPasses->filter(function ($pass) use ($existingCloudRecords) {
+                $lpId = $pass->lp_id;
+                
+                // If not in cloud, needs to be synced (new record)
+                if (!isset($existingCloudRecords[$lpId])) {
+                    return true;
+                }
+                
+                // If in cloud, compare data to see if it changed (ignore image path differences)
+                $localData = [
+                    'lp_id' => $pass->lp_id,
+                    'faculty_id' => $pass->faculty_id,
+                    'lp_type' => $pass->lp_type,
+                    'lp_purpose' => $pass->lp_purpose,
+                    'pass_slip_itinerary' => $pass->pass_slip_itinerary,
+                    'pass_slip_date' => $pass->pass_slip_date,
+                    'pass_slip_departure_time' => $pass->pass_slip_departure_time,
+                    'pass_slip_arrival_time' => $pass->pass_slip_arrival_time,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $existingCloudRecords[$lpId]);
+            });
+            
+            if ($passesToSync->isEmpty()) {
+                Log::info('No new or changed passes to sync to cloud');
+                return $synced;
+            }
+            
+            $payload = $passesToSync->map(function ($pass) {
                 // Sync pass image to cloud and update path
                 $cloudImagePath = $this->syncPassImage($pass->lp_image);
                 
@@ -413,8 +652,10 @@ class CloudSyncService
             })->values()->all();
             $resp = $this->pushBulkToCloud('passes', $payload);
             if ($resp['success']) {
-                $synced = $localPasses->pluck('lp_id')->all();
-                Log::info('Synced ' . count($synced) . ' new passes to cloud');
+                $synced = $passesToSync->pluck('lp_id')->all();
+                $newCount = count($passesToSync->filter(function($p) use ($existingCloudRecords) { return !isset($existingCloudRecords[$p->lp_id]); }));
+                $updatedCount = count($passesToSync) - $newCount;
+                Log::info('Synced ' . count($synced) . ' passes to cloud (' . $newCount . ' new, ' . $updatedCount . ' updated)');
             }
         } catch (\Exception $e) {
             Log::error("Error syncing passes: " . $e->getMessage());
@@ -431,10 +672,14 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // First, sync deletions to cloud (notify cloud about locally deleted records)
+            $deletedIds = $this->getDeletedIds('tbl_recognition_logs');
+            $this->syncDeletionsToCloud('recognition-logs', $deletedIds);
+            
             // Get existing recognition log IDs from cloud (limit by recent days to reduce payload)
             $existingCloudIds = $this->getExistingCloudIds('recognition-logs', 'log_id', ['days' => 7]);
             
-            // Get local logs and only include those NOT present on cloud
+            // Get local logs and only include those NOT present on cloud (append-only, no updates needed)
             $localLogs = RecognitionLog::all()->filter(function ($log) use ($existingCloudIds) {
                 return !in_array($log->log_id, $existingCloudIds);
             });
@@ -466,6 +711,7 @@ class CloudSyncService
             
             if ($resp['success'] && $upserted > 0) {
                 $synced = $localLogs->pluck('log_id')->all();
+                Log::info('Synced ' . count($synced) . ' new recognition logs to cloud');
             } elseif ($resp['success'] && $upserted == 0) {
                 Log::warning("Recognition logs sync returned success but 0 records were upserted (nothing new).");
             }
@@ -484,10 +730,14 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // First, sync deletions to cloud (notify cloud about locally deleted records)
+            $deletedIds = $this->getDeletedIds('tbl_stream_recordings');
+            $this->syncDeletionsToCloud('stream-recordings', $deletedIds);
+            
             // Get existing stream recording IDs from cloud (last 7 days)
             $existingCloudIds = $this->getExistingCloudIds('stream-recordings', 'recording_id', ['days' => 7]);
             
-            // Get all local stream recordings and filter out existing ones
+            // Get all local stream recordings and filter out existing ones (append-only, no updates needed)
             $localRecordings = StreamRecording::all()->filter(function ($recording) use ($existingCloudIds) {
                 return !in_array($recording->recording_id, $existingCloudIds);
             });
@@ -654,20 +904,47 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing subject IDs from cloud
-            $existingCloudIds = $this->getExistingCloudIds('subjects', 'subject_id');
+            // First, sync deletions to cloud (notify cloud about locally deleted records)
+            $deletedIds = $this->getDeletedIds('tbl_subject');
+            $this->syncDeletionsToCloud('subjects', $deletedIds);
             
-            // Get all local subjects and filter out existing ones
-            $localSubjects = Subject::all()->filter(function ($subject) use ($existingCloudIds) {
-                return !in_array($subject->subject_id, $existingCloudIds);
-            });
+            // Get existing cloud records with their data for comparison
+            $existingCloudRecords = $this->getExistingCloudRecords('subjects', 'subject_id');
+            
+            // Get all local subjects
+            $localSubjects = Subject::all();
             
             if ($localSubjects->isEmpty()) {
-                Log::info('No new subjects to sync to cloud');
+                Log::info('No subjects to sync to cloud');
                 return $synced;
             }
             
-            $payload = $localSubjects->map(function ($s) {
+            // Filter: only sync new records or records that have changed
+            $subjectsToSync = $localSubjects->filter(function ($subject) use ($existingCloudRecords) {
+                $subjectId = $subject->subject_id;
+                
+                // If not in cloud, needs to be synced (new record)
+                if (!isset($existingCloudRecords[$subjectId])) {
+                    return true;
+                }
+                
+                // If in cloud, compare data to see if it changed
+                $localData = [
+                    'subject_id' => $subject->subject_id,
+                    'subject_code' => $subject->subject_code,
+                    'subject_description' => $subject->subject_description,
+                    'department' => $subject->department,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $existingCloudRecords[$subjectId]);
+            });
+            
+            if ($subjectsToSync->isEmpty()) {
+                Log::info('No new or changed subjects to sync to cloud');
+                return $synced;
+            }
+            
+            $payload = $subjectsToSync->map(function ($s) {
                 return [
                     'subject_id' => $s->subject_id,
                     'subject_code' => $s->subject_code,
@@ -679,12 +956,13 @@ class CloudSyncService
             })->values()->all();
             $resp = $this->pushBulkToCloud('subjects', $payload);
             $upserted = $resp['data']['upserted'] ?? 0;
-            Log::info('Bulk subjects result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($localSubjects)]);
+            Log::info('Bulk subjects result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($subjectsToSync)]);
             
             if ($resp['success'] && $upserted > 0) {
-                // Only return synced IDs if records were actually upserted
-                $synced = $localSubjects->pluck('subject_id')->all();
-                Log::info('Synced ' . count($synced) . ' new subjects to cloud');
+                $synced = $subjectsToSync->pluck('subject_id')->all();
+                $newCount = count($subjectsToSync->filter(function($s) use ($existingCloudRecords) { return !isset($existingCloudRecords[$s->subject_id]); }));
+                $updatedCount = count($subjectsToSync) - $newCount;
+                Log::info('Synced ' . count($synced) . ' subjects to cloud (' . $newCount . ' new, ' . $updatedCount . ' updated)');
             } elseif ($resp['success'] && $upserted == 0) {
                 Log::warning("Subjects sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
             }
@@ -703,20 +981,50 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing user IDs from cloud
-            $existingCloudIds = $this->getExistingCloudIds('users', 'user_id');
+            // First, sync deletions to cloud (notify cloud about locally deleted records)
+            $deletedIds = $this->getDeletedIds('tbl_user');
+            $this->syncDeletionsToCloud('users', $deletedIds);
             
-            // Get all local users and filter out existing ones
-            $localUsers = User::all()->filter(function ($user) use ($existingCloudIds) {
-                return !in_array($user->user_id, $existingCloudIds);
-            });
+            // Get existing cloud records with their data for comparison
+            $existingCloudRecords = $this->getExistingCloudRecords('users', 'user_id');
+            
+            // Get all local users
+            $localUsers = User::all();
             
             if ($localUsers->isEmpty()) {
-                Log::info('No new users to sync to cloud');
+                Log::info('No users to sync to cloud');
                 return $synced;
             }
             
-            $payload = $localUsers->map(function ($u) {
+            // Filter: only sync new records or records that have changed
+            $usersToSync = $localUsers->filter(function ($user) use ($existingCloudRecords) {
+                $userId = $user->user_id;
+                
+                // If not in cloud, needs to be synced (new record)
+                if (!isset($existingCloudRecords[$userId])) {
+                    return true;
+                }
+                
+                // If in cloud, compare data to see if it changed
+                $localData = [
+                    'user_id' => $user->user_id,
+                    'user_role' => $user->user_role,
+                    'user_department' => $user->user_department,
+                    'user_fname' => $user->user_fname,
+                    'user_lname' => $user->user_lname,
+                    'username' => $user->username,
+                    'user_password' => $user->user_password,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $existingCloudRecords[$userId]);
+            });
+            
+            if ($usersToSync->isEmpty()) {
+                Log::info('No new or changed users to sync to cloud');
+                return $synced;
+            }
+            
+            $payload = $usersToSync->map(function ($u) {
                 return [
                     'user_id' => $u->user_id,
                     'user_role' => $u->user_role,
@@ -731,12 +1039,13 @@ class CloudSyncService
             })->values()->all();
             $resp = $this->pushBulkToCloud('users', $payload);
             $upserted = $resp['data']['upserted'] ?? 0;
-            Log::info('Bulk users result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($localUsers)]);
+            Log::info('Bulk users result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($usersToSync)]);
             
             if ($resp['success'] && $upserted > 0) {
-                // Only return synced IDs if records were actually upserted
-                $synced = $localUsers->pluck('user_id')->all();
-                Log::info('Synced ' . count($synced) . ' new users to cloud');
+                $synced = $usersToSync->pluck('user_id')->all();
+                $newCount = count($usersToSync->filter(function($u) use ($existingCloudRecords) { return !isset($existingCloudRecords[$u->user_id]); }));
+                $updatedCount = count($usersToSync) - $newCount;
+                Log::info('Synced ' . count($synced) . ' users to cloud (' . $newCount . ' new, ' . $updatedCount . ' updated)');
             } elseif ($resp['success'] && $upserted == 0) {
                 Log::warning("Users sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
             }
@@ -755,10 +1064,14 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // First, sync deletions to cloud (notify cloud about locally deleted records)
+            $deletedIds = $this->getDeletedIds('tbl_activity_logs');
+            $this->syncDeletionsToCloud('activity-logs', $deletedIds);
+            
             // Get existing activity log IDs from cloud (recent window)
             $existingCloudIds = $this->getExistingCloudIds('activity-logs', 'logs_id', ['days' => 30]);
             
-            // Only send logs that don't exist on cloud
+            // Only send logs that don't exist on cloud (append-only, no updates needed)
             $localLogs = ActivityLog::all()->filter(function ($log) use ($existingCloudIds) {
                 return !in_array($log->logs_id, $existingCloudIds);
             });
@@ -785,6 +1098,9 @@ class CloudSyncService
             
             if ($resp['success'] && $upserted > 0) {
                 $synced = $localLogs->pluck('logs_id')->all();
+                Log::info('Synced ' . count($synced) . ' new activity logs to cloud');
+            } elseif ($resp['success'] && $upserted == 0) {
+                Log::warning("Activity logs sync returned success but 0 records were upserted (nothing new).");
             }
         } catch (\Exception $e) {
             Log::error("Error syncing activity logs: " . $e->getMessage());
@@ -801,10 +1117,14 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // First, sync deletions to cloud (notify cloud about locally deleted records)
+            $deletedIds = $this->getDeletedIds('tbl_teaching_load_archive');
+            $this->syncDeletionsToCloud('teaching-load-archives', $deletedIds);
+            
             // Get existing teaching load archive IDs from cloud
             $existingCloudIds = $this->getExistingCloudIds('teaching-load-archives', 'archive_id');
             
-            // Get all local teaching load archives and filter out existing ones
+            // Get all local teaching load archives and filter out existing ones (append-only, no updates needed)
             $localArchives = TeachingLoadArchive::all()->filter(function ($archive) use ($existingCloudIds) {
                 return !in_array($archive->archive_id, $existingCloudIds);
             });
@@ -838,7 +1158,6 @@ class CloudSyncService
             Log::info('Bulk teaching-load-archives result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($localArchives)]);
             
             if ($resp['success'] && $upserted > 0) {
-                // Only return synced IDs if records were actually upserted
                 $synced = $localArchives->pluck('archive_id')->all();
                 Log::info('Synced ' . count($synced) . ' new teaching load archives to cloud');
             } elseif ($resp['success'] && $upserted == 0) {
@@ -859,10 +1178,14 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // First, sync deletions to cloud (notify cloud about locally deleted records)
+            $deletedIds = $this->getDeletedIds('tbl_attendance_record_archive');
+            $this->syncDeletionsToCloud('attendance-record-archives', $deletedIds);
+            
             // Get existing attendance record archive IDs from cloud
             $existingCloudIds = $this->getExistingCloudIds('attendance-record-archives', 'archive_id');
             
-            // Get all local attendance record archives and filter out existing ones
+            // Get all local attendance record archives and filter out existing ones (append-only, no updates needed)
             $localArchives = AttendanceRecordArchive::all()->filter(function ($archive) use ($existingCloudIds) {
                 return !in_array($archive->archive_id, $existingCloudIds);
             });
@@ -899,7 +1222,6 @@ class CloudSyncService
             Log::info('Bulk attendance-record-archives result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($localArchives)]);
             
             if ($resp['success'] && $upserted > 0) {
-                // Only return synced IDs if records were actually upserted
                 $synced = $localArchives->pluck('archive_id')->all();
                 Log::info('Synced ' . count($synced) . ' new attendance record archives to cloud');
             } elseif ($resp['success'] && $upserted == 0) {
@@ -1464,6 +1786,301 @@ class CloudSyncService
     }
     
     /**
+     * Get existing records from cloud with their data (for compare-and-update)
+     * @param string $endpoint API endpoint
+     * @param string $idKey The key name for the ID field (e.g., 'user_id', 'room_no')
+     * @param array $params Additional query parameters
+     * @return array Array keyed by ID with record data
+     */
+    protected function getExistingCloudRecords(string $endpoint, string $idKey, array $params = [])
+    {
+        try {
+            $cloudData = $this->fetchBulkFromCloud($endpoint, $params);
+            $existingRecords = [];
+            
+            foreach ($cloudData as $record) {
+                if (isset($record[$idKey])) {
+                    $existingRecords[$record[$idKey]] = $record;
+                }
+            }
+            
+            return $existingRecords;
+        } catch (\Exception $e) {
+            Log::error("Error getting existing cloud records for {$endpoint}: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Compare two records to determine if they're different
+     * @param array $localRecord Local record data
+     * @param array $cloudRecord Cloud record data
+     * @param array $fieldsToCompare Fields to compare (if empty, compares all fields except timestamps)
+     * @return bool True if records are different, false if same
+     */
+    protected function recordsAreDifferent(array $localRecord, array $cloudRecord, array $fieldsToCompare = [])
+    {
+        // Fields to ignore in comparison (timestamps, file paths that might differ)
+        $ignoreFields = ['created_at', 'updated_at', 'time_in_snapshot', 'time_out_snapshot', 'lp_image', 'om_attachment', 'faculty_images', 'filepath'];
+        
+        // If no specific fields provided, compare all except ignored ones
+        if (empty($fieldsToCompare)) {
+            $allFields = array_unique(array_merge(array_keys($localRecord), array_keys($cloudRecord)));
+            $fieldsToCompare = array_diff($allFields, $ignoreFields);
+        }
+        
+        foreach ($fieldsToCompare as $field) {
+            $localValue = $localRecord[$field] ?? null;
+            $cloudValue = $cloudRecord[$field] ?? null;
+            
+            // Normalize values for comparison
+            $localValue = $this->normalizeValueForComparison($localValue);
+            $cloudValue = $this->normalizeValueForComparison($cloudValue);
+            
+            if ($localValue !== $cloudValue) {
+                return true; // Records are different
+            }
+        }
+        
+        return false; // Records are the same
+    }
+    
+    /**
+     * Normalize value for comparison (handles dates, nulls, etc.)
+     */
+    protected function normalizeValueForComparison($value)
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        
+        // Normalize dates
+        if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}/', $value)) {
+            try {
+                return \Carbon\Carbon::parse($value)->format('Y-m-d');
+            } catch (\Exception $e) {
+                return $value;
+            }
+        }
+        
+        return $value;
+    }
+    
+    /**
+     * Track a deleted record ID (to prevent it from being restored during sync)
+     * This should be called when a record is deleted locally
+     * @param string $tableName Table name (e.g., 'tbl_user', 'tbl_room')
+     * @param mixed $recordId The ID of the deleted record
+     * @param int $ttlDays How many days to remember this deletion (default: 90 days)
+     */
+    public function trackDeletion(string $tableName, $recordId, int $ttlDays = 90, array $metadata = [])
+    {
+        try {
+            $cacheKey = "sync_deletion:{$tableName}:{$recordId}";
+            $listKey = "sync_deletion_list:{$tableName}";
+            $ttl = now()->addDays($ttlDays);
+            
+            // Store deletion with expiration and metadata
+            Cache::put($cacheKey, [
+                'table' => $tableName,
+                'id' => $recordId,
+                'deleted_at' => now()->toDateTimeString(),
+                'expires_at' => $ttl->toDateTimeString(),
+                'metadata' => $metadata, // Store additional data (e.g., lp_type for leaves/passes)
+            ], $ttl);
+            
+            // Also add to list of deleted IDs for this table (for syncing to cloud)
+            $deletedIds = Cache::get($listKey, []);
+            if (!in_array($recordId, $deletedIds)) {
+                $deletedIds[] = $recordId;
+                Cache::put($listKey, $deletedIds, $ttl);
+            }
+            
+            Log::info("Tracked deletion: {$tableName} #{$recordId} (expires in {$ttlDays} days)");
+        } catch (\Exception $e) {
+            Log::error("Error tracking deletion for {$tableName} #{$recordId}: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Check if a record was deleted locally (to prevent restoring from cloud)
+     * @param string $tableName Table name (e.g., 'users', 'rooms')
+     * @param mixed $recordId The ID to check
+     * @return bool True if the record was deleted locally
+     */
+    protected function isDeletedLocally(string $tableName, $recordId): bool
+    {
+        try {
+            $cacheKey = "sync_deletion:{$tableName}:{$recordId}";
+            return Cache::has($cacheKey);
+        } catch (\Exception $e) {
+            Log::error("Error checking deletion status for {$tableName} #{$recordId}: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Get all deleted IDs for a table (for syncing deletions to cloud)
+     * @param string $tableName Table name
+     * @return array Array of deleted IDs
+     */
+    protected function getDeletedIds(string $tableName): array
+    {
+        try {
+            $listKey = "sync_deletion_list:{$tableName}";
+            $deletedIds = Cache::get($listKey, []);
+            
+            // Filter out IDs that are no longer in cache (expired)
+            $validDeletedIds = [];
+            foreach ($deletedIds as $id) {
+                $cacheKey = "sync_deletion:{$tableName}:{$id}";
+                if (Cache::has($cacheKey)) {
+                    $validDeletedIds[] = $id;
+                }
+            }
+            
+            // Update the list if some IDs expired
+            if (count($validDeletedIds) !== count($deletedIds)) {
+                Cache::put($listKey, $validDeletedIds, now()->addDays(90));
+            }
+            
+            return $validDeletedIds;
+        } catch (\Exception $e) {
+            Log::error("Error getting deleted IDs for {$tableName}: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Sync deletions to cloud (notify cloud about locally deleted records)
+     * @param string $endpoint API endpoint (e.g., 'users', 'rooms')
+     * @param array $deletedIds Array of deleted record IDs
+     */
+    protected function syncDeletionsToCloud(string $endpoint, array $deletedIds)
+    {
+        if (empty($deletedIds)) {
+            return;
+        }
+        
+        try {
+            $url = "{$this->cloudApiUrl}/sync/{$endpoint}/deletions";
+            
+            $response = Http::withHeaders([
+                'X-API-Key' => $this->cloudApiKey,
+                'Content-Type' => 'application/json',
+            ])->post($url, [
+                'deleted_ids' => $deletedIds,
+                'deleted_at' => now()->toDateTimeString(),
+            ]);
+            
+            if ($response->successful()) {
+                Log::info("Synced " . count($deletedIds) . " deletions to cloud for {$endpoint}");
+            } else {
+                Log::warning("Failed to sync deletions to cloud for {$endpoint}: " . $response->body());
+            }
+        } catch (\Exception $e) {
+            Log::error("Error syncing deletions to cloud for {$endpoint}: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Get deleted IDs from cloud (to delete locally)
+     * @param string $endpoint API endpoint
+     * @return array Array of deleted record IDs
+     */
+    protected function getDeletedIdsFromCloud(string $endpoint): array
+    {
+        try {
+            $url = "{$this->cloudApiUrl}/sync/{$endpoint}/deletions";
+            
+            $response = Http::withHeaders([
+                'X-API-Key' => $this->cloudApiKey,
+            ])->get($url);
+            
+            if ($response->successful()) {
+                $data = $response->json();
+                return $data['deleted_ids'] ?? [];
+            }
+            
+            return [];
+        } catch (\Exception $e) {
+            Log::error("Error getting deleted IDs from cloud for {$endpoint}: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Map table name to endpoint name for deletion tracking
+     * @param string $tableName Database table name
+     * @return string|null Endpoint name or null if not mappable
+     */
+    protected function getTableEndpoint(string $tableName): ?string
+    {
+        $mapping = [
+            'tbl_user' => 'users',
+            'tbl_subject' => 'subjects',
+            'tbl_room' => 'rooms',
+            'tbl_camera' => 'cameras',
+            'tbl_faculty' => 'faculties',
+            'tbl_teaching_load' => 'teaching-loads',
+            'tbl_attendance_record' => 'attendance-records',
+            'tbl_leave_pass' => 'leaves', // or 'passes' depending on lp_type
+            'tbl_official_matters' => 'official-matters',
+            'tbl_recognition_logs' => 'recognition-logs',
+            'tbl_stream_recordings' => 'stream-recordings',
+            'tbl_activity_logs' => 'activity-logs',
+            'tbl_teaching_load_archive' => 'teaching-load-archives',
+            'tbl_attendance_record_archive' => 'attendance-record-archives',
+        ];
+        
+        return $mapping[$tableName] ?? null;
+    }
+    
+    /**
+     * Process deletions from cloud (delete records locally that were deleted in cloud)
+     * @param string $endpoint API endpoint
+     * @param string $tableName Local table name
+     * @param string $idKey Primary key field name
+     */
+    protected function processDeletionsFromCloud(string $endpoint, string $tableName, string $idKey)
+    {
+        try {
+            $deletedIds = $this->getDeletedIdsFromCloud($endpoint);
+            
+            if (empty($deletedIds)) {
+                return;
+            }
+            
+            $deletedCount = 0;
+            foreach ($deletedIds as $deletedId) {
+                try {
+                    // Check if record exists locally
+                    $exists = DB::table($tableName)->where($idKey, $deletedId)->exists();
+                    
+                    if ($exists) {
+                        // Delete the record locally
+                        DB::table($tableName)->where($idKey, $deletedId)->delete();
+                        
+                        // Track the deletion locally (so it won't be restored)
+                        $this->trackDeletion($tableName, $deletedId);
+                        
+                        $deletedCount++;
+                        Log::info("Deleted {$tableName} #{$deletedId} (synced from cloud deletion)");
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Error deleting {$tableName} #{$deletedId} from cloud deletion: " . $e->getMessage());
+                }
+            }
+            
+            if ($deletedCount > 0) {
+                Log::info("Processed {$deletedCount} deletions from cloud for {$endpoint}");
+            }
+        } catch (\Exception $e) {
+            Log::error("Error processing deletions from cloud for {$endpoint}: " . $e->getMessage());
+        }
+    }
+    
+    /**
      * Get existing IDs from local database (for filtering cloud-to-local sync)
      * @param string $table Table name
      * @param string $idKey The key name for the ID field (e.g., 'user_id', 'room_no')
@@ -1481,6 +2098,32 @@ class CloudSyncService
     }
     
     /**
+     * Get existing records from local database with their data (for compare-and-update)
+     * @param string $table Table name
+     * @param string $idKey The key name for the ID field (e.g., 'user_id', 'room_no')
+     * @return array Array keyed by ID with record data
+     */
+    protected function getExistingLocalRecords(string $table, string $idKey)
+    {
+        try {
+            $records = DB::table($table)->get();
+            $existingRecords = [];
+            
+            foreach ($records as $record) {
+                $id = $record->$idKey ?? null;
+                if ($id !== null) {
+                    $existingRecords[$id] = (array)$record;
+                }
+            }
+            
+            return $existingRecords;
+        } catch (\Exception $e) {
+            Log::error("Error getting existing local records for {$table}: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
      * Sync users from cloud to local
      */
     protected function syncUsersFromCloud()
@@ -1488,9 +2131,13 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing user IDs from local database
-            $existingLocalIds = $this->getExistingLocalIds('tbl_user', 'user_id');
+            // First, process deletions from cloud (delete records locally that were deleted in cloud)
+            $this->processDeletionsFromCloud('users', 'tbl_user', 'user_id');
             
+            // Get existing local records with their data for comparison
+            $existingLocalRecords = $this->getExistingLocalRecords('tbl_user', 'user_id');
+            
+            // Get all users from cloud
             $cloudUsers = $this->fetchBulkFromCloud('users');
             
             if (empty($cloudUsers)) {
@@ -1498,17 +2145,43 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter out users that already exist locally
-            $newUsers = array_filter($cloudUsers, function ($cloudUser) use ($existingLocalIds) {
-                return !in_array($cloudUser['user_id'] ?? null, $existingLocalIds);
+            // Filter: only sync new records or records that have changed
+            $usersToSync = array_filter($cloudUsers, function ($cloudUser) use ($existingLocalRecords) {
+                $userId = $cloudUser['user_id'] ?? null;
+                if (!$userId) return false;
+                
+                // Skip if this record was deleted locally (prevent restoring deleted records)
+                if ($this->isDeletedLocally('tbl_user', $userId)) {
+                    Log::debug("Skipping user {$userId} - was deleted locally");
+                    return false;
+                }
+                
+                // If not in local, needs to be synced (new record)
+                if (!isset($existingLocalRecords[$userId])) {
+                    return true;
+                }
+                
+                // If in local, compare data to see if it changed
+                $localData = [
+                    'user_id' => $existingLocalRecords[$userId]['user_id'],
+                    'user_role' => $existingLocalRecords[$userId]['user_role'] ?? null,
+                    'user_department' => $existingLocalRecords[$userId]['user_department'] ?? null,
+                    'user_fname' => $existingLocalRecords[$userId]['user_fname'] ?? null,
+                    'user_lname' => $existingLocalRecords[$userId]['user_lname'] ?? null,
+                    'username' => $existingLocalRecords[$userId]['username'] ?? null,
+                    'user_password' => $existingLocalRecords[$userId]['user_password'] ?? null,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $cloudUser);
             });
             
-            if (empty($newUsers)) {
-                Log::info('No new users to sync from cloud to local');
+            if (empty($usersToSync)) {
+                Log::info('No new or changed users to sync from cloud to local');
                 return $synced;
             }
             
-            foreach ($newUsers as $cloudUser) {
+            // Upsert only changed/new users
+            foreach ($usersToSync as $cloudUser) {
                 try {
                     DB::table('tbl_user')->upsert([
                         [
@@ -1530,7 +2203,9 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " new users from cloud to local");
+            $newCount = count(array_filter($usersToSync, function($u) use ($existingLocalRecords) { return !isset($existingLocalRecords[$u['user_id']]); }));
+            $updatedCount = count($usersToSync) - $newCount;
+            Log::info("Synced " . count($synced) . " users from cloud to local (" . $newCount . " new, " . $updatedCount . " updated)");
         } catch (\Exception $e) {
             Log::error("Error syncing users from cloud: " . $e->getMessage());
         }
@@ -1546,26 +2221,53 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing subject IDs from local database
-            $existingLocalIds = $this->getExistingLocalIds('tbl_subject', 'subject_id');
+            // First, process deletions from cloud (delete records locally that were deleted in cloud)
+            $this->processDeletionsFromCloud('subjects', 'tbl_subject', 'subject_id');
             
+            // Get existing local records with their data for comparison
+            $existingLocalRecords = $this->getExistingLocalRecords('tbl_subject', 'subject_id');
+            
+            // Get all subjects from cloud
             $cloudSubjects = $this->fetchBulkFromCloud('subjects');
             
             if (empty($cloudSubjects)) {
                 return $synced;
             }
             
-            // Filter out subjects that already exist locally
-            $newSubjects = array_filter($cloudSubjects, function ($cloudSubject) use ($existingLocalIds) {
-                return !in_array($cloudSubject['subject_id'] ?? null, $existingLocalIds);
+            // Filter: only sync new records or records that have changed
+            $subjectsToSync = array_filter($cloudSubjects, function ($cloudSubject) use ($existingLocalRecords) {
+                $subjectId = $cloudSubject['subject_id'] ?? null;
+                if (!$subjectId) return false;
+                
+                // Skip if this record was deleted locally (prevent restoring deleted records)
+                if ($this->isDeletedLocally('tbl_subject', $subjectId)) {
+                    Log::debug("Skipping subject {$subjectId} - was deleted locally");
+                    return false;
+                }
+                
+                // If not in local, needs to be synced (new record)
+                if (!isset($existingLocalRecords[$subjectId])) {
+                    return true;
+                }
+                
+                // If in local, compare data to see if it changed
+                $localData = [
+                    'subject_id' => $existingLocalRecords[$subjectId]['subject_id'],
+                    'subject_code' => $existingLocalRecords[$subjectId]['subject_code'] ?? null,
+                    'subject_description' => $existingLocalRecords[$subjectId]['subject_description'] ?? null,
+                    'department' => $existingLocalRecords[$subjectId]['department'] ?? null,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $cloudSubject);
             });
             
-            if (empty($newSubjects)) {
-                Log::info('No new subjects to sync from cloud to local');
+            if (empty($subjectsToSync)) {
+                Log::info('No new or changed subjects to sync from cloud to local');
                 return $synced;
             }
             
-            foreach ($newSubjects as $cloudSubject) {
+            // Upsert only changed/new subjects
+            foreach ($subjectsToSync as $cloudSubject) {
                 try {
                     DB::table('tbl_subject')->upsert([
                         [
@@ -1584,7 +2286,9 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " new subjects from cloud to local");
+            $newCount = count(array_filter($subjectsToSync, function($s) use ($existingLocalRecords) { return !isset($existingLocalRecords[$s['subject_id']]); }));
+            $updatedCount = count($subjectsToSync) - $newCount;
+            Log::info("Synced " . count($synced) . " subjects from cloud to local (" . $newCount . " new, " . $updatedCount . " updated)");
         } catch (\Exception $e) {
             Log::error("Error syncing subjects from cloud: " . $e->getMessage());
         }
@@ -1600,26 +2304,52 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing room IDs from local database
-            $existingLocalIds = $this->getExistingLocalIds('tbl_room', 'room_no');
+            // First, process deletions from cloud (delete records locally that were deleted in cloud)
+            $this->processDeletionsFromCloud('rooms', 'tbl_room', 'room_no');
             
+            // Get existing local records with their data for comparison
+            $existingLocalRecords = $this->getExistingLocalRecords('tbl_room', 'room_no');
+            
+            // Get all rooms from cloud
             $cloudRooms = $this->fetchBulkFromCloud('rooms');
             
             if (empty($cloudRooms)) {
                 return $synced;
             }
             
-            // Filter out rooms that already exist locally
-            $newRooms = array_filter($cloudRooms, function ($cloudRoom) use ($existingLocalIds) {
-                return !in_array($cloudRoom['room_no'] ?? null, $existingLocalIds);
+            // Filter: only sync new records or records that have changed
+            $roomsToSync = array_filter($cloudRooms, function ($cloudRoom) use ($existingLocalRecords) {
+                $roomNo = $cloudRoom['room_no'] ?? null;
+                if (!$roomNo) return false;
+                
+                // Skip if this record was deleted locally (prevent restoring deleted records)
+                if ($this->isDeletedLocally('tbl_room', $roomNo)) {
+                    Log::debug("Skipping room {$roomNo} - was deleted locally");
+                    return false;
+                }
+                
+                // If not in local, needs to be synced (new record)
+                if (!isset($existingLocalRecords[$roomNo])) {
+                    return true;
+                }
+                
+                // If in local, compare data to see if it changed
+                $localData = [
+                    'room_no' => $existingLocalRecords[$roomNo]['room_no'],
+                    'room_name' => $existingLocalRecords[$roomNo]['room_name'] ?? null,
+                    'room_building_no' => $existingLocalRecords[$roomNo]['room_building_no'] ?? null,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $cloudRoom);
             });
             
-            if (empty($newRooms)) {
-                Log::info('No new rooms to sync from cloud to local');
+            if (empty($roomsToSync)) {
+                Log::info('No new or changed rooms to sync from cloud to local');
                 return $synced;
             }
             
-            foreach ($newRooms as $cloudRoom) {
+            // Upsert only changed/new rooms
+            foreach ($roomsToSync as $cloudRoom) {
                 try {
                     DB::table('tbl_room')->upsert([
                         [
@@ -1635,7 +2365,9 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " new rooms from cloud to local");
+            $newCount = count(array_filter($roomsToSync, function($r) use ($existingLocalRecords) { return !isset($existingLocalRecords[$r['room_no']]); }));
+            $updatedCount = count($roomsToSync) - $newCount;
+            Log::info("Synced " . count($synced) . " rooms from cloud to local (" . $newCount . " new, " . $updatedCount . " updated)");
         } catch (\Exception $e) {
             Log::error("Error syncing rooms from cloud: " . $e->getMessage());
         }
@@ -1651,26 +2383,56 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing camera IDs from local database
-            $existingLocalIds = $this->getExistingLocalIds('tbl_camera', 'camera_id');
+            // First, process deletions from cloud (delete records locally that were deleted in cloud)
+            $this->processDeletionsFromCloud('cameras', 'tbl_camera', 'camera_id');
             
+            // Get existing local records with their data for comparison
+            $existingLocalRecords = $this->getExistingLocalRecords('tbl_camera', 'camera_id');
+            
+            // Get all cameras from cloud
             $cloudCameras = $this->fetchBulkFromCloud('cameras');
             
             if (empty($cloudCameras)) {
                 return $synced;
             }
             
-            // Filter out cameras that already exist locally
-            $newCameras = array_filter($cloudCameras, function ($cloudCamera) use ($existingLocalIds) {
-                return !in_array($cloudCamera['camera_id'] ?? null, $existingLocalIds);
+            // Filter: only sync new records or records that have changed
+            $camerasToSync = array_filter($cloudCameras, function ($cloudCamera) use ($existingLocalRecords) {
+                $cameraId = $cloudCamera['camera_id'] ?? null;
+                if (!$cameraId) return false;
+                
+                // Skip if this record was deleted locally (prevent restoring deleted records)
+                if ($this->isDeletedLocally('tbl_camera', $cameraId)) {
+                    Log::debug("Skipping camera {$cameraId} - was deleted locally");
+                    return false;
+                }
+                
+                // If not in local, needs to be synced (new record)
+                if (!isset($existingLocalRecords[$cameraId])) {
+                    return true;
+                }
+                
+                // If in local, compare data to see if it changed
+                $localData = [
+                    'camera_id' => $existingLocalRecords[$cameraId]['camera_id'],
+                    'camera_name' => $existingLocalRecords[$cameraId]['camera_name'] ?? null,
+                    'camera_ip_address' => $existingLocalRecords[$cameraId]['camera_ip_address'] ?? null,
+                    'camera_username' => $existingLocalRecords[$cameraId]['camera_username'] ?? null,
+                    'camera_password' => $existingLocalRecords[$cameraId]['camera_password'] ?? null,
+                    'camera_live_feed' => $existingLocalRecords[$cameraId]['camera_live_feed'] ?? null,
+                    'room_no' => $existingLocalRecords[$cameraId]['room_no'] ?? null,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $cloudCamera);
             });
             
-            if (empty($newCameras)) {
-                Log::info('No new cameras to sync from cloud to local');
+            if (empty($camerasToSync)) {
+                Log::info('No new or changed cameras to sync from cloud to local');
                 return $synced;
             }
             
-            foreach ($newCameras as $cloudCamera) {
+            // Upsert only changed/new cameras
+            foreach ($camerasToSync as $cloudCamera) {
                 try {
                     DB::table('tbl_camera')->upsert([
                         [
@@ -1690,7 +2452,9 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " new cameras from cloud to local");
+            $newCount = count(array_filter($camerasToSync, function($c) use ($existingLocalRecords) { return !isset($existingLocalRecords[$c['camera_id']]); }));
+            $updatedCount = count($camerasToSync) - $newCount;
+            Log::info("Synced " . count($synced) . " cameras from cloud to local (" . $newCount . " new, " . $updatedCount . " updated)");
         } catch (\Exception $e) {
             Log::error("Error syncing cameras from cloud: " . $e->getMessage());
         }
@@ -1706,26 +2470,54 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing faculty IDs from local database
-            $existingLocalIds = $this->getExistingLocalIds('tbl_faculty', 'faculty_id');
+            // First, process deletions from cloud (delete records locally that were deleted in cloud)
+            $this->processDeletionsFromCloud('faculties', 'tbl_faculty', 'faculty_id');
             
+            // Get existing local records with their data for comparison
+            $existingLocalRecords = $this->getExistingLocalRecords('tbl_faculty', 'faculty_id');
+            
+            // Get all faculties from cloud
             $cloudFaculties = $this->fetchBulkFromCloud('faculties');
             
             if (empty($cloudFaculties)) {
                 return $synced;
             }
             
-            // Filter out faculties that already exist locally
-            $newFaculties = array_filter($cloudFaculties, function ($cloudFaculty) use ($existingLocalIds) {
-                return !in_array($cloudFaculty['faculty_id'] ?? null, $existingLocalIds);
+            // Filter: only sync new records or records that have changed
+            $facultiesToSync = array_filter($cloudFaculties, function ($cloudFaculty) use ($existingLocalRecords) {
+                $facultyId = $cloudFaculty['faculty_id'] ?? null;
+                if (!$facultyId) return false;
+                
+                // Skip if this record was deleted locally (prevent restoring deleted records)
+                if ($this->isDeletedLocally('tbl_faculty', $facultyId)) {
+                    Log::debug("Skipping faculty {$facultyId} - was deleted locally");
+                    return false;
+                }
+                
+                // If not in local, needs to be synced (new record)
+                if (!isset($existingLocalRecords[$facultyId])) {
+                    return true;
+                }
+                
+                // If in local, compare data to see if it changed (ignore images path differences)
+                $localData = [
+                    'faculty_id' => $existingLocalRecords[$facultyId]['faculty_id'],
+                    'faculty_fname' => $existingLocalRecords[$facultyId]['faculty_fname'] ?? null,
+                    'faculty_lname' => $existingLocalRecords[$facultyId]['faculty_lname'] ?? null,
+                    'faculty_department' => $existingLocalRecords[$facultyId]['faculty_department'] ?? null,
+                    'faculty_face_embedding' => $existingLocalRecords[$facultyId]['faculty_face_embedding'] ?? null,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $cloudFaculty);
             });
             
-            if (empty($newFaculties)) {
-                Log::info('No new faculties to sync from cloud to local');
+            if (empty($facultiesToSync)) {
+                Log::info('No new or changed faculties to sync from cloud to local');
                 return $synced;
             }
             
-            foreach ($newFaculties as $cloudFaculty) {
+            // Upsert only changed/new faculties
+            foreach ($facultiesToSync as $cloudFaculty) {
                 try {
                     // Download faculty images from cloud
                     $localImages = $this->downloadFacultyImages($cloudFaculty['faculty_images'] ?? null);
@@ -1749,7 +2541,9 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " new faculties from cloud to local");
+            $newCount = count(array_filter($facultiesToSync, function($f) use ($existingLocalRecords) { return !isset($existingLocalRecords[$f['faculty_id']]); }));
+            $updatedCount = count($facultiesToSync) - $newCount;
+            Log::info("Synced " . count($synced) . " faculties from cloud to local (" . $newCount . " new, " . $updatedCount . " updated)");
         } catch (\Exception $e) {
             Log::error("Error syncing faculties from cloud: " . $e->getMessage());
         }
@@ -1765,26 +2559,58 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing teaching load IDs from local database
-            $existingLocalIds = $this->getExistingLocalIds('tbl_teaching_load', 'teaching_load_id');
+            // First, process deletions from cloud (delete records locally that were deleted in cloud)
+            $this->processDeletionsFromCloud('teaching-loads', 'tbl_teaching_load', 'teaching_load_id');
             
+            // Get existing local records with their data for comparison
+            $existingLocalRecords = $this->getExistingLocalRecords('tbl_teaching_load', 'teaching_load_id');
+            
+            // Get all teaching loads from cloud
             $cloudLoads = $this->fetchBulkFromCloud('teaching-loads');
             
             if (empty($cloudLoads)) {
                 return $synced;
             }
             
-            // Filter out teaching loads that already exist locally
-            $newLoads = array_filter($cloudLoads, function ($cloudLoad) use ($existingLocalIds) {
-                return !in_array($cloudLoad['teaching_load_id'] ?? null, $existingLocalIds);
+            // Filter: only sync new records or records that have changed
+            $loadsToSync = array_filter($cloudLoads, function ($cloudLoad) use ($existingLocalRecords) {
+                $loadId = $cloudLoad['teaching_load_id'] ?? null;
+                if (!$loadId) return false;
+                
+                // Skip if this record was deleted locally (prevent restoring deleted records)
+                if ($this->isDeletedLocally('tbl_teaching_load', $loadId)) {
+                    Log::debug("Skipping teaching load {$loadId} - was deleted locally");
+                    return false;
+                }
+                
+                // If not in local, needs to be synced (new record)
+                if (!isset($existingLocalRecords[$loadId])) {
+                    return true;
+                }
+                
+                // If in local, compare data to see if it changed
+                $localData = [
+                    'teaching_load_id' => $existingLocalRecords[$loadId]['teaching_load_id'],
+                    'faculty_id' => $existingLocalRecords[$loadId]['faculty_id'] ?? null,
+                    'teaching_load_course_code' => $existingLocalRecords[$loadId]['teaching_load_course_code'] ?? null,
+                    'teaching_load_subject' => $existingLocalRecords[$loadId]['teaching_load_subject'] ?? null,
+                    'teaching_load_day_of_week' => $existingLocalRecords[$loadId]['teaching_load_day_of_week'] ?? null,
+                    'teaching_load_class_section' => $existingLocalRecords[$loadId]['teaching_load_class_section'] ?? null,
+                    'teaching_load_time_in' => $existingLocalRecords[$loadId]['teaching_load_time_in'] ?? null,
+                    'teaching_load_time_out' => $existingLocalRecords[$loadId]['teaching_load_time_out'] ?? null,
+                    'room_no' => $existingLocalRecords[$loadId]['room_no'] ?? null,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $cloudLoad);
             });
             
-            if (empty($newLoads)) {
-                Log::info('No new teaching loads to sync from cloud to local');
+            if (empty($loadsToSync)) {
+                Log::info('No new or changed teaching loads to sync from cloud to local');
                 return $synced;
             }
             
-            foreach ($newLoads as $cloudLoad) {
+            // Upsert only changed/new teaching loads
+            foreach ($loadsToSync as $cloudLoad) {
                 try {
                     DB::table('tbl_teaching_load')->upsert([
                         [
@@ -1808,7 +2634,9 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " new teaching loads from cloud to local");
+            $newCount = count(array_filter($loadsToSync, function($l) use ($existingLocalRecords) { return !isset($existingLocalRecords[$l['teaching_load_id']]); }));
+            $updatedCount = count($loadsToSync) - $newCount;
+            Log::info("Synced " . count($synced) . " teaching loads from cloud to local (" . $newCount . " new, " . $updatedCount . " updated)");
         } catch (\Exception $e) {
             Log::error("Error syncing teaching loads from cloud: " . $e->getMessage());
         }
@@ -1824,26 +2652,70 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing attendance record IDs from local database
-            $existingLocalIds = $this->getExistingLocalIds('tbl_attendance_record', 'record_id');
+            // First, process deletions from cloud (delete records locally that were deleted in cloud)
+            $this->processDeletionsFromCloud('attendance-records', 'tbl_attendance_record', 'record_id');
             
+            // Get existing local records with their data for comparison (last 30 days for performance)
+            $existingLocalRecords = $this->getExistingLocalRecords('tbl_attendance_record', 'record_id');
+            // Filter to only last 30 days for comparison
+            $thirtyDaysAgo = now()->subDays(30);
+            $existingLocalRecords = array_filter($existingLocalRecords, function($record) use ($thirtyDaysAgo) {
+                $recordDate = $record['record_date'] ?? null;
+                if (!$recordDate) return false;
+                try {
+                    return \Carbon\Carbon::parse($recordDate)->gte($thirtyDaysAgo);
+                } catch (\Exception $e) {
+                    return false;
+                }
+            });
+            
+            // Get all attendance records from cloud
             $cloudRecords = $this->fetchBulkFromCloud('attendance-records', ['days' => 30]);
             
             if (empty($cloudRecords)) {
                 return $synced;
             }
             
-            // Filter out attendance records that already exist locally
-            $newRecords = array_filter($cloudRecords, function ($cloudRecord) use ($existingLocalIds) {
-                return !in_array($cloudRecord['record_id'] ?? null, $existingLocalIds);
+            // Filter: only sync new records or records that have changed
+            $recordsToSync = array_filter($cloudRecords, function ($cloudRecord) use ($existingLocalRecords) {
+                $recordId = $cloudRecord['record_id'] ?? null;
+                if (!$recordId) return false;
+                
+                // Skip if this record was deleted locally (prevent restoring deleted records)
+                if ($this->isDeletedLocally('tbl_attendance_record', $recordId)) {
+                    Log::debug("Skipping attendance record {$recordId} - was deleted locally");
+                    return false;
+                }
+                
+                // If not in local, needs to be synced (new record)
+                if (!isset($existingLocalRecords[$recordId])) {
+                    return true;
+                }
+                
+                // If in local, compare data to see if it changed (ignore snapshot paths)
+                $localData = [
+                    'record_id' => $existingLocalRecords[$recordId]['record_id'],
+                    'record_date' => $this->formatDateTime($existingLocalRecords[$recordId]['record_date'] ?? null),
+                    'faculty_id' => $existingLocalRecords[$recordId]['faculty_id'] ?? null,
+                    'teaching_load_id' => $existingLocalRecords[$recordId]['teaching_load_id'] ?? null,
+                    'record_time_in' => $existingLocalRecords[$recordId]['record_time_in'] ?? null,
+                    'record_time_out' => $existingLocalRecords[$recordId]['record_time_out'] ?? null,
+                    'time_duration_seconds' => $existingLocalRecords[$recordId]['time_duration_seconds'] ?? null,
+                    'record_status' => $existingLocalRecords[$recordId]['record_status'] ?? null,
+                    'record_remarks' => $existingLocalRecords[$recordId]['record_remarks'] ?? null,
+                    'camera_id' => $existingLocalRecords[$recordId]['camera_id'] ?? null,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $cloudRecord);
             });
             
-            if (empty($newRecords)) {
-                Log::info('No new attendance records to sync from cloud to local');
+            if (empty($recordsToSync)) {
+                Log::info('No new or changed attendance records to sync from cloud to local');
                 return $synced;
             }
             
-            foreach ($newRecords as $cloudRecord) {
+            // Upsert only changed/new attendance records
+            foreach ($recordsToSync as $cloudRecord) {
                 try {
                     // Download snapshot images from cloud
                     $localTimeInSnapshot = $this->downloadAttendanceSnapshot($cloudRecord['time_in_snapshot'] ?? null);
@@ -1872,7 +2744,9 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " new attendance records from cloud to local");
+            $newCount = count(array_filter($recordsToSync, function($r) use ($existingLocalRecords) { return !isset($existingLocalRecords[$r['record_id']]); }));
+            $updatedCount = count($recordsToSync) - $newCount;
+            Log::info("Synced " . count($synced) . " attendance records from cloud to local (" . $newCount . " new, " . $updatedCount . " updated)");
         } catch (\Exception $e) {
             Log::error("Error syncing attendance records from cloud: " . $e->getMessage());
         }
@@ -1888,12 +2762,25 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing leave IDs from local database (filter by lp_type = 'Leave')
-            $existingLocalIds = DB::table('tbl_leave_pass')
-                ->where('lp_type', 'Leave')
-                ->pluck('lp_id')
-                ->toArray();
+            // First, process deletions from cloud (delete records locally that were deleted in cloud)
+            $this->processDeletionsFromCloud('leaves', 'tbl_leave_pass', 'lp_id');
             
+            // Get existing local records with their data for comparison (last 90 days for performance)
+            $existingLocalRecords = $this->getExistingLocalRecords('tbl_leave_pass', 'lp_id');
+            // Filter to only leaves and last 90 days
+            $ninetyDaysAgo = now()->subDays(90);
+            $existingLocalRecords = array_filter($existingLocalRecords, function($record) use ($ninetyDaysAgo) {
+                if (($record['lp_type'] ?? null) !== 'Leave') return false;
+                $createdAt = $record['created_at'] ?? null;
+                if (!$createdAt) return false;
+                try {
+                    return \Carbon\Carbon::parse($createdAt)->gte($ninetyDaysAgo);
+                } catch (\Exception $e) {
+                    return false;
+                }
+            });
+            
+            // Get all leaves from cloud
             $cloudLeaves = $this->fetchBulkFromCloud('leaves', ['days' => 90]);
             
             Log::info("Fetched " . count($cloudLeaves) . " leaves from cloud");
@@ -1903,17 +2790,42 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter out leaves that already exist locally
-            $newLeaves = array_filter($cloudLeaves, function ($cloudLeave) use ($existingLocalIds) {
-                return !in_array($cloudLeave['lp_id'] ?? null, $existingLocalIds);
+            // Filter: only sync new records or records that have changed
+            $leavesToSync = array_filter($cloudLeaves, function ($cloudLeave) use ($existingLocalRecords) {
+                $lpId = $cloudLeave['lp_id'] ?? null;
+                if (!$lpId) return false;
+                
+                // Skip if this record was deleted locally (prevent restoring deleted records)
+                if ($this->isDeletedLocally('tbl_leave_pass', $lpId)) {
+                    Log::debug("Skipping leave {$lpId} - was deleted locally");
+                    return false;
+                }
+                
+                // If not in local, needs to be synced (new record)
+                if (!isset($existingLocalRecords[$lpId])) {
+                    return true;
+                }
+                
+                // If in local, compare data to see if it changed (ignore image path differences)
+                $localData = [
+                    'lp_id' => $existingLocalRecords[$lpId]['lp_id'],
+                    'faculty_id' => $existingLocalRecords[$lpId]['faculty_id'] ?? null,
+                    'lp_type' => $existingLocalRecords[$lpId]['lp_type'] ?? null,
+                    'lp_purpose' => $existingLocalRecords[$lpId]['lp_purpose'] ?? null,
+                    'leave_start_date' => $existingLocalRecords[$lpId]['leave_start_date'] ?? null,
+                    'leave_end_date' => $existingLocalRecords[$lpId]['leave_end_date'] ?? null,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $cloudLeave);
             });
             
-            if (empty($newLeaves)) {
-                Log::info('No new leaves to sync from cloud to local');
+            if (empty($leavesToSync)) {
+                Log::info('No new or changed leaves to sync from cloud to local');
                 return $synced;
             }
             
-            foreach ($newLeaves as $cloudLeave) {
+            // Upsert only changed/new leaves
+            foreach ($leavesToSync as $cloudLeave) {
                 try {
                     // Download leave slip image from cloud
                     $localImagePath = $this->downloadLeaveImage($cloudLeave['lp_image'] ?? null);
@@ -1983,7 +2895,9 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " leaves from cloud to local");
+            $newCount = count(array_filter($leavesToSync, function($l) use ($existingLocalRecords) { return !isset($existingLocalRecords[$l['lp_id']]); }));
+            $updatedCount = count($leavesToSync) - $newCount;
+            Log::info("Synced " . count($synced) . " leaves from cloud to local (" . $newCount . " new, " . $updatedCount . " updated)");
         } catch (\Exception $e) {
             Log::error("Error syncing leaves from cloud: " . $e->getMessage());
             Log::error("Stack trace: " . $e->getTraceAsString());
@@ -2000,12 +2914,25 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing pass IDs from local database (filter by lp_type = 'Pass')
-            $existingLocalIds = DB::table('tbl_leave_pass')
-                ->where('lp_type', 'Pass')
-                ->pluck('lp_id')
-                ->toArray();
+            // First, process deletions from cloud (delete records locally that were deleted in cloud)
+            $this->processDeletionsFromCloud('passes', 'tbl_leave_pass', 'lp_id');
             
+            // Get existing local records with their data for comparison (last 90 days for performance)
+            $existingLocalRecords = $this->getExistingLocalRecords('tbl_leave_pass', 'lp_id');
+            // Filter to only passes and last 90 days
+            $ninetyDaysAgo = now()->subDays(90);
+            $existingLocalRecords = array_filter($existingLocalRecords, function($record) use ($ninetyDaysAgo) {
+                if (($record['lp_type'] ?? null) !== 'Pass') return false;
+                $createdAt = $record['created_at'] ?? null;
+                if (!$createdAt) return false;
+                try {
+                    return \Carbon\Carbon::parse($createdAt)->gte($ninetyDaysAgo);
+                } catch (\Exception $e) {
+                    return false;
+                }
+            });
+            
+            // Get all passes from cloud
             $cloudPasses = $this->fetchBulkFromCloud('passes', ['days' => 90]);
             
             Log::info("Fetched " . count($cloudPasses) . " passes from cloud");
@@ -2015,17 +2942,44 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter out passes that already exist locally
-            $newPasses = array_filter($cloudPasses, function ($cloudPass) use ($existingLocalIds) {
-                return !in_array($cloudPass['lp_id'] ?? null, $existingLocalIds);
+            // Filter: only sync new records or records that have changed
+            $passesToSync = array_filter($cloudPasses, function ($cloudPass) use ($existingLocalRecords) {
+                $lpId = $cloudPass['lp_id'] ?? null;
+                if (!$lpId) return false;
+                
+                // Skip if this record was deleted locally (prevent restoring deleted records)
+                if ($this->isDeletedLocally('tbl_leave_pass', $lpId)) {
+                    Log::debug("Skipping pass {$lpId} - was deleted locally");
+                    return false;
+                }
+                
+                // If not in local, needs to be synced (new record)
+                if (!isset($existingLocalRecords[$lpId])) {
+                    return true;
+                }
+                
+                // If in local, compare data to see if it changed (ignore image path differences)
+                $localData = [
+                    'lp_id' => $existingLocalRecords[$lpId]['lp_id'],
+                    'faculty_id' => $existingLocalRecords[$lpId]['faculty_id'] ?? null,
+                    'lp_type' => $existingLocalRecords[$lpId]['lp_type'] ?? null,
+                    'lp_purpose' => $existingLocalRecords[$lpId]['lp_purpose'] ?? null,
+                    'pass_slip_itinerary' => $existingLocalRecords[$lpId]['pass_slip_itinerary'] ?? null,
+                    'pass_slip_date' => $existingLocalRecords[$lpId]['pass_slip_date'] ?? null,
+                    'pass_slip_departure_time' => $existingLocalRecords[$lpId]['pass_slip_departure_time'] ?? null,
+                    'pass_slip_arrival_time' => $existingLocalRecords[$lpId]['pass_slip_arrival_time'] ?? null,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $cloudPass);
             });
             
-            if (empty($newPasses)) {
-                Log::info('No new passes to sync from cloud to local');
+            if (empty($passesToSync)) {
+                Log::info('No new or changed passes to sync from cloud to local');
                 return $synced;
             }
             
-            foreach ($newPasses as $cloudPass) {
+            // Upsert only changed/new passes
+            foreach ($passesToSync as $cloudPass) {
                 try {
                     // Download pass slip image from cloud
                     $localImagePath = $this->downloadPassImage($cloudPass['lp_image'] ?? null);
@@ -2085,7 +3039,7 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " passes from cloud to local");
+            Log::info("Synced " . count($synced) . " passes from cloud to local (upserted)");
         } catch (\Exception $e) {
             Log::error("Error syncing passes from cloud: " . $e->getMessage());
             Log::error("Stack trace: " . $e->getTraceAsString());
@@ -2102,17 +3056,36 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // First, process deletions from cloud (delete records locally that were deleted in cloud)
+            $this->processDeletionsFromCloud('recognition-logs', 'tbl_recognition_logs', 'log_id');
+            
+            // Get existing recognition log IDs from local database
+            $existingLocalIds = $this->getExistingLocalIds('tbl_recognition_logs', 'log_id');
+            
             $cloudLogs = $this->fetchBulkFromCloud('recognition-logs', ['days' => 7]);
             
             if (empty($cloudLogs)) {
                 return $synced;
             }
             
-            // Filter out logs that already exist locally
-            $existingLocalIds = $this->getExistingLocalIds('tbl_recognition_logs', 'log_id');
+            // Filter out logs that already exist locally or were deleted locally (append-only, no updates needed)
             $cloudLogs = array_values(array_filter($cloudLogs, function ($log) use ($existingLocalIds) {
-                return !in_array($log['log_id'] ?? null, $existingLocalIds);
+                $logId = $log['log_id'] ?? null;
+                if (!$logId) return false;
+                
+                // Skip if this record was deleted locally (prevent restoring deleted records)
+                if ($this->isDeletedLocally('tbl_recognition_logs', $logId)) {
+                    Log::debug("Skipping recognition log {$logId} - was deleted locally");
+                    return false;
+                }
+                
+                return !in_array($logId, $existingLocalIds);
             }));
+            
+            if (empty($cloudLogs)) {
+                Log::info('No new recognition logs to sync from cloud to local');
+                return $synced;
+            }
             
             foreach ($cloudLogs as $cloudLog) {
                 try {
@@ -2138,7 +3111,7 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " recognition logs from cloud to local");
+            Log::info("Synced " . count($synced) . " new recognition logs from cloud to local");
         } catch (\Exception $e) {
             Log::error("Error syncing recognition logs from cloud: " . $e->getMessage());
         }
@@ -2154,6 +3127,9 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // First, process deletions from cloud (delete records locally that were deleted in cloud)
+            $this->processDeletionsFromCloud('stream-recordings', 'tbl_stream_recordings', 'recording_id');
+            
             // Get existing stream recording IDs from local database
             $existingLocalIds = $this->getExistingLocalIds('tbl_stream_recordings', 'recording_id');
             
@@ -2163,9 +3139,18 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter out stream recordings that already exist locally
+            // Filter out stream recordings that already exist locally or were deleted locally (append-only, no updates needed)
             $newRecordings = array_filter($cloudRecordings, function ($cloudRecording) use ($existingLocalIds) {
-                return !in_array($cloudRecording['recording_id'] ?? null, $existingLocalIds);
+                $recordingId = $cloudRecording['recording_id'] ?? null;
+                if (!$recordingId) return false;
+                
+                // Skip if this record was deleted locally (prevent restoring deleted records)
+                if ($this->isDeletedLocally('tbl_stream_recordings', $recordingId)) {
+                    Log::debug("Skipping stream recording {$recordingId} - was deleted locally");
+                    return false;
+                }
+                
+                return !in_array($recordingId, $existingLocalIds);
             });
             
             if (empty($newRecordings)) {
@@ -2206,7 +3191,7 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " stream recordings from cloud to local");
+            Log::info("Synced " . count($synced) . " new stream recordings from cloud to local");
         } catch (\Exception $e) {
             Log::error("Error syncing stream recordings from cloud: " . $e->getMessage());
         }
@@ -2222,17 +3207,36 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // First, process deletions from cloud (delete records locally that were deleted in cloud)
+            $this->processDeletionsFromCloud('activity-logs', 'tbl_activity_logs', 'logs_id');
+            
+            // Get existing activity log IDs from local database
+            $existingLocalIds = $this->getExistingLocalIds('tbl_activity_logs', 'logs_id');
+            
             $cloudLogs = $this->fetchBulkFromCloud('activity-logs');
             
             if (empty($cloudLogs)) {
                 return $synced;
             }
             
-            // Filter out logs that already exist locally
-            $existingLocalIds = $this->getExistingLocalIds('tbl_activity_logs', 'logs_id');
+            // Filter out logs that already exist locally or were deleted locally (append-only, no updates needed)
             $cloudLogs = array_values(array_filter($cloudLogs, function ($log) use ($existingLocalIds) {
-                return !in_array($log['logs_id'] ?? null, $existingLocalIds);
+                $logId = $log['logs_id'] ?? null;
+                if (!$logId) return false;
+                
+                // Skip if this record was deleted locally (prevent restoring deleted records)
+                if ($this->isDeletedLocally('tbl_activity_logs', $logId)) {
+                    Log::debug("Skipping activity log {$logId} - was deleted locally");
+                    return false;
+                }
+                
+                return !in_array($logId, $existingLocalIds);
             }));
+            
+            if (empty($cloudLogs)) {
+                Log::info('No new activity logs to sync from cloud to local');
+                return $synced;
+            }
             
             foreach ($cloudLogs as $cloudLog) {
                 try {
@@ -2253,7 +3257,7 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " activity logs from cloud to local");
+            Log::info("Synced " . count($synced) . " new activity logs from cloud to local");
         } catch (\Exception $e) {
             Log::error("Error syncing activity logs from cloud: " . $e->getMessage());
         }
@@ -2269,6 +3273,9 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // First, process deletions from cloud (delete records locally that were deleted in cloud)
+            $this->processDeletionsFromCloud('teaching-load-archives', 'tbl_teaching_load_archive', 'archive_id');
+            
             // Get existing teaching load archive IDs from local database
             $existingLocalIds = $this->getExistingLocalIds('tbl_teaching_load_archive', 'archive_id');
             
@@ -2278,9 +3285,18 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter out teaching load archives that already exist locally
+            // Filter out teaching load archives that already exist locally or were deleted locally (append-only, no updates needed)
             $newArchives = array_filter($cloudArchives, function ($cloudArchive) use ($existingLocalIds) {
-                return !in_array($cloudArchive['archive_id'] ?? null, $existingLocalIds);
+                $archiveId = $cloudArchive['archive_id'] ?? null;
+                if (!$archiveId) return false;
+                
+                // Skip if this record was deleted locally (prevent restoring deleted records)
+                if ($this->isDeletedLocally('tbl_teaching_load_archive', $archiveId)) {
+                    Log::debug("Skipping teaching load archive {$archiveId} - was deleted locally");
+                    return false;
+                }
+                
+                return !in_array($archiveId, $existingLocalIds);
             });
             
             if (empty($newArchives)) {
@@ -2316,7 +3332,7 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " teaching load archives from cloud to local");
+            Log::info("Synced " . count($synced) . " new teaching load archives from cloud to local");
         } catch (\Exception $e) {
             Log::error("Error syncing teaching load archives from cloud: " . $e->getMessage());
         }
@@ -2332,6 +3348,9 @@ class CloudSyncService
         $synced = [];
         
         try {
+            // First, process deletions from cloud (delete records locally that were deleted in cloud)
+            $this->processDeletionsFromCloud('attendance-record-archives', 'tbl_attendance_record_archive', 'archive_id');
+            
             // Get existing attendance record archive IDs from local database
             $existingLocalIds = $this->getExistingLocalIds('tbl_attendance_record_archive', 'archive_id');
             
@@ -2341,9 +3360,18 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter out attendance record archives that already exist locally
+            // Filter out attendance record archives that already exist locally or were deleted locally (append-only, no updates needed)
             $newArchives = array_filter($cloudArchives, function ($cloudArchive) use ($existingLocalIds) {
-                return !in_array($cloudArchive['archive_id'] ?? null, $existingLocalIds);
+                $archiveId = $cloudArchive['archive_id'] ?? null;
+                if (!$archiveId) return false;
+                
+                // Skip if this record was deleted locally (prevent restoring deleted records)
+                if ($this->isDeletedLocally('tbl_attendance_record_archive', $archiveId)) {
+                    Log::debug("Skipping attendance record archive {$archiveId} - was deleted locally");
+                    return false;
+                }
+                
+                return !in_array($archiveId, $existingLocalIds);
             });
             
             if (empty($newArchives)) {
@@ -2382,7 +3410,7 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " attendance record archives from cloud to local");
+            Log::info("Synced " . count($synced) . " new attendance record archives from cloud to local");
         } catch (\Exception $e) {
             Log::error("Error syncing attendance record archives from cloud: " . $e->getMessage());
         }
@@ -2398,20 +3426,50 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing official matter IDs from cloud (last 90 days)
-            $existingCloudIds = $this->getExistingCloudIds('official-matters', 'om_id', ['days' => 90]);
+            // First, sync deletions to cloud (notify cloud about locally deleted records)
+            $deletedIds = $this->getDeletedIds('tbl_official_matters');
+            $this->syncDeletionsToCloud('official-matters', $deletedIds);
             
-            // Get all local official matters and filter out existing ones
-            $localOfficialMatters = OfficialMatter::all()->filter(function ($om) use ($existingCloudIds) {
-                return !in_array($om->om_id, $existingCloudIds);
-            });
+            // Get existing cloud records with their data for comparison
+            $existingCloudRecords = $this->getExistingCloudRecords('official-matters', 'om_id', ['days' => 90]);
+            
+            // Get all local official matters
+            $localOfficialMatters = OfficialMatter::all();
             
             if ($localOfficialMatters->isEmpty()) {
-                Log::info('No new official matters to sync to cloud');
+                Log::info('No official matters to sync to cloud');
                 return $synced;
             }
             
-            $payload = $localOfficialMatters->map(function ($om) {
+            // Filter: only sync new records or records that have changed
+            $mattersToSync = $localOfficialMatters->filter(function ($om) use ($existingCloudRecords) {
+                $omId = $om->om_id;
+                
+                // If not in cloud, needs to be synced (new record)
+                if (!isset($existingCloudRecords[$omId])) {
+                    return true;
+                }
+                
+                // If in cloud, compare data to see if it changed (ignore attachment path differences)
+                $localData = [
+                    'om_id' => $om->om_id,
+                    'faculty_id' => $om->faculty_id,
+                    'om_department' => $om->om_department,
+                    'om_purpose' => $om->om_purpose,
+                    'om_remarks' => $om->om_remarks,
+                    'om_start_date' => $om->om_start_date,
+                    'om_end_date' => $om->om_end_date,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $existingCloudRecords[$omId]);
+            });
+            
+            if ($mattersToSync->isEmpty()) {
+                Log::info('No new or changed official matters to sync to cloud');
+                return $synced;
+            }
+            
+            $payload = $mattersToSync->map(function ($om) {
                 // Sync attachment to cloud and update path
                 $cloudAttachmentPath = $this->syncOfficialMatterAttachment($om->om_attachment);
                 
@@ -2430,12 +3488,13 @@ class CloudSyncService
             })->values()->all();
             $resp = $this->pushBulkToCloud('official-matters', $payload);
             $upserted = $resp['data']['upserted'] ?? 0;
-            Log::info('Bulk official-matters result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($localOfficialMatters)]);
+            Log::info('Bulk official-matters result', ['upserted' => $upserted, 'success' => $resp['success'] ?? null, 'local_count' => count($mattersToSync)]);
             
             if ($resp['success'] && $upserted > 0) {
-                // Only return synced IDs if records were actually upserted
-                $synced = $localOfficialMatters->pluck('om_id')->all();
-                Log::info('Synced ' . count($synced) . ' new official matters to cloud');
+                $synced = $mattersToSync->pluck('om_id')->all();
+                $newCount = count($mattersToSync->filter(function($om) use ($existingCloudRecords) { return !isset($existingCloudRecords[$om->om_id]); }));
+                $updatedCount = count($mattersToSync) - $newCount;
+                Log::info('Synced ' . count($synced) . ' official matters to cloud (' . $newCount . ' new, ' . $updatedCount . ' updated)');
             } elseif ($resp['success'] && $upserted == 0) {
                 Log::warning("Official matters sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
             }
@@ -2499,39 +3558,67 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // Get existing official matter IDs from local
-            $existingLocalIds = DB::table('tbl_official_matters')->pluck('om_id')->toArray();
+            // First, process deletions from cloud (delete records locally that were deleted in cloud)
+            $this->processDeletionsFromCloud('official-matters', 'tbl_official_matters', 'om_id');
             
-            // Get official matters from cloud (last 90 days)
-            $response = Http::timeout(60)
-                ->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->cloudApiKey,
-                    'Accept' => 'application/json',
-                ])
-                ->get("{$this->cloudApiUrl}/official-matters", ['days' => 90]);
-            
-            if (!$response->successful()) {
-                Log::error("Failed to get official matters from cloud: " . $response->body());
-                return $synced;
-            }
-            
-            $cloudOfficialMatters = $response->json();
-            
-            if (empty($cloudOfficialMatters) || !is_array($cloudOfficialMatters)) {
-                return $synced;
-            }
-            
-            // Filter out official matters that already exist locally
-            $newOfficialMatters = array_filter($cloudOfficialMatters, function ($cloudOM) use ($existingLocalIds) {
-                return !in_array($cloudOM['om_id'] ?? null, $existingLocalIds);
+            // Get existing local records with their data for comparison (last 90 days for performance)
+            $existingLocalRecords = $this->getExistingLocalRecords('tbl_official_matters', 'om_id');
+            // Filter to only last 90 days
+            $ninetyDaysAgo = now()->subDays(90);
+            $existingLocalRecords = array_filter($existingLocalRecords, function($record) use ($ninetyDaysAgo) {
+                $createdAt = $record['created_at'] ?? null;
+                if (!$createdAt) return false;
+                try {
+                    return \Carbon\Carbon::parse($createdAt)->gte($ninetyDaysAgo);
+                } catch (\Exception $e) {
+                    return false;
+                }
             });
             
-            if (empty($newOfficialMatters)) {
-                Log::info('No new official matters to sync from cloud to local');
+            // Get all official matters from cloud
+            $cloudOfficialMatters = $this->fetchBulkFromCloud('official-matters', ['days' => 90]);
+            
+            if (empty($cloudOfficialMatters)) {
                 return $synced;
             }
             
-            foreach ($newOfficialMatters as $cloudOM) {
+            // Filter: only sync new records or records that have changed
+            $mattersToSync = array_filter($cloudOfficialMatters, function ($cloudOM) use ($existingLocalRecords) {
+                $omId = $cloudOM['om_id'] ?? null;
+                if (!$omId) return false;
+                
+                // Skip if this record was deleted locally (prevent restoring deleted records)
+                if ($this->isDeletedLocally('tbl_official_matters', $omId)) {
+                    Log::debug("Skipping official matter {$omId} - was deleted locally");
+                    return false;
+                }
+                
+                // If not in local, needs to be synced (new record)
+                if (!isset($existingLocalRecords[$omId])) {
+                    return true;
+                }
+                
+                // If in local, compare data to see if it changed (ignore attachment path differences)
+                $localData = [
+                    'om_id' => $existingLocalRecords[$omId]['om_id'],
+                    'faculty_id' => $existingLocalRecords[$omId]['faculty_id'] ?? null,
+                    'om_department' => $existingLocalRecords[$omId]['om_department'] ?? null,
+                    'om_purpose' => $existingLocalRecords[$omId]['om_purpose'] ?? null,
+                    'om_remarks' => $existingLocalRecords[$omId]['om_remarks'] ?? null,
+                    'om_start_date' => $existingLocalRecords[$omId]['om_start_date'] ?? null,
+                    'om_end_date' => $existingLocalRecords[$omId]['om_end_date'] ?? null,
+                ];
+                
+                return $this->recordsAreDifferent($localData, $cloudOM);
+            });
+            
+            if (empty($mattersToSync)) {
+                Log::info('No new or changed official matters to sync from cloud to local');
+                return $synced;
+            }
+            
+            // Upsert only changed/new official matters
+            foreach ($mattersToSync as $cloudOM) {
                 try {
                     // Download attachment from cloud
                     $localAttachmentPath = $this->downloadOfficialMatterAttachment($cloudOM['om_attachment'] ?? null);
@@ -2557,7 +3644,9 @@ class CloudSyncService
                 }
             }
             
-            Log::info("Synced " . count($synced) . " official matters from cloud to local");
+            $newCount = count(array_filter($mattersToSync, function($om) use ($existingLocalRecords) { return !isset($existingLocalRecords[$om['om_id']]); }));
+            $updatedCount = count($mattersToSync) - $newCount;
+            Log::info("Synced " . count($synced) . " official matters from cloud to local (" . $newCount . " new, " . $updatedCount . " updated)");
         } catch (\Exception $e) {
             Log::error("Error syncing official matters from cloud: " . $e->getMessage());
         }

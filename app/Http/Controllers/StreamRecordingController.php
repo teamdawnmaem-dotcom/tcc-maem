@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\StreamRecording;
 use App\Models\Camera;
+use App\Services\CloudSyncService;
 
 class StreamRecordingController extends Controller
 {
@@ -201,7 +202,12 @@ class StreamRecordingController extends Controller
             }
             
             // Delete the database record
+            $recordingId = $recording->recording_id;
             $recording->delete();
+            
+            // Track deletion for sync
+            $syncService = app(CloudSyncService::class);
+            $syncService->trackDeletion('tbl_stream_recordings', $recordingId);
             
             return response()->json([
                 'message' => 'Recording deleted successfully'

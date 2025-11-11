@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Faculty;
 use App\Models\TeachingLoad;
 use App\Models\ActivityLog;
+use App\Services\CloudSyncService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
 
@@ -312,7 +313,12 @@ class FacultyController extends Controller
                 Storage::disk('public')->delete($img);
             }
         }
+        $facultyId = $faculty->faculty_id;
         $faculty->delete();
+
+        // Track deletion for sync
+        $syncService = app(CloudSyncService::class);
+        $syncService->trackDeletion('tbl_faculty', $facultyId);
 
         // Log the action
         ActivityLog::create([

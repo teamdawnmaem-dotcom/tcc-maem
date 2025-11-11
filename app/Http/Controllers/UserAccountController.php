@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\User;
+use App\Services\CloudSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -145,7 +146,12 @@ public function AdminUpdateAccountSettings(Request $request)
     {
         $user = User::findOrFail($id);
         $username = $user->username;
+        $userId = $user->user_id;
         $user->delete();
+
+        // Track deletion for sync
+        $syncService = app(CloudSyncService::class);
+        $syncService->trackDeletion('tbl_user', $userId);
 
         // Log the action
         ActivityLog::create([
