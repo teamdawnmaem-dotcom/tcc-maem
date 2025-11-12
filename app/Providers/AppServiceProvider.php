@@ -12,7 +12,31 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Set MySQL timezone early in the connection lifecycle
+        // This ensures timezone is set before any database queries
+        $this->app->resolving('db', function ($db) {
+            try {
+                $appTimezone = config('app.timezone', 'UTC');
+                
+                // Always convert to offset format to avoid timezone table dependency
+                $mysqlTimezone = '+00:00'; // Default to UTC offset
+                
+                try {
+                    $dt = new \DateTime('now', new \DateTimeZone($appTimezone));
+                    $offset = $dt->getOffset();
+                    $hours = intval($offset / 3600);
+                    $minutes = abs(intval(($offset % 3600) / 60));
+                    $mysqlTimezone = sprintf('%+03d:%02d', $hours, $minutes);
+                } catch (\Exception $e) {
+                    $mysqlTimezone = '+00:00';
+                }
+                
+                // Set timezone for the default connection
+                \DB::statement("SET time_zone = '{$mysqlTimezone}'");
+            } catch (\Exception $e) {
+                // Silently fail - timezone setting is not critical
+            }
+        });
     }
 
     /**
@@ -31,14 +55,15 @@ class AppServiceProvider extends ServiceProvider
         
         // Set MySQL timezone to match application timezone
         // This ensures timestamps are stored correctly in the database
+        // Note: MySQL requires timezone tables to be populated for named timezones
+        // We use offset format (e.g., '+08:00') which works without timezone tables
         try {
             $appTimezone = config('app.timezone', 'UTC');
             
-            // Convert timezone name to MySQL offset format if needed
-            // MySQL accepts timezone names (e.g., 'Asia/Manila') or offsets (e.g., '+08:00')
-            $mysqlTimezone = $appTimezone;
+            // Always convert to offset format to avoid timezone table dependency
+            // MySQL offset format: '+08:00', '-05:00', '+00:00' for UTC
+            $mysqlTimezone = '+00:00'; // Default to UTC offset
             
-            // If it's a named timezone, try to get the offset
             try {
                 $dt = new \DateTime('now', new \DateTimeZone($appTimezone));
                 $offset = $dt->getOffset();
@@ -46,8 +71,9 @@ class AppServiceProvider extends ServiceProvider
                 $minutes = abs(intval(($offset % 3600) / 60));
                 $mysqlTimezone = sprintf('%+03d:%02d', $hours, $minutes);
             } catch (\Exception $e) {
-                // If conversion fails, use the timezone name directly (MySQL supports named timezones)
-                $mysqlTimezone = $appTimezone;
+                // If conversion fails, default to UTC offset
+                $mysqlTimezone = '+00:00';
+                \Log::warning("Failed to convert timezone '{$appTimezone}' to offset, using UTC (+00:00)");
             }
             
             \DB::statement("SET time_zone = '{$mysqlTimezone}'");
