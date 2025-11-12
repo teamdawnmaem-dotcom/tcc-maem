@@ -3664,33 +3664,25 @@ class CloudSyncService
                         
                         $dateChanged = ($oldDate !== $newDate);
                         
-                        if ($dateChanged) {
+                        if ($dateChanged || $newDate) {
                             try {
                                 $remarksService = new AttendanceRemarksService();
                                 
-                                // First, reconcile the old date to remove old pass slip records
-                                if ($oldDate) {
-                                    $remarksService->reconcilePassChange($cloudPass['faculty_id'], $oldDate);
-                                }
+                                // Intelligently reconcile pass change - preserve existing IDs
+                                // Pass old date only if date changed, otherwise null to preserve IDs
+                                $remarksService->reconcilePassChange(
+                                    $cloudPass['faculty_id'], 
+                                    $newDate,
+                                    $dateChanged ? $oldDate : null
+                                );
                                 
-                                // Then, reconcile the new date
-                                if ($newDate) {
-                                    $remarksService->reconcilePassChange($cloudPass['faculty_id'], $newDate);
+                                if ($dateChanged) {
+                                    Log::info("Updated attendance records for pass {$cloudPass['lp_id']} due to date change");
+                                } else {
+                                    Log::debug("Reconciled attendance records for pass {$cloudPass['lp_id']} (time or other field may have changed)");
                                 }
-                                
-                                Log::info("Updated attendance records for pass {$cloudPass['lp_id']} due to date change");
                             } catch (\Exception $e) {
                                 Log::error("Error updating attendance records for pass {$cloudPass['lp_id']}: " . $e->getMessage());
-                            }
-                        } elseif ($newDate) {
-                            // Date didn't change but pass might have been updated (e.g., time changed)
-                            // Reconcile to ensure attendance records are correct
-                            try {
-                                $remarksService = new AttendanceRemarksService();
-                                $remarksService->reconcilePassChange($cloudPass['faculty_id'], $newDate);
-                                Log::debug("Reconciled attendance records for pass {$cloudPass['lp_id']} (time or other field may have changed)");
-                            } catch (\Exception $e) {
-                                Log::error("Error reconciling attendance records for pass {$cloudPass['lp_id']}: " . $e->getMessage());
                             }
                         }
                     } elseif (!$isUpdate && !empty($cloudPass['faculty_id']) && $passSlipDate) {

@@ -1299,8 +1299,15 @@ class SyncReceiverController extends Controller
                 $date = $data['date'] ?? null;
                 
                 if ($facultyId && $date) {
-                    // Reconcile pass change to update attendance records
-                    $remarksService->reconcilePassChange($facultyId, $date);
+                    // Get old pass data if this is an update
+                    $oldPass = null;
+                    if ($lpId) {
+                        $oldPass = DB::table('tbl_leave_pass')->where('lp_id', $lpId)->first();
+                    }
+                    
+                    // Reconcile pass change to update attendance records - preserve existing IDs
+                    $oldDate = $oldPass && $oldPass->pass_slip_date !== $date ? $oldPass->pass_slip_date : null;
+                    $remarksService->reconcilePassChange($facultyId, $date, $oldDate);
                     Log::info("Triggered attendance update for pass {$lpId} (faculty: {$facultyId}, date: {$date})");
                 }
                 

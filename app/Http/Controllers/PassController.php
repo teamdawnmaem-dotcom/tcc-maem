@@ -112,19 +112,15 @@ class PassController extends Controller
         
         $pass->update($data);
 
-        // Update attendance remarks for the pass slip date (reconcile)
+        // Intelligently update attendance remarks for the pass slip - preserve existing IDs
         $remarksService = new AttendanceRemarksService();
         
-        // First, reconcile the old date to remove old pass slip records
-        if ($oldDate !== $request->pass_slip_date) {
-            $remarksService->reconcilePassChange($request->faculty_id, $oldDate);
-        }
-        
-        // Then, reconcile the new date
-        $remarksService->reconcilePassChange($request->faculty_id, $request->pass_slip_date);
-        
-        // Also create absent records for scheduled classes on pass slip date
-        $remarksService->updateAbsentFacultyRemarks($request->faculty_id, $request->pass_slip_date);
+        // Reconcile pass change - pass old date to preserve IDs when date is unchanged
+        $remarksService->reconcilePassChange(
+            $request->faculty_id, 
+            $request->pass_slip_date,
+            $oldDate !== $request->pass_slip_date ? $oldDate : null
+        );
 
         $faculty = Faculty::find($pass->faculty_id);
         ActivityLog::create([
