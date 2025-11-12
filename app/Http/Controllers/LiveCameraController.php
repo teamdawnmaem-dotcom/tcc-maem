@@ -51,7 +51,11 @@ class LiveCameraController extends Controller
     $faculties = Faculty::all();
 
     // Get all stream recordings grouped by camera_id
-    $recordings = StreamRecording::orderBy('start_time', 'desc')->get();
+    // Format start_time as MySQL datetime string to avoid timezone conversion issues
+    $recordings = StreamRecording::orderBy('start_time', 'desc')->get()->map(function ($recording) {
+        $recording->start_time_formatted = $recording->start_time ? $recording->start_time->format('Y-m-d H:i:s') : null;
+        return $recording;
+    });
 
         // Pass data to the Blade view
         return view('deptHead.live-camera-feed', compact('cameras', 'teachingLoads', 'faculties', 'recordings'));
@@ -97,7 +101,11 @@ class LiveCameraController extends Controller
     $faculties = Faculty::all();
 
     // Get all stream recordings grouped by camera_id
-    $recordings = StreamRecording::orderBy('start_time', 'desc')->get();
+    // Format start_time as MySQL datetime string to avoid timezone conversion issues
+    $recordings = StreamRecording::orderBy('start_time', 'desc')->get()->map(function ($recording) {
+        $recording->start_time_formatted = $recording->start_time ? $recording->start_time->format('Y-m-d H:i:s') : null;
+        return $recording;
+    });
 
         // Pass data to the Blade view
         return view('admin.live-camera-feed', compact('cameras', 'teachingLoads', 'faculties', 'recordings'));
@@ -143,7 +151,11 @@ class LiveCameraController extends Controller
     $faculties = Faculty::all();
 
     // Get all stream recordings grouped by camera_id
-    $recordings = StreamRecording::orderBy('start_time', 'desc')->get();
+    // Format start_time as MySQL datetime string to avoid timezone conversion issues
+    $recordings = StreamRecording::orderBy('start_time', 'desc')->get()->map(function ($recording) {
+        $recording->start_time_formatted = $recording->start_time ? $recording->start_time->format('Y-m-d H:i:s') : null;
+        return $recording;
+    });
 
         // Pass data to the Blade view
         return view('checker.live-camera-feed', compact('cameras', 'teachingLoads', 'faculties', 'recordings'));
