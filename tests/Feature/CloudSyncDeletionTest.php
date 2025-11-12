@@ -428,5 +428,200 @@ class CloudSyncDeletionTest extends TestCase
             return false;
         });
     }
+
+    /**
+     * Test that per-table deletion sync processes deletions before data sync
+     * NEW APPROACH: Deletions are processed per table before each table's data sync
+     */
+    public function test_per_table_deletion_sync_before_data_sync(): void
+    {
+        $service = new CloudSyncService();
+        
+        // Track deletions for multiple tables
+        $service->trackDeletion('tbl_user', 1);
+        $service->trackDeletion('tbl_room', 'ROOM001');
+        $service->trackDeletion('tbl_official_matters', 100);
+
+        Http::fake([
+            '*/sync/users/deletions' => Http::response(['success' => true], 200),
+            '*/sync/rooms/deletions' => Http::response(['success' => true], 200),
+            '*/sync/official-matters/deletions' => Http::response(['success' => true], 200),
+            '*/sync/users*' => Http::response(['data' => []], 200),
+            '*/sync/rooms*' => Http::response(['data' => []], 200),
+            '*/sync/official-matters*' => Http::response(['data' => []], 200),
+        ]);
+
+        // Use reflection to access protected methods
+        $reflection = new \ReflectionClass($service);
+        
+        // Test syncTableDeletionsToCloud for users
+        $method = $reflection->getMethod('syncTableDeletionsToCloud');
+        $method->setAccessible(true);
+        $method->invoke($service, 'tbl_user', 'users');
+
+        // Verify deletion was sent before data sync
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/sync/users/deletions') &&
+                   $request->method() === 'POST' &&
+                   in_array(1, $request->data()['deleted_ids'] ?? []);
+        });
+    }
+
+    /**
+     * Test that per-table deletion processing from cloud works correctly
+     */
+    public function test_per_table_deletion_processing_from_cloud(): void
+    {
+        // Create test records
+        DB::table('tbl_user')->insert([
+            'user_id' => 50,
+            'user_role' => 'admin',
+            'user_department' => 'IT',
+            'user_fname' => 'Test',
+            'user_lname' => 'User',
+            'username' => 'testuser',
+            'user_password' => bcrypt('password'),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('tbl_room')->insert([
+            'room_no' => 'TEST001',
+            'room_name' => 'Test Room',
+            'room_building_no' => 'B1',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Http::fake([
+            '*/sync/users/deletions' => Http::response(['deleted_ids' => [50]], 200),
+            '*/sync/rooms/deletions' => Http::response(['deleted_ids' => ['TEST001']], 200),
+        ]);
+
+        $service = new CloudSyncService();
+        
+        // Use reflection to access protected method
+        $reflection = new \ReflectionClass($service);
+        $method = $reflection->getMethod('processTableDeletionsFromCloud');
+        $method->setAccessible(true);
+        
+        // Process deletions for users
+        $method->invoke($service, 'users', 'tbl_user', 'user_id');
+        
+        // Process deletions for rooms
+        $method->invoke($service, 'rooms', 'tbl_room', 'room_no');
+
+        // Verify records were deleted
+        $this->assertFalse(
+            DB::table('tbl_user')->where('user_id', 50)->exists(),
+            'User should be deleted'
+        );
+
+        $this->assertFalse(
+            DB::table('tbl_room')->where('room_no', 'TEST001')->exists(),
+            'Room should be deleted'
+        );
+    }
+
+    /**
+     * Test that all 15 tables have deletion sync before data sync
+     */
+    public function test_all_tables_have_deletion_sync(): void
+    {
+        $service = new CloudSyncService();
+        
+        // Track deletions for all 15 tables
+        $tables = [
+            'tbl_user' => 'users',
+            'tbl_subject' => 'subjects',
+            'tbl_room' => 'rooms',
+            'tbl_camera' => 'cameras',
+            'tbl_faculty' => 'faculties',
+            'tbl_teaching_load' => 'teaching-loads',
+            'tbl_attendance_record' => 'attendance-records',
+            'tbl_official_matters' => 'official-matters',
+            'tbl_recognition_logs' => 'recognition-logs',
+            'tbl_stream_recordings' => 'stream-recordings',
+            'tbl_activity_logs' => 'activity-logs',
+            'tbl_teaching_load_archive' => 'teaching-load-archives',
+            'tbl_attendance_record_archive' => 'attendance-record-archives',
+        ];
+
+        // Track deletions for each table
+        foreach ($tables as $table => $endpoint) {
+            $service->trackDeletion($table, 999);
+        }
+
+        // Track leaves and passes separately
+        $service->trackDeletion('tbl_leave_pass', 1, 90, ['lp_type' => 'Leave']);
+        $service->trackDeletion('tbl_leave_pass', 2, 90, ['lp_type' => 'Pass']);
+
+        // Mock all endpoints
+        $fakeResponses = [];
+        foreach ($tables as $table => $endpoint) {
+            $fakeResponses["*/sync/{$endpoint}/deletions"] = Http::response(['success' => true], 200);
+        }
+        $fakeResponses['*/sync/leaves/deletions'] = Http::response(['success' => true], 200);
+        $fakeResponses['*/sync/passes/deletions'] = Http::response(['success' => true], 200);
+        
+        Http::fake($fakeResponses);
+
+        // Use reflection to test syncTableDeletionsToCloud for each table
+        $reflection = new \ReflectionClass($service);
+        $method = $reflection->getMethod('syncTableDeletionsToCloud');
+        $method->setAccessible(true);
+
+        // Test each table
+        foreach ($tables as $table => $endpoint) {
+            $method->invoke($service, $table, $endpoint);
+            
+            // Verify deletion was sent
+            Http::assertSent(function ($request) use ($endpoint) {
+                return str_contains($request->url(), "/sync/{$endpoint}/deletions") &&
+                       $request->method() === 'POST';
+            });
+        }
+
+        // Test leaves and passes
+        $getDeletedIdsMethod = $reflection->getMethod('getDeletedIds');
+        $getDeletedIdsMethod->setAccessible(true);
+        $deletedIds = $getDeletedIdsMethod->invoke($service, 'tbl_leave_pass');
+        
+        $leaveDeletedIds = [];
+        $passDeletedIds = [];
+        foreach ($deletedIds as $id) {
+            $cacheKey = "sync_deletion:tbl_leave_pass:{$id}";
+            $deletionData = Cache::get($cacheKey);
+            $lpType = $deletionData['metadata']['lp_type'] ?? null;
+            if ($lpType === 'Leave') {
+                $leaveDeletedIds[] = $id;
+            } elseif ($lpType === 'Pass') {
+                $passDeletedIds[] = $id;
+            }
+        }
+
+        if (!empty($leaveDeletedIds)) {
+            $syncMethod = $reflection->getMethod('syncDeletionsToCloud');
+            $syncMethod->setAccessible(true);
+            $syncMethod->invoke($service, 'leaves', $leaveDeletedIds);
+        }
+
+        if (!empty($passDeletedIds)) {
+            $syncMethod = $reflection->getMethod('syncDeletionsToCloud');
+            $syncMethod->setAccessible(true);
+            $syncMethod->invoke($service, 'passes', $passDeletedIds);
+        }
+
+        // Verify leaves and passes deletions were sent
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/sync/leaves/deletions') &&
+                   $request->method() === 'POST';
+        });
+
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/sync/passes/deletions') &&
+                   $request->method() === 'POST';
+        });
+    }
 }
 

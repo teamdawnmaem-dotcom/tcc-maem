@@ -48,19 +48,10 @@ class SyncBidirectional extends Command
         $startTime = microtime(true);
         
         try {
-            // CRITICAL: Process deletions FIRST in both directions sequentially
-            // This ensures deletions are synced before any data sync happens
-            // This prevents race conditions where data is synced before deletions are processed
-            $this->info('🗑️  STEP 1: Processing deletions (sequential - critical for data integrity)...');
-            $this->info('   📤 Syncing local deletions to cloud...');
-            $this->cloudSyncService->syncAllDeletionsToCloud();
-            $this->info('   📥 Processing deletions from cloud...');
-            $this->cloudSyncService->processAllDeletionsFromCloud();
-            $this->info('✅ Deletions processed - both sides are now in sync on deletions');
-            $this->newLine();
-            
-            // Now run data syncs in parallel (they will do a final deletion pass, but most are already done)
-            $this->info('📤📥 STEP 2: Running data syncs in parallel...');
+            // NEW APPROACH: Deletions are now processed per table before each table's data sync
+            // This ensures deletions are synced right before the data sync for each table
+            // This prevents race conditions and ensures deletions are processed in the correct order
+            $this->info('📤📥 Running data syncs in parallel (with per-table deletion processing)...');
             
             // Use proc_open to run both syncs in parallel
             $descriptorspec = [
