@@ -151,6 +151,9 @@ Route::middleware('api.key')->prefix('sync')->group(function () {
     Route::get('/official-matters', [SyncReceiverController::class, 'getOfficialMatters']);
     Route::post('/official-matters', [SyncReceiverController::class, 'receiveOfficialMatter']);
     
+    // Get deleted IDs for an endpoint (used by local server during sync)
+    Route::get('/{endpoint}/deletions', [SyncReceiverController::class, 'getDeletedIds']);
+    
     // File Uploads
     Route::post('/upload/{directory}', [SyncReceiverController::class, 'receiveFileUpload']);
 

@@ -2116,4 +2116,68 @@ class SyncReceiverController extends Controller
             return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
+    
+    /**
+     * Get deleted IDs for a specific endpoint (called by local server during sync)
+     * @param string $endpoint API endpoint (e.g., 'users', 'leaves')
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getDeletedIds($endpoint)
+    {
+        try {
+            $syncService = app(\App\Services\CloudSyncService::class);
+            
+            // Map endpoint to table name
+            $tableMapping = [
+                'users' => 'tbl_user',
+                'subjects' => 'tbl_subject',
+                'rooms' => 'tbl_room',
+                'cameras' => 'tbl_camera',
+                'faculties' => 'tbl_faculty',
+                'teaching-loads' => 'tbl_teaching_load',
+                'attendance-records' => 'tbl_attendance_record',
+                'leaves' => 'tbl_leave_pass',
+                'passes' => 'tbl_leave_pass',
+                'official-matters' => 'tbl_official_matters',
+                'recognition-logs' => 'tbl_recognition_logs',
+                'stream-recordings' => 'tbl_stream_recordings',
+                'activity-logs' => 'tbl_activity_logs',
+                'teaching-load-archives' => 'tbl_teaching_load_archive',
+                'attendance-record-archives' => 'tbl_attendance_record_archive',
+            ];
+            
+            $tableName = $tableMapping[$endpoint] ?? null;
+            if (!$tableName) {
+                return response()->json(['success' => false, 'error' => 'Invalid endpoint'], 400);
+            }
+            
+            // Get deleted IDs from cache
+            $deletedIds = $syncService->getDeletedIds($tableName);
+            
+            // For leaves and passes, filter by lp_type
+            if ($tableName === 'tbl_leave_pass') {
+                $filteredIds = [];
+                foreach ($deletedIds as $id) {
+                    $cacheKey = "sync_deletion:tbl_leave_pass:{$id}";
+                    $deletionData = \Illuminate\Support\Facades\Cache::get($cacheKey);
+                    $lpType = $deletionData['metadata']['lp_type'] ?? null;
+                    
+                    if (($endpoint === 'leaves' && $lpType === 'Leave') || 
+                        ($endpoint === 'passes' && $lpType === 'Pass')) {
+                        $filteredIds[] = $id;
+                    }
+                }
+                $deletedIds = $filteredIds;
+            }
+            
+            Log::info("Returning " . count($deletedIds) . " deleted IDs for {$endpoint}");
+            return response()->json([
+                'success' => true,
+                'deleted_ids' => $deletedIds
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error getting deleted IDs for {$endpoint}: " . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
 }

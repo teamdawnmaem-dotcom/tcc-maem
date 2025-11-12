@@ -193,7 +193,7 @@ class CloudSyncService
             
             Log::info("Attempting to trigger deletion on local: {$url}");
             
-            $response = Http::timeout(30)
+            $response = Http::timeout(5) // Shorter timeout for faster failure detection
                 ->withHeaders([
                     'Authorization' => 'Bearer ' . $this->localApiKey,
                     'Accept' => 'application/json',
@@ -205,11 +205,13 @@ class CloudSyncService
                 return true;
             } else {
                 Log::warning("Failed to trigger deletion on local for {$endpoint} ID: {$recordId} - Status: {$response->status()}, Body: " . $response->body());
+                // Deletion is already tracked, so it will be processed during next sync
                 return false;
             }
         } catch (\Exception $e) {
-            Log::error("Error triggering deletion on local for {$endpoint} ID: {$recordId} - " . $e->getMessage());
-            Log::error("URL attempted: {$url}");
+            // Connection failed - this is expected if local server is not publicly accessible
+            // The deletion is already tracked, so it will be processed during next sync
+            Log::info("Could not immediately trigger deletion on local for {$endpoint} ID: {$recordId} - " . $e->getMessage() . " (Deletion will be processed during next sync)");
             return false;
         }
     }
@@ -2603,7 +2605,7 @@ class CloudSyncService
      * @param string $tableName Table name
      * @return array Array of deleted IDs
      */
-    protected function getDeletedIds(string $tableName): array
+    public function getDeletedIds(string $tableName): array
     {
         try {
             $listKey = "sync_deletion_list:{$tableName}";
