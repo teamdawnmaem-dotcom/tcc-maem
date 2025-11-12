@@ -2485,6 +2485,7 @@ class CloudSyncService
             foreach ($tables as $tableName => $endpoint) {
                 $deletedIds = $this->getDeletedIds($tableName);
                 if (!empty($deletedIds)) {
+                    Log::info("Syncing " . count($deletedIds) . " deletions for {$tableName} to cloud endpoint {$endpoint}");
                     $this->syncDeletionsToCloud($endpoint, $deletedIds);
                 }
             }
@@ -2508,10 +2509,12 @@ class CloudSyncService
                 }
                 
                 if (!empty($leaveDeletedIds)) {
+                    Log::info("Syncing " . count($leaveDeletedIds) . " leave deletions to cloud");
                     $this->syncDeletionsToCloud('leaves', $leaveDeletedIds);
                 }
                 
                 if (!empty($passDeletedIds)) {
+                    Log::info("Syncing " . count($passDeletedIds) . " pass deletions to cloud");
                     $this->syncDeletionsToCloud('passes', $passDeletedIds);
                 }
             }
@@ -2577,18 +2580,52 @@ class CloudSyncService
             $deletedCount = 0;
             foreach ($deletedIds as $deletedId) {
                 try {
-                    // Check if record exists locally
-                    $exists = DB::table($tableName)->where($idKey, $deletedId)->exists();
-                    
-                    if ($exists) {
-                        // Delete the record locally
-                        DB::table($tableName)->where($idKey, $deletedId)->delete();
+                    // Special handling for leaves and passes (they share the same table)
+                    if ($tableName === 'tbl_leave_pass') {
+                        // First, get the record to check its type (before deletion)
+                        $record = DB::table($tableName)->where($idKey, $deletedId)->first();
+                        
+                        if (!$record) {
+                            continue;
+                        }
+                        
+                        $lpType = $record->lp_type ?? null;
+                        
+                        // Filter by lp_type based on endpoint
+                        if ($endpoint === 'leaves' && $lpType !== 'Leave') {
+                            // This is not a leave, skip it
+                            continue;
+                        } elseif ($endpoint === 'passes' && $lpType !== 'Pass') {
+                            // This is not a pass, skip it
+                            continue;
+                        }
+                        
+                        // Delete the record locally (with type filter to ensure we delete the right one)
+                        DB::table($tableName)
+                            ->where($idKey, $deletedId)
+                            ->where('lp_type', $lpType)
+                            ->delete();
                         
                         // Track the deletion locally (so it won't be restored)
-                        $this->trackDeletion($tableName, $deletedId);
+                        // Include lp_type metadata for proper filtering
+                        $this->trackDeletion($tableName, $deletedId, 90, ['lp_type' => $lpType]);
                         
                         $deletedCount++;
-                        Log::info("Deleted {$tableName} #{$deletedId} (synced from cloud deletion)");
+                        Log::info("Deleted {$tableName} #{$deletedId} (type: {$lpType}) (synced from cloud deletion)");
+                    } else {
+                        // For other tables, standard deletion
+                        $exists = DB::table($tableName)->where($idKey, $deletedId)->exists();
+                        
+                        if ($exists) {
+                            // Delete the record locally
+                            DB::table($tableName)->where($idKey, $deletedId)->delete();
+                            
+                            // Track the deletion locally (so it won't be restored)
+                            $this->trackDeletion($tableName, $deletedId);
+                            
+                            $deletedCount++;
+                            Log::info("Deleted {$tableName} #{$deletedId} (synced from cloud deletion)");
+                        }
                     }
                 } catch (\Exception $e) {
                     Log::error("Error deleting {$tableName} #{$deletedId} from cloud deletion: " . $e->getMessage());
