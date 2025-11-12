@@ -23,6 +23,8 @@ class Pass extends Model
         'pass_slip_arrival_time',
         'faculty_id',
         'lp_image',
+        'created_at',
+        'updated_at',
     ];
 
     // Always filter by lp_type = 'Pass'
@@ -30,6 +32,17 @@ class Pass extends Model
     {
         static::addGlobalScope('pass', function (Builder $builder) {
             $builder->where('lp_type', 'Pass');
+        });
+        
+        // Set timestamps explicitly with correct timezone when creating/updating
+        static::creating(function ($model) {
+            $now = now()->format('Y-m-d H:i:s');
+            $model->created_at = $now;
+            $model->updated_at = $now;
+        });
+        
+        static::updating(function ($model) {
+            $model->updated_at = now()->format('Y-m-d H:i:s');
         });
     }
 

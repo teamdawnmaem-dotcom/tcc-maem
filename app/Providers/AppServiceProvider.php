@@ -35,6 +35,7 @@ class AppServiceProvider extends ServiceProvider
                 foreach ($db->getConnections() as $connection) {
                     try {
                         $connection->statement("SET time_zone = '{$mysqlTimezone}'");
+                        $connection->statement("SET SESSION time_zone = '{$mysqlTimezone}'");
                     } catch (\Exception $e) {
                         // Ignore errors for individual connections
                     }
@@ -43,6 +44,7 @@ class AppServiceProvider extends ServiceProvider
                 // Also set for default connection
                 try {
                     \DB::statement("SET time_zone = '{$mysqlTimezone}'");
+                    \DB::statement("SET SESSION time_zone = '{$mysqlTimezone}'");
                 } catch (\Exception $e) {
                     // Ignore if connection not ready
                 }
@@ -70,30 +72,63 @@ class AppServiceProvider extends ServiceProvider
         // This ensures timestamps are stored correctly in the database
         // Note: MySQL requires timezone tables to be populated for named timezones
         // We use offset format (e.g., '+08:00') which works without timezone tables
+        
+        // Get timezone once and cache it
+        $appTimezone = env('APP_TIMEZONE', config('app.timezone', 'UTC'));
+        $mysqlTimezone = '+00:00'; // Default to UTC offset
+        
         try {
-            // Read from env() directly to work even with config cache
-            $appTimezone = env('APP_TIMEZONE', config('app.timezone', 'UTC'));
-            
-            // Always convert to offset format to avoid timezone table dependency
-            // MySQL offset format: '+08:00', '-05:00', '+00:00' for UTC
-            $mysqlTimezone = '+00:00'; // Default to UTC offset
-            
-            try {
-                $dt = new \DateTime('now', new \DateTimeZone($appTimezone));
-                $offset = $dt->getOffset();
-                $hours = intval($offset / 3600);
-                $minutes = abs(intval(($offset % 3600) / 60));
-                $mysqlTimezone = sprintf('%+03d:%02d', $hours, $minutes);
-            } catch (\Exception $e) {
-                // If conversion fails, default to UTC offset
-                $mysqlTimezone = '+00:00';
-                \Log::warning("Failed to convert timezone '{$appTimezone}' to offset, using UTC (+00:00)");
-            }
-            
-            \DB::statement("SET time_zone = '{$mysqlTimezone}'");
-            \Log::info("MySQL timezone set to: {$mysqlTimezone} (app timezone: {$appTimezone})");
+            $dt = new \DateTime('now', new \DateTimeZone($appTimezone));
+            $offset = $dt->getOffset();
+            $hours = intval($offset / 3600);
+            $minutes = abs(intval(($offset % 3600) / 60));
+            $mysqlTimezone = sprintf('%+03d:%02d', $hours, $minutes);
         } catch (\Exception $e) {
-            // If timezone setting fails, log but don't break the application
+            $mysqlTimezone = '+00:00';
+            \Log::warning("Failed to convert timezone '{$appTimezone}' to offset, using UTC (+00:00)");
+        }
+        
+        // CRITICAL: Set timezone on the PDO connection directly
+        // This ensures CURRENT_TIMESTAMP uses the correct timezone
+        try {
+            $pdo = \DB::connection()->getPdo();
+            $pdo->exec("SET SESSION time_zone = '{$mysqlTimezone}'");
+            $pdo->exec("SET time_zone = '{$mysqlTimezone}'");
+        } catch (\Exception $e) {
+            // If PDO not ready, try DB statement
+            try {
+                \DB::statement("SET SESSION time_zone = '{$mysqlTimezone}'");
+                \DB::statement("SET time_zone = '{$mysqlTimezone}'");
+            } catch (\Exception $e2) {
+                \Log::warning("Failed to set MySQL timezone on PDO: " . $e2->getMessage());
+            }
+        }
+        
+        // Set timezone before every database query using DB::listen
+        // This ensures timezone is set even if connection is reused
+        \DB::listen(function ($query) use ($mysqlTimezone) {
+            static $timezoneSetForQuery = [];
+            $connectionName = $query->connectionName ?? 'default';
+            
+            if (!isset($timezoneSetForQuery[$connectionName])) {
+                try {
+                    \DB::connection($connectionName)->statement("SET SESSION time_zone = '{$mysqlTimezone}'");
+                    $timezoneSetForQuery[$connectionName] = true;
+                } catch (\Exception $e) {
+                    // Ignore errors
+                }
+            }
+        });
+        
+        // Set it immediately for the default connection
+        try {
+            \DB::statement("SET SESSION time_zone = '{$mysqlTimezone}'");
+            \DB::statement("SET time_zone = '{$mysqlTimezone}'");
+            if (!app()->bound('timezone_set_logged')) {
+                \Log::info("MySQL timezone set to: {$mysqlTimezone} (app timezone: {$appTimezone})");
+                app()->instance('timezone_set_logged', true);
+            }
+        } catch (\Exception $e) {
             \Log::warning("Failed to set MySQL timezone: " . $e->getMessage());
         }
     }
