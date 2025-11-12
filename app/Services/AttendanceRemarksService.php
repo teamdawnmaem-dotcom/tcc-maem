@@ -348,10 +348,13 @@ class AttendanceRemarksService
 
     /**
      * Reconcile attendance records for Pass slip changes on a specific date.
-     * - Remove 'absent' + 'with pass slip' records that no longer overlap any pass
-     * - Ensure records exist for overlaps (idempotent creation)
+     * Intelligently updates records to preserve IDs when possible.
+     * 
+     * @param int $facultyId Faculty ID
+     * @param string $date Date to reconcile
+     * @param string|null $oldDate Old date (null if new record or date unchanged)
      */
-    public function reconcilePassChange($facultyId, $date)
+    public function reconcilePassChange($facultyId, $date, $oldDate = null)
     {
         $dayOfWeek = Carbon::parse($date)->format('l');
         $teachingLoads = TeachingLoad::where('faculty_id', $facultyId)
@@ -363,6 +366,25 @@ class AttendanceRemarksService
             ->where('pass_slip_date', $date)
             ->get();
 
+        // If date changed, remove pass slip records from old date
+        if ($oldDate && $oldDate !== $date) {
+            $oldDayOfWeek = Carbon::parse($oldDate)->format('l');
+            $oldTeachingLoads = TeachingLoad::where('faculty_id', $facultyId)
+                ->where('teaching_load_day_of_week', $oldDayOfWeek)
+                ->get();
+            
+            foreach ($oldTeachingLoads as $load) {
+                // Remove pass slip records from old date
+                AttendanceRecord::where('faculty_id', $facultyId)
+                    ->where('teaching_load_id', $load->teaching_load_id)
+                    ->whereDate('record_date', $oldDate)
+                    ->where('record_status', 'Absent')
+                    ->where('record_remarks', 'With Pass Slip')
+                    ->delete();
+            }
+        }
+
+        // Process new date - update existing records or create new ones
         foreach ($teachingLoads as $load) {
             $hasOverlap = false;
             foreach ($passes as $pass) {
@@ -379,18 +401,55 @@ class AttendanceRemarksService
                 }
             }
 
-            if (!$hasOverlap) {
-                // Remove no-longer-valid pass-slip absent records for this date/load
-                AttendanceRecord::where('faculty_id', $facultyId)
-                    ->where('teaching_load_id', $load->teaching_load_id)
-                    ->whereDate('record_date', $date)
-                    ->where('record_status', 'Absent')
-                    ->where('record_remarks', 'With Pass Slip')
-                    ->delete();
+            // Check if attendance record already exists
+            $existingRecord = AttendanceRecord::where('faculty_id', $facultyId)
+                ->where('teaching_load_id', $load->teaching_load_id)
+                ->whereDate('record_date', $date)
+                ->first();
+
+            if ($hasOverlap) {
+                // Pass slip overlaps with teaching load - ensure record exists with correct remarks
+                if ($existingRecord) {
+                    // Update existing record - preserve ID
+                    $existingRecord->update([
+                        'record_status' => 'Absent',
+                        'record_remarks' => 'With Pass Slip',
+                    ]);
+                } else {
+                    // Create new record only if doesn't exist
+                    $cameraId = Camera::where('room_no', $load->room_no)->value('camera_id');
+                    
+                    if ($cameraId) {
+                        AttendanceRecord::create([
+                            'faculty_id' => $facultyId,
+                            'teaching_load_id' => $load->teaching_load_id,
+                            'camera_id' => $cameraId,
+                            'record_date' => $date,
+                            'record_time_in' => null,
+                            'record_time_out' => null,
+                            'time_duration_seconds' => 0,
+                            'record_status' => 'Absent',
+                            'record_remarks' => 'With Pass Slip',
+                        ]);
+                    }
+                }
+            } else {
+                // No overlap - remove pass slip records for this date/load if they exist
+                if ($existingRecord && $existingRecord->record_remarks === 'With Pass Slip' && $existingRecord->record_status === 'Absent') {
+                    $existingRecord->delete();
+                } else {
+                    // Remove any other pass slip records for this date/load
+                    AttendanceRecord::where('faculty_id', $facultyId)
+                        ->where('teaching_load_id', $load->teaching_load_id)
+                        ->whereDate('record_date', $date)
+                        ->where('record_status', 'Absent')
+                        ->where('record_remarks', 'With Pass Slip')
+                        ->delete();
+                }
             }
         }
 
-        // Ensure records are created for any valid overlaps
+        // Also check for leave overlaps and update accordingly (preserve IDs)
         $this->updateAbsentFacultyRemarks($facultyId, $date);
     }
 }
