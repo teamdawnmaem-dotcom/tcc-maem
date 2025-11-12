@@ -114,7 +114,7 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed, and skip records deleted in cloud
+            // Filter: only sync new records or records where local has newer/latest updated_at
             $roomsToSync = $localRooms->filter(function ($room) use ($existingCloudRecords, $cloudDeletedIds) {
                 $roomNo = $room->room_no;
                 
@@ -129,19 +129,35 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if cloud has a newer version (to prevent overwriting cloud updates)
-                if ($this->shouldSkipDueToNewerVersion($room, $existingCloudRecords[$roomNo], 'room', $roomNo)) {
+                // STRICT RULE: Compare updated_at timestamps - only sync if local is newer or equal
+                $localUpdatedAt = $room->updated_at ? $this->formatDateTime($room->updated_at) : null;
+                $cloudUpdatedAt = $existingCloudRecords[$roomNo]['updated_at'] ?? null;
+                
+                $comparison = $this->compareRecordTimestamps($localUpdatedAt, $cloudUpdatedAt);
+                
+                if ($comparison === 1) {
+                    // Cloud is newer, skip syncing local to cloud
+                    Log::debug("Skipping room {$roomNo} - cloud has newer updated_at (cloud: {$cloudUpdatedAt}, local: {$localUpdatedAt})");
                     return false;
                 }
                 
-                // If in cloud, compare data to see if it changed
-                $localData = [
-                    'room_no' => $room->room_no,
-                    'room_name' => $room->room_name,
-                    'room_building_no' => $room->room_building_no,
-                ];
+                // Local is newer or equal - sync it
+                if ($comparison === -1) {
+                    Log::debug("Syncing room {$roomNo} - local has newer updated_at (local: {$localUpdatedAt}, cloud: {$cloudUpdatedAt})");
+                    return true;
+                }
                 
-                return $this->recordsAreDifferent($localData, $existingCloudRecords[$roomNo]);
+                // Timestamps are equal - check if data is different
+                if ($comparison === 0) {
+                    $localData = [
+                        'room_no' => $room->room_no,
+                        'room_name' => $room->room_name,
+                        'room_building_no' => $room->room_building_no,
+                    ];
+                    return $this->recordsAreDifferent($localData, $existingCloudRecords[$roomNo]);
+                }
+                
+                return false;
             });
             
             if ($roomsToSync->isEmpty()) {
@@ -155,6 +171,8 @@ class CloudSyncService
                     'room_no' => $room->room_no,
                     'room_name' => $room->room_name,
                     'room_building_no' => $room->room_building_no,
+                    'created_at' => $this->formatDateTime($room->created_at),
+                    'updated_at' => $this->formatDateTime($room->updated_at),
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('rooms', $payload);
@@ -195,7 +213,7 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed, and skip records deleted in cloud
+            // Filter: only sync new records or records where local has newer/latest updated_at
             $camerasToSync = $localCameras->filter(function ($camera) use ($existingCloudRecords, $cloudDeletedIds) {
                 $cameraId = $camera->camera_id;
                 
@@ -210,23 +228,39 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if cloud has a newer version (to prevent overwriting cloud updates)
-                if ($this->shouldSkipDueToNewerVersion($camera, $existingCloudRecords[$cameraId], 'camera', $cameraId)) {
+                // STRICT RULE: Compare updated_at timestamps - only sync if local is newer or equal
+                $localUpdatedAt = $camera->updated_at ? $this->formatDateTime($camera->updated_at) : null;
+                $cloudUpdatedAt = $existingCloudRecords[$cameraId]['updated_at'] ?? null;
+                
+                $comparison = $this->compareRecordTimestamps($localUpdatedAt, $cloudUpdatedAt);
+                
+                if ($comparison === 1) {
+                    // Cloud is newer, skip syncing local to cloud
+                    Log::debug("Skipping camera {$cameraId} - cloud has newer updated_at (cloud: {$cloudUpdatedAt}, local: {$localUpdatedAt})");
                     return false;
                 }
                 
-                // If in cloud, compare data to see if it changed
-                $localData = [
-                    'camera_id' => $camera->camera_id,
-                    'camera_name' => $camera->camera_name,
-                    'camera_ip_address' => $camera->camera_ip_address,
-                    'camera_username' => $camera->camera_username,
-                    'camera_password' => $camera->camera_password,
-                    'camera_live_feed' => $camera->camera_live_feed,
-                    'room_no' => $camera->room_no,
-                ];
+                // Local is newer or equal - sync it
+                if ($comparison === -1) {
+                    Log::debug("Syncing camera {$cameraId} - local has newer updated_at (local: {$localUpdatedAt}, cloud: {$cloudUpdatedAt})");
+                    return true;
+                }
                 
-                return $this->recordsAreDifferent($localData, $existingCloudRecords[$cameraId]);
+                // Timestamps are equal - check if data is different
+                if ($comparison === 0) {
+                    $localData = [
+                        'camera_id' => $camera->camera_id,
+                        'camera_name' => $camera->camera_name,
+                        'camera_ip_address' => $camera->camera_ip_address,
+                        'camera_username' => $camera->camera_username,
+                        'camera_password' => $camera->camera_password,
+                        'camera_live_feed' => $camera->camera_live_feed,
+                        'room_no' => $camera->room_no,
+                    ];
+                    return $this->recordsAreDifferent($localData, $existingCloudRecords[$cameraId]);
+                }
+                
+                return false;
             });
             
             if ($camerasToSync->isEmpty()) {
@@ -243,6 +277,8 @@ class CloudSyncService
                     'camera_password' => $camera->camera_password,
                     'camera_live_feed' => $camera->camera_live_feed,
                     'room_no' => $camera->room_no,
+                    'created_at' => $this->formatDateTime($camera->created_at),
+                    'updated_at' => $this->formatDateTime($camera->updated_at),
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('cameras', $payload);
@@ -285,7 +321,7 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed, and skip records deleted in cloud
+            // Filter: only sync new records or records where local has newer/latest updated_at
             $facultiesToSync = $localFaculties->filter(function ($faculty) use ($existingCloudRecords, $cloudDeletedIds) {
                 $facultyId = $faculty->faculty_id;
                 
@@ -300,21 +336,37 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if cloud has a newer version (to prevent overwriting cloud updates)
-                if ($this->shouldSkipDueToNewerVersion($faculty, $existingCloudRecords[$facultyId], 'faculty', $facultyId)) {
+                // STRICT RULE: Compare updated_at timestamps - only sync if local is newer or equal
+                $localUpdatedAt = $faculty->updated_at ? $this->formatDateTime($faculty->updated_at) : null;
+                $cloudUpdatedAt = $existingCloudRecords[$facultyId]['updated_at'] ?? null;
+                
+                $comparison = $this->compareRecordTimestamps($localUpdatedAt, $cloudUpdatedAt);
+                
+                if ($comparison === 1) {
+                    // Cloud is newer, skip syncing local to cloud
+                    Log::debug("Skipping faculty {$facultyId} - cloud has newer updated_at (cloud: {$cloudUpdatedAt}, local: {$localUpdatedAt})");
                     return false;
                 }
                 
-                // If in cloud, compare data to see if it changed (ignore images path differences)
-                $localData = [
-                    'faculty_id' => $faculty->faculty_id,
-                    'faculty_fname' => $faculty->faculty_fname,
-                    'faculty_lname' => $faculty->faculty_lname,
-                    'faculty_department' => $faculty->faculty_department,
-                    'faculty_face_embedding' => $faculty->faculty_face_embedding,
-                ];
+                // Local is newer or equal - sync it
+                if ($comparison === -1) {
+                    Log::debug("Syncing faculty {$facultyId} - local has newer updated_at (local: {$localUpdatedAt}, cloud: {$cloudUpdatedAt})");
+                    return true;
+                }
                 
-                return $this->recordsAreDifferent($localData, $existingCloudRecords[$facultyId]);
+                // Timestamps are equal - check if data is different
+                if ($comparison === 0) {
+                    $localData = [
+                        'faculty_id' => $faculty->faculty_id,
+                        'faculty_fname' => $faculty->faculty_fname,
+                        'faculty_lname' => $faculty->faculty_lname,
+                        'faculty_department' => $faculty->faculty_department,
+                        'faculty_face_embedding' => $faculty->faculty_face_embedding,
+                    ];
+                    return $this->recordsAreDifferent($localData, $existingCloudRecords[$facultyId]);
+                }
+                
+                return false;
             });
             
             if ($facultiesToSync->isEmpty()) {
@@ -377,7 +429,7 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed, and skip records deleted in cloud
+            // Filter: STRICT RULE - only sync if local has newer/latest updated_at
             $loadsToSync = $localLoads->filter(function ($load) use ($existingCloudRecords, $cloudDeletedIds) {
                 $loadId = $load->teaching_load_id;
                 
@@ -392,12 +444,12 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if cloud has a newer version (to prevent overwriting cloud updates)
-                if ($this->shouldSkipDueToNewerVersion($load, $existingCloudRecords[$loadId], 'teaching_load', $loadId)) {
+                // STRICT RULE: Compare updated_at timestamps - only sync if local is newer or equal
+                if (!$this->shouldSyncLocalToCloud($load, $existingCloudRecords[$loadId], 'teaching_load', $loadId)) {
                     return false;
                 }
                 
-                // If in cloud, compare data to see if it changed
+                // If timestamps are equal, check if data is different
                 $localData = [
                     'teaching_load_id' => $load->teaching_load_id,
                     'faculty_id' => $load->faculty_id,
@@ -478,7 +530,7 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed, and skip records deleted in cloud
+            // Filter: STRICT RULE - only sync if local has newer/latest updated_at
             $recordsToSync = $localRecords->filter(function ($record) use ($existingCloudRecords, $cloudDeletedIds) {
                 $recordId = $record->record_id;
                 
@@ -493,12 +545,12 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if cloud has a newer version (to prevent overwriting cloud updates)
-                if ($this->shouldSkipDueToNewerVersion($record, $existingCloudRecords[$recordId], 'attendance_record', $recordId)) {
+                // STRICT RULE: Compare updated_at timestamps - only sync if local is newer or equal
+                if (!$this->shouldSyncLocalToCloud($record, $existingCloudRecords[$recordId], 'attendance_record', $recordId)) {
                     return false;
                 }
                 
-                // If in cloud, compare data to see if it changed (ignore snapshot paths)
+                // If timestamps are equal, check if data is different
                 $localData = [
                     'record_id' => $record->record_id,
                     'record_date' => $this->formatDateTime($record->record_date),
@@ -538,6 +590,8 @@ class CloudSyncService
                     'camera_id' => $record->camera_id,
                     'time_in_snapshot' => $cloudTimeInSnapshot,
                     'time_out_snapshot' => $cloudTimeOutSnapshot,
+                    'created_at' => $this->formatDateTime($record->created_at),
+                    'updated_at' => $this->formatDateTime($record->updated_at),
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('attendance-records', $payload);
@@ -606,24 +660,9 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if cloud has a newer version (to prevent overwriting cloud updates)
-                $cloudUpdatedAt = $existingCloudRecords[$lpId]['updated_at'] ?? null;
-                $localUpdatedAt = $leave->updated_at ? $this->formatDateTime($leave->updated_at) : null;
-                
-                if ($cloudUpdatedAt && $localUpdatedAt) {
-                    try {
-                        $cloudTime = \Carbon\Carbon::parse($cloudUpdatedAt);
-                        $localTime = \Carbon\Carbon::parse($localUpdatedAt);
-                        
-                        // If cloud is newer, skip syncing to avoid overwriting cloud's updates
-                        if ($cloudTime->gt($localTime)) {
-                            Log::debug("Skipping leave {$lpId} - cloud has newer version (cloud: {$cloudUpdatedAt}, local: {$localUpdatedAt})");
-                            return false;
-                        }
-                    } catch (\Exception $e) {
-                        // If date parsing fails, continue with normal comparison
-                        Log::debug("Could not compare timestamps for leave {$lpId}: " . $e->getMessage());
-                    }
+                // STRICT RULE: Compare updated_at timestamps - only sync if local is newer or equal
+                if (!$this->shouldSyncLocalToCloud($leave, $existingCloudRecords[$lpId], 'leave', $lpId)) {
+                    return false;
                 }
                 
                 // If in cloud, compare data to see if it changed (ignore image path differences)
@@ -731,24 +770,9 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if cloud has a newer version (to prevent overwriting cloud updates)
-                $cloudUpdatedAt = $existingCloudRecords[$lpId]['updated_at'] ?? null;
-                $localUpdatedAt = $pass->updated_at ? $this->formatDateTime($pass->updated_at) : null;
-                
-                if ($cloudUpdatedAt && $localUpdatedAt) {
-                    try {
-                        $cloudTime = \Carbon\Carbon::parse($cloudUpdatedAt);
-                        $localTime = \Carbon\Carbon::parse($localUpdatedAt);
-                        
-                        // If cloud is newer, skip syncing to avoid overwriting cloud's updates
-                        if ($cloudTime->gt($localTime)) {
-                            Log::debug("Skipping pass {$lpId} - cloud has newer version (cloud: {$cloudUpdatedAt}, local: {$localUpdatedAt})");
-                            return false;
-                        }
-                    } catch (\Exception $e) {
-                        // If date parsing fails, continue with normal comparison
-                        Log::debug("Could not compare timestamps for pass {$lpId}: " . $e->getMessage());
-                    }
+                // STRICT RULE: Compare updated_at timestamps - only sync if local is newer or equal
+                if (!$this->shouldSyncLocalToCloud($pass, $existingCloudRecords[$lpId], 'pass', $lpId)) {
+                    return false;
                 }
                 
                 // If in cloud, compare data to see if it changed (ignore image path differences)
@@ -858,6 +882,8 @@ class CloudSyncService
                     'faculty_id' => $log->faculty_id,
                     'camera_id' => $log->camera_id,
                     'teaching_load_id' => $log->teaching_load_id,
+                    'created_at' => $this->formatDateTime($log->created_at),
+                    'updated_at' => $this->formatDateTime($log->updated_at),
                 ];
             })->values()->all();
             
@@ -1090,7 +1116,7 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed, and skip records deleted in cloud
+            // Filter: STRICT RULE - only sync if local has newer/latest updated_at
             $subjectsToSync = $localSubjects->filter(function ($subject) use ($existingCloudRecords, $cloudDeletedIds) {
                 $subjectId = $subject->subject_id;
                 
@@ -1105,12 +1131,12 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if cloud has a newer version (to prevent overwriting cloud updates)
-                if ($this->shouldSkipDueToNewerVersion($subject, $existingCloudRecords[$subjectId], 'subject', $subjectId)) {
+                // STRICT RULE: Compare updated_at timestamps - only sync if local is newer or equal
+                if (!$this->shouldSyncLocalToCloud($subject, $existingCloudRecords[$subjectId], 'subject', $subjectId)) {
                     return false;
                 }
                 
-                // If in cloud, compare data to see if it changed
+                // If timestamps are equal, check if data is different
                 $localData = [
                     'subject_id' => $subject->subject_id,
                     'subject_code' => $subject->subject_code,
@@ -1181,7 +1207,7 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed, and skip records deleted in cloud
+            // Filter: STRICT RULE - only sync if local has newer/latest updated_at
             $usersToSync = $localUsers->filter(function ($user) use ($existingCloudRecords, $cloudDeletedIds) {
                 $userId = $user->user_id;
                 
@@ -1196,12 +1222,12 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if cloud has a newer version (to prevent overwriting cloud updates)
-                if ($this->shouldSkipDueToNewerVersion($user, $existingCloudRecords[$userId], 'user', $userId)) {
+                // STRICT RULE: Compare updated_at timestamps - only sync if local is newer or equal
+                if (!$this->shouldSyncLocalToCloud($user, $existingCloudRecords[$userId], 'user', $userId)) {
                     return false;
                 }
                 
-                // If in cloud, compare data to see if it changed
+                // If timestamps are equal, check if data is different
                 $localData = [
                     'user_id' => $user->user_id,
                     'user_role' => $user->user_role,
@@ -1297,6 +1323,8 @@ class CloudSyncService
                     'logs_description' => $log->logs_description,
                     'logs_timestamp' => $this->formatDateTime($log->logs_timestamp),
                     'logs_module' => $log->logs_module,
+                    'created_at' => $this->formatDateTime($log->created_at),
+                    'updated_at' => $this->formatDateTime($log->updated_at),
                 ];
             })->values()->all();
             
@@ -1371,6 +1399,8 @@ class CloudSyncService
                     'archived_at' => $this->formatDateTime($a->archived_at),
                     'archived_by' => $a->archived_by,
                     'archive_notes' => $a->archive_notes,
+                    'created_at' => $this->formatDateTime($a->created_at),
+                    'updated_at' => $this->formatDateTime($a->updated_at),
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('teaching-load-archives', $payload);
@@ -2106,11 +2136,19 @@ class CloudSyncService
     /**
      * Check if cloud record is newer than local record based on updated_at timestamp
      * Returns: 1 if cloud is newer, -1 if local is newer, 0 if same or cannot determine
+     * STRICT: If one timestamp is missing, treat the one with timestamp as newer
      */
     protected function compareRecordTimestamps($localUpdatedAt, $cloudUpdatedAt)
     {
-        if (empty($localUpdatedAt) || empty($cloudUpdatedAt)) {
-            return 0; // Cannot determine if one is missing
+        // STRICT RULE: If one is missing, the one with timestamp is considered newer
+        if (empty($localUpdatedAt) && !empty($cloudUpdatedAt)) {
+            return 1; // Cloud has timestamp, local doesn't - cloud is newer
+        }
+        if (!empty($localUpdatedAt) && empty($cloudUpdatedAt)) {
+            return -1; // Local has timestamp, cloud doesn't - local is newer
+        }
+        if (empty($localUpdatedAt) && empty($cloudUpdatedAt)) {
+            return 0; // Both missing - cannot determine
         }
         
         try {
@@ -2128,6 +2166,70 @@ class CloudSyncService
             Log::debug("Could not compare timestamps: " . $e->getMessage());
             return 0; // Cannot determine on error
         }
+    }
+    
+    /**
+     * STRICT TIMESTAMP RULE: Check if local record should be synced to cloud
+     * Returns true if local should be synced (local is newer or equal), false otherwise
+     */
+    protected function shouldSyncLocalToCloud($localRecord, $cloudRecord, $recordType, $recordId)
+    {
+        $localUpdatedAt = is_object($localRecord) 
+            ? ($localRecord->updated_at ? $this->formatDateTime($localRecord->updated_at) : null)
+            : ($localRecord['updated_at'] ?? null);
+        
+        $cloudUpdatedAt = is_array($cloudRecord) 
+            ? ($cloudRecord['updated_at'] ?? null)
+            : ($cloudRecord->updated_at ?? null);
+        
+        $comparison = $this->compareRecordTimestamps($localUpdatedAt, $cloudUpdatedAt);
+        
+        if ($comparison === 1) {
+            // Cloud is newer, skip syncing local to cloud
+            Log::debug("STRICT: Skipping {$recordType} {$recordId} - cloud has newer updated_at (cloud: {$cloudUpdatedAt}, local: {$localUpdatedAt})");
+            return false;
+        }
+        
+        if ($comparison === -1) {
+            // Local is newer, sync it
+            Log::debug("STRICT: Syncing {$recordType} {$recordId} - local has newer updated_at (local: {$localUpdatedAt}, cloud: {$cloudUpdatedAt})");
+            return true;
+        }
+        
+        // Timestamps are equal or cannot determine - check if data is different
+        return true; // Default to syncing if timestamps are equal (will be filtered by recordsAreDifferent if needed)
+    }
+    
+    /**
+     * STRICT TIMESTAMP RULE: Check if cloud record should be synced to local
+     * Returns true if cloud should be synced (cloud is newer or equal), false otherwise
+     */
+    protected function shouldSyncCloudToLocal($localRecord, $cloudRecord, $recordType, $recordId)
+    {
+        $localUpdatedAt = is_array($localRecord) 
+            ? ($localRecord['updated_at'] ?? null)
+            : ($localRecord->updated_at ?? null);
+        
+        $cloudUpdatedAt = is_array($cloudRecord) 
+            ? ($cloudRecord['updated_at'] ?? null)
+            : ($cloudRecord->updated_at ?? null);
+        
+        $comparison = $this->compareRecordTimestamps($localUpdatedAt, $cloudUpdatedAt);
+        
+        if ($comparison === -1) {
+            // Local is newer, skip syncing cloud to local
+            Log::debug("STRICT: Skipping {$recordType} {$recordId} from cloud - local has newer updated_at (local: {$localUpdatedAt}, cloud: {$cloudUpdatedAt})");
+            return false;
+        }
+        
+        if ($comparison === 1) {
+            // Cloud is newer, sync it
+            Log::debug("STRICT: Syncing {$recordType} {$recordId} from cloud - cloud has newer updated_at (cloud: {$cloudUpdatedAt}, local: {$localUpdatedAt})");
+            return true;
+        }
+        
+        // Timestamps are equal or cannot determine - check if data is different
+        return true; // Default to syncing if timestamps are equal (will be filtered by recordsAreDifferent if needed)
     }
     
     /**
@@ -2570,8 +2672,8 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if local has a newer version (to prevent overwriting local updates)
-                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$userId], $cloudUser, 'user', $userId)) {
+                // STRICT RULE: Compare updated_at timestamps - only sync if cloud is newer or equal
+                if (!$this->shouldSyncCloudToLocal($existingLocalRecords[$userId], $cloudUser, 'user', $userId)) {
                     return false;
                 }
                 
@@ -2609,7 +2711,7 @@ class CloudSyncService
                             'created_at' => $this->formatDateTime($cloudUser['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudUser['updated_at'] ?? null),
                         ]
-                    ], ['user_id'], ['user_role', 'user_department', 'user_fname', 'user_lname', 'username', 'user_password', 'updated_at']);
+                    ], ['user_id'], ['user_role', 'user_department', 'user_fname', 'user_lname', 'username', 'user_password', 'created_at', 'updated_at']);
                     
                     $synced[] = $cloudUser['user_id'];
                 } catch (\Exception $e) {
@@ -2664,8 +2766,8 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if local has a newer version (to prevent overwriting local updates)
-                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$subjectId], $cloudSubject, 'subject', $subjectId)) {
+                // STRICT RULE: Compare updated_at timestamps - only sync if cloud is newer or equal
+                if (!$this->shouldSyncCloudToLocal($existingLocalRecords[$subjectId], $cloudSubject, 'subject', $subjectId)) {
                     return false;
                 }
                 
@@ -2697,7 +2799,7 @@ class CloudSyncService
                             'created_at' => $this->formatDateTime($cloudSubject['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudSubject['updated_at'] ?? null),
                         ]
-                    ], ['subject_id'], ['subject_code', 'subject_description', 'department', 'updated_at']);
+                    ], ['subject_id'], ['subject_code', 'subject_description', 'department', 'created_at', 'updated_at']);
                     
                     $synced[] = $cloudSubject['subject_id'];
                 } catch (\Exception $e) {
@@ -2736,7 +2838,7 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed
+            // Filter: STRICT RULE - only sync if cloud has newer/latest updated_at
             $roomsToSync = array_filter($cloudRooms, function ($cloudRoom) use ($existingLocalRecords) {
                 $roomNo = $cloudRoom['room_no'] ?? null;
                 if (!$roomNo) return false;
@@ -2752,12 +2854,12 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if local has a newer version (to prevent overwriting local updates)
-                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$roomNo], $cloudRoom, 'room', $roomNo)) {
+                // STRICT RULE: Compare updated_at timestamps - only sync if cloud is newer or equal
+                if (!$this->shouldSyncCloudToLocal($existingLocalRecords[$roomNo], $cloudRoom, 'room', $roomNo)) {
                     return false;
                 }
                 
-                // If in local, compare data to see if it changed
+                // If timestamps are equal, check if data is different
                 $localData = [
                     'room_no' => $existingLocalRecords[$roomNo]['room_no'],
                     'room_name' => $existingLocalRecords[$roomNo]['room_name'] ?? null,
@@ -2780,8 +2882,10 @@ class CloudSyncService
                             'room_no' => $cloudRoom['room_no'],
                             'room_name' => $cloudRoom['room_name'] ?? null,
                             'room_building_no' => $cloudRoom['room_building_no'] ?? null,
+                            'created_at' => $this->formatDateTime($cloudRoom['created_at'] ?? null),
+                            'updated_at' => $this->formatDateTime($cloudRoom['updated_at'] ?? null),
                         ]
-                    ], ['room_no'], ['room_name', 'room_building_no']);
+                    ], ['room_no'], ['room_name', 'room_building_no', 'created_at', 'updated_at']);
                     
                     $synced[] = $cloudRoom['room_no'];
                 } catch (\Exception $e) {
@@ -2820,7 +2924,7 @@ class CloudSyncService
                 return $synced;
             }
             
-            // Filter: only sync new records or records that have changed
+            // Filter: STRICT RULE - only sync if cloud has newer/latest updated_at
             $camerasToSync = array_filter($cloudCameras, function ($cloudCamera) use ($existingLocalRecords) {
                 $cameraId = $cloudCamera['camera_id'] ?? null;
                 if (!$cameraId) return false;
@@ -2836,12 +2940,12 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if local has a newer version (to prevent overwriting local updates)
-                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$cameraId], $cloudCamera, 'camera', $cameraId)) {
+                // STRICT RULE: Compare updated_at timestamps - only sync if cloud is newer or equal
+                if (!$this->shouldSyncCloudToLocal($existingLocalRecords[$cameraId], $cloudCamera, 'camera', $cameraId)) {
                     return false;
                 }
                 
-                // If in local, compare data to see if it changed
+                // If timestamps are equal, check if data is different
                 $localData = [
                     'camera_id' => $existingLocalRecords[$cameraId]['camera_id'],
                     'camera_name' => $existingLocalRecords[$cameraId]['camera_name'] ?? null,
@@ -2872,8 +2976,10 @@ class CloudSyncService
                             'camera_password' => $cloudCamera['camera_password'] ?? null,
                             'camera_live_feed' => $cloudCamera['camera_live_feed'] ?? null,
                             'room_no' => $cloudCamera['room_no'] ?? null,
+                            'created_at' => $this->formatDateTime($cloudCamera['created_at'] ?? null),
+                            'updated_at' => $this->formatDateTime($cloudCamera['updated_at'] ?? null),
                         ]
-                    ], ['camera_id'], ['camera_name', 'camera_ip_address', 'camera_username', 'camera_password', 'camera_live_feed', 'room_no']);
+                    ], ['camera_id'], ['camera_name', 'camera_ip_address', 'camera_username', 'camera_password', 'camera_live_feed', 'room_no', 'created_at', 'updated_at']);
                     
                     $synced[] = $cloudCamera['camera_id'];
                 } catch (\Exception $e) {
@@ -2928,8 +3034,8 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if local has a newer version (to prevent overwriting local updates)
-                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$facultyId], $cloudFaculty, 'faculty', $facultyId)) {
+                // STRICT RULE: Compare updated_at timestamps - only sync if cloud is newer or equal
+                if (!$this->shouldSyncCloudToLocal($existingLocalRecords[$facultyId], $cloudFaculty, 'faculty', $facultyId)) {
                     return false;
                 }
                 
@@ -2967,7 +3073,7 @@ class CloudSyncService
                             'created_at' => $this->formatDateTime($cloudFaculty['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudFaculty['updated_at'] ?? null),
                         ]
-                    ], ['faculty_id'], ['faculty_fname', 'faculty_lname', 'faculty_department', 'faculty_images', 'faculty_face_embedding', 'updated_at']);
+                    ], ['faculty_id'], ['faculty_fname', 'faculty_lname', 'faculty_department', 'faculty_images', 'faculty_face_embedding', 'created_at', 'updated_at']);
                     
                     $synced[] = $cloudFaculty['faculty_id'];
                 } catch (\Exception $e) {
@@ -3022,8 +3128,8 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if local has a newer version (to prevent overwriting local updates)
-                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$loadId], $cloudLoad, 'teaching_load', $loadId)) {
+                // STRICT RULE: Compare updated_at timestamps - only sync if cloud is newer or equal
+                if (!$this->shouldSyncCloudToLocal($existingLocalRecords[$loadId], $cloudLoad, 'teaching_load', $loadId)) {
                     return false;
                 }
                 
@@ -3065,7 +3171,7 @@ class CloudSyncService
                             'created_at' => $this->formatDateTime($cloudLoad['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudLoad['updated_at'] ?? null),
                         ]
-                    ], ['teaching_load_id'], ['faculty_id', 'teaching_load_course_code', 'teaching_load_subject', 'teaching_load_day_of_week', 'teaching_load_class_section', 'teaching_load_time_in', 'teaching_load_time_out', 'room_no', 'updated_at']);
+                    ], ['teaching_load_id'], ['faculty_id', 'teaching_load_course_code', 'teaching_load_subject', 'teaching_load_day_of_week', 'teaching_load_class_section', 'teaching_load_time_in', 'teaching_load_time_out', 'room_no', 'created_at', 'updated_at']);
                     
                     $synced[] = $cloudLoad['teaching_load_id'];
                 } catch (\Exception $e) {
@@ -3131,8 +3237,8 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if local has a newer version (to prevent overwriting local updates)
-                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$recordId], $cloudRecord, 'attendance_record', $recordId)) {
+                // STRICT RULE: Compare updated_at timestamps - only sync if cloud is newer or equal
+                if (!$this->shouldSyncCloudToLocal($existingLocalRecords[$recordId], $cloudRecord, 'attendance_record', $recordId)) {
                     return false;
                 }
                 
@@ -3179,8 +3285,10 @@ class CloudSyncService
                             'camera_id' => $cloudRecord['camera_id'] ?? null,
                             'time_in_snapshot' => $localTimeInSnapshot,
                             'time_out_snapshot' => $localTimeOutSnapshot,
+                            'created_at' => $this->formatDateTime($cloudRecord['created_at'] ?? null),
+                            'updated_at' => $this->formatDateTime($cloudRecord['updated_at'] ?? null),
                         ]
-                    ], ['record_id'], ['record_date', 'faculty_id', 'teaching_load_id', 'record_time_in', 'record_time_out', 'time_duration_seconds', 'record_status', 'record_remarks', 'camera_id', 'time_in_snapshot', 'time_out_snapshot']);
+                    ], ['record_id'], ['record_date', 'faculty_id', 'teaching_load_id', 'record_time_in', 'record_time_out', 'time_duration_seconds', 'record_status', 'record_remarks', 'camera_id', 'time_in_snapshot', 'time_out_snapshot', 'created_at', 'updated_at']);
                     
                     $synced[] = $cloudRecord['record_id'];
                 } catch (\Exception $e) {
@@ -3250,8 +3358,8 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if local has a newer version (to prevent overwriting local updates)
-                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$lpId], $cloudLeave, 'leave', $lpId)) {
+                // STRICT RULE: Compare updated_at timestamps - only sync if cloud is newer or equal
+                if (!$this->shouldSyncCloudToLocal($existingLocalRecords[$lpId], $cloudLeave, 'leave', $lpId)) {
                     return false;
                 }
                 
@@ -3343,7 +3451,7 @@ class CloudSyncService
                             'created_at' => $this->formatDateTime($cloudLeave['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudLeave['updated_at'] ?? null),
                         ]
-                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'leave_start_date', 'leave_end_date', 'lp_image', 'updated_at']);
+                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'leave_start_date', 'leave_end_date', 'lp_image', 'created_at', 'updated_at']);
                     
                     // Check if date range changed and update attendance records if needed
                     $isUpdate = isset($oldRecordsMap[$cloudLeave['lp_id']]);
@@ -3458,8 +3566,8 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if local has a newer version (to prevent overwriting local updates)
-                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$lpId], $cloudPass, 'pass', $lpId)) {
+                // STRICT RULE: Compare updated_at timestamps - only sync if cloud is newer or equal
+                if (!$this->shouldSyncCloudToLocal($existingLocalRecords[$lpId], $cloudPass, 'pass', $lpId)) {
                     return false;
                 }
                 
@@ -3543,7 +3651,7 @@ class CloudSyncService
                             'created_at' => $this->formatDateTime($cloudPass['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudPass['updated_at'] ?? null),
                         ]
-                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'lp_image', 'updated_at']);
+                    ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'lp_image', 'created_at', 'updated_at']);
                     
                     // Check if date changed and update attendance records if needed
                     $isUpdate = isset($oldRecordsMap[$cloudPass['lp_id']]);
@@ -3666,8 +3774,10 @@ class CloudSyncService
                             'faculty_name' => $cloudLog['faculty_name'] ?? null,
                             'status' => $cloudLog['status'] ?? null,
                             'distance' => $cloudLog['distance'] ?? null,
+                            'created_at' => $this->formatDateTime($cloudLog['created_at'] ?? null),
+                            'updated_at' => $this->formatDateTime($cloudLog['updated_at'] ?? null),
                         ]
-                    ], ['log_id'], ['faculty_id', 'camera_id', 'teaching_load_id', 'recognition_time', 'camera_name', 'room_name', 'building_no', 'faculty_name', 'status', 'distance']);
+                    ], ['log_id'], ['faculty_id', 'camera_id', 'teaching_load_id', 'recognition_time', 'camera_name', 'room_name', 'building_no', 'faculty_name', 'status', 'distance', 'created_at', 'updated_at']);
                     
                     $synced[] = $cloudLog['log_id'];
                 } catch (\Exception $e) {
@@ -3747,7 +3857,7 @@ class CloudSyncService
                             'created_at' => $this->formatDateTime($cloudRecording['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudRecording['updated_at'] ?? null),
                         ]
-                    ], ['recording_id'], ['camera_id', 'start_time', 'duration', 'frames', 'filepath', 'filename', 'file_size', 'updated_at']);
+                    ], ['recording_id'], ['camera_id', 'start_time', 'duration', 'frames', 'filepath', 'filename', 'file_size', 'created_at', 'updated_at']);
                     
                     $synced[] = $cloudRecording['recording_id'];
                 } catch (\Exception $e) {
@@ -3812,8 +3922,10 @@ class CloudSyncService
                             'logs_description' => $cloudLog['logs_description'] ?? null,
                             'logs_timestamp' => $this->formatDateTime($cloudLog['logs_timestamp'] ?? null),
                             'logs_module' => $cloudLog['logs_module'] ?? null,
+                            'created_at' => $this->formatDateTime($cloudLog['created_at'] ?? null),
+                            'updated_at' => $this->formatDateTime($cloudLog['updated_at'] ?? null),
                         ]
-                    ], ['logs_id'], ['user_id', 'logs_action', 'logs_description', 'logs_timestamp', 'logs_module']);
+                    ], ['logs_id'], ['user_id', 'logs_action', 'logs_description', 'logs_timestamp', 'logs_module', 'created_at', 'updated_at']);
                     
                     $synced[] = $cloudLog['logs_id'];
                 } catch (\Exception $e) {
@@ -3887,8 +3999,10 @@ class CloudSyncService
                             'archived_at' => $this->formatDateTime($cloudArchive['archived_at'] ?? null),
                             'archived_by' => $cloudArchive['archived_by'] ?? null,
                             'archive_notes' => $cloudArchive['archive_notes'] ?? null,
+                            'created_at' => $this->formatDateTime($cloudArchive['created_at'] ?? null),
+                            'updated_at' => $this->formatDateTime($cloudArchive['updated_at'] ?? null),
                         ]
-                    ], ['archive_id'], ['original_teaching_load_id', 'faculty_id', 'teaching_load_course_code', 'teaching_load_subject', 'teaching_load_class_section', 'teaching_load_day_of_week', 'teaching_load_time_in', 'teaching_load_time_out', 'room_no', 'school_year', 'semester', 'archived_at', 'archived_by', 'archive_notes']);
+                    ], ['archive_id'], ['original_teaching_load_id', 'faculty_id', 'teaching_load_course_code', 'teaching_load_subject', 'teaching_load_class_section', 'teaching_load_day_of_week', 'teaching_load_time_in', 'teaching_load_time_out', 'room_no', 'school_year', 'semester', 'archived_at', 'archived_by', 'archive_notes', 'created_at', 'updated_at']);
                     
                     $synced[] = $cloudArchive['archive_id'];
                 } catch (\Exception $e) {
@@ -3966,7 +4080,7 @@ class CloudSyncService
                             'created_at' => $this->formatDateTime($cloudArchive['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudArchive['updated_at'] ?? null),
                         ]
-                    ], ['archive_id'], ['original_record_id', 'faculty_id', 'teaching_load_id', 'camera_id', 'record_date', 'record_time_in', 'record_time_out', 'time_duration_seconds', 'record_status', 'record_remarks', 'school_year', 'semester', 'archived_at', 'archived_by', 'archive_notes', 'updated_at']);
+                    ], ['archive_id'], ['original_record_id', 'faculty_id', 'teaching_load_id', 'camera_id', 'record_date', 'record_time_in', 'record_time_out', 'time_duration_seconds', 'record_status', 'record_remarks', 'school_year', 'semester', 'archived_at', 'archived_by', 'archive_notes', 'created_at', 'updated_at']);
                     
                     $synced[] = $cloudArchive['archive_id'];
                 } catch (\Exception $e) {
@@ -4023,27 +4137,12 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if cloud has a newer version (to prevent overwriting cloud updates)
-                $cloudUpdatedAt = $existingCloudRecords[$omId]['updated_at'] ?? null;
-                $localUpdatedAt = $om->updated_at ? $this->formatDateTime($om->updated_at) : null;
-                
-                if ($cloudUpdatedAt && $localUpdatedAt) {
-                    try {
-                        $cloudTime = \Carbon\Carbon::parse($cloudUpdatedAt);
-                        $localTime = \Carbon\Carbon::parse($localUpdatedAt);
-                        
-                        // If cloud is newer, skip syncing to avoid overwriting cloud's updates
-                        if ($cloudTime->gt($localTime)) {
-                            Log::debug("Skipping official matter {$omId} - cloud has newer version (cloud: {$cloudUpdatedAt}, local: {$localUpdatedAt})");
-                            return false;
-                        }
-                    } catch (\Exception $e) {
-                        // If date parsing fails, continue with normal comparison
-                        Log::debug("Could not compare timestamps for official matter {$omId}: " . $e->getMessage());
-                    }
+                // STRICT RULE: Compare updated_at timestamps - only sync if local is newer or equal
+                if (!$this->shouldSyncLocalToCloud($om, $existingCloudRecords[$omId], 'official_matter', $omId)) {
+                    return false;
                 }
                 
-                // If in cloud, compare data to see if it changed (ignore attachment path differences)
+                // If timestamps are equal, check if data is different (ignore attachment path differences)
                 $localData = [
                     'om_id' => $om->om_id,
                     'faculty_id' => $om->faculty_id,
@@ -4196,8 +4295,8 @@ class CloudSyncService
                     return true;
                 }
                 
-                // Check if local has a newer version (to prevent overwriting local updates)
-                if ($this->shouldSkipCloudRecordDueToNewerLocal($existingLocalRecords[$omId], $cloudOM, 'official_matter', $omId)) {
+                // STRICT RULE: Compare updated_at timestamps - only sync if cloud is newer or equal
+                if (!$this->shouldSyncCloudToLocal($existingLocalRecords[$omId], $cloudOM, 'official_matter', $omId)) {
                     return false;
                 }
                 
@@ -4276,7 +4375,7 @@ class CloudSyncService
                             'created_at' => $this->formatDateTime($cloudOM['created_at'] ?? null),
                             'updated_at' => $this->formatDateTime($cloudOM['updated_at'] ?? null),
                         ]
-                    ], ['om_id'], ['faculty_id', 'om_department', 'om_purpose', 'om_remarks', 'om_start_date', 'om_end_date', 'om_attachment', 'updated_at']);
+                    ], ['om_id'], ['faculty_id', 'om_department', 'om_purpose', 'om_remarks', 'om_start_date', 'om_end_date', 'om_attachment', 'created_at', 'updated_at']);
                     
                     // If this is an update and date range/faculty/department/remarks changed, create new attendance records
                     if ($needsAttendanceUpdate) {
