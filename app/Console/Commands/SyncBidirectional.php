@@ -20,7 +20,7 @@ class SyncBidirectional extends Command
      *
      * @var string
      */
-    protected $description = 'Sync data bidirectionally (cloud to local first, then local to cloud)';
+    protected $description = 'Sync data bidirectionally (deletions first, then parallel data sync for speed)';
 
     protected $cloudSyncService;
 
@@ -47,14 +47,204 @@ class SyncBidirectional extends Command
         
         $startTime = microtime(true);
         
-        // Run sequential sync: Cloud to Local FIRST, then Local to Cloud
-        // This ensures deletions from cloud are processed before syncing local data
-        return $this->runSequentialSync($startTime);
+        // Hybrid approach: Process deletions first, then run data syncs in parallel
+        // This gives us both data consistency (deletions first) and speed (parallel data sync)
+        return $this->runHybridSync($startTime);
+    }
+    
+    /**
+     * Run hybrid sync: Process deletions first, then run data syncs in parallel
+     * This gives us both data consistency (deletions first) and speed (parallel data sync)
+     */
+    private function runHybridSync($startTime = null)
+    {
+        if ($startTime === null) {
+            $startTime = microtime(true);
+        }
+        
+        $this->info('🔄 Running hybrid sync (deletions first, then parallel data sync)...');
+        $this->newLine();
+        
+        // STEP 1: Process deletions from cloud FIRST (quick operation)
+        // This ensures deletions are processed before any data sync happens
+        $this->info('🗑️  Step 1: Processing deletions from cloud (this happens FIRST)...');
+        try {
+            $deletionResults = $this->cloudSyncService->processAllDeletionsFromCloud();
+            $totalDeleted = $deletionResults['total_deleted'] ?? 0;
+            
+            if ($totalDeleted > 0) {
+                $this->info("✅ Deletions processed: {$totalDeleted} records deleted locally");
+            } else {
+                $this->info("✅ No deletions to process");
+            }
+        } catch (\Exception $e) {
+            $this->error("❌ Deletion processing failed: {$e->getMessage()}");
+            // Continue with sync even if deletion processing fails
+        }
+        
+        $this->newLine();
+        
+        // STEP 2: Run data syncs in parallel (faster than sequential)
+        $this->info('📤📥 Step 2: Running data syncs in parallel (cloud to local + local to cloud)...');
+        
+        // Use proc_open to run both syncs in parallel
+        $descriptorspec = [
+            0 => ['pipe', 'r'],  // stdin
+            1 => ['pipe', 'w'],  // stdout
+            2 => ['pipe', 'w']   // stderr
+        ];
+        
+        // Start cloud-to-local sync process (data only, deletions already processed)
+        $processFromCloud = proc_open(
+            PHP_BINARY . ' ' . base_path('artisan') . ' sync:cloud --from-cloud 2>&1',
+            $descriptorspec,
+            $pipesFromCloud
+        );
+        
+        // Start local-to-cloud sync process
+        $processToCloud = proc_open(
+            PHP_BINARY . ' ' . base_path('artisan') . ' sync:cloud 2>&1',
+            $descriptorspec,
+            $pipesToCloud
+        );
+        
+        // Close stdin pipes (we don't need to write to them)
+        if (isset($pipesFromCloud[0])) fclose($pipesFromCloud[0]);
+        if (isset($pipesToCloud[0])) fclose($pipesToCloud[0]);
+        
+        // Read output from both processes
+        $outputFromCloud = '';
+        $errorFromCloud = '';
+        $outputToCloud = '';
+        $errorToCloud = '';
+        
+        // Set pipes to non-blocking mode
+        if (isset($pipesFromCloud[1])) stream_set_blocking($pipesFromCloud[1], false);
+        if (isset($pipesFromCloud[2])) stream_set_blocking($pipesFromCloud[2], false);
+        if (isset($pipesToCloud[1])) stream_set_blocking($pipesToCloud[1], false);
+        if (isset($pipesToCloud[2])) stream_set_blocking($pipesToCloud[2], false);
+        
+        // Wait for both processes to complete
+        while (true) {
+            // Check if processes are still running
+            $statusFromCloud = proc_get_status($processFromCloud);
+            $statusToCloud = proc_get_status($processToCloud);
+            
+            // Read available output from stdout
+            if (isset($pipesFromCloud[1]) && !feof($pipesFromCloud[1])) {
+                $chunk = fread($pipesFromCloud[1], 8192);
+                if ($chunk !== false && $chunk !== '') {
+                    $outputFromCloud .= $chunk;
+                }
+            }
+            
+            if (isset($pipesToCloud[1]) && !feof($pipesToCloud[1])) {
+                $chunk = fread($pipesToCloud[1], 8192);
+                if ($chunk !== false && $chunk !== '') {
+                    $outputToCloud .= $chunk;
+                }
+            }
+            
+            // Read available output from stderr
+            if (isset($pipesFromCloud[2]) && !feof($pipesFromCloud[2])) {
+                $chunk = fread($pipesFromCloud[2], 8192);
+                if ($chunk !== false && $chunk !== '') {
+                    $errorFromCloud .= $chunk;
+                }
+            }
+            
+            if (isset($pipesToCloud[2]) && !feof($pipesToCloud[2])) {
+                $chunk = fread($pipesToCloud[2], 8192);
+                if ($chunk !== false && $chunk !== '') {
+                    $errorToCloud .= $chunk;
+                }
+            }
+            
+            // If both processes have finished, break
+            if ((!$statusFromCloud || !$statusFromCloud['running']) && 
+                (!$statusToCloud || !$statusToCloud['running'])) {
+                break;
+            }
+            
+            // Small delay to prevent CPU spinning
+            usleep(100000); // 0.1 second
+        }
+        
+        // Read any remaining output
+        if (isset($pipesFromCloud[1])) {
+            $remaining = stream_get_contents($pipesFromCloud[1]);
+            if ($remaining !== false) $outputFromCloud .= $remaining;
+        }
+        if (isset($pipesToCloud[1])) {
+            $remaining = stream_get_contents($pipesToCloud[1]);
+            if ($remaining !== false) $outputToCloud .= $remaining;
+        }
+        if (isset($pipesFromCloud[2])) {
+            $remaining = stream_get_contents($pipesFromCloud[2]);
+            if ($remaining !== false) $errorFromCloud .= $remaining;
+        }
+        if (isset($pipesToCloud[2])) {
+            $remaining = stream_get_contents($pipesToCloud[2]);
+            if ($remaining !== false) $errorToCloud .= $remaining;
+        }
+        
+        // Close pipes
+        if (isset($pipesFromCloud[1])) fclose($pipesFromCloud[1]);
+        if (isset($pipesFromCloud[2])) fclose($pipesFromCloud[2]);
+        if (isset($pipesToCloud[1])) fclose($pipesToCloud[1]);
+        if (isset($pipesToCloud[2])) fclose($pipesToCloud[2]);
+        
+        // Get exit codes
+        $exitCodeFromCloud = proc_close($processFromCloud);
+        $exitCodeToCloud = proc_close($processToCloud);
+        
+        $endTime = microtime(true);
+        $duration = round($endTime - $startTime, 2);
+        
+        // Display results
+        $this->newLine();
+        $this->info('📥 Cloud to Local Results:');
+        if ($exitCodeFromCloud === 0) {
+            $this->info('✅ Cloud to local completed successfully');
+            // Try to extract summary from output
+            if (preg_match('/Total records synced: (\d+)/', $outputFromCloud, $matches)) {
+                $this->line("   Records synced: {$matches[1]}");
+            }
+        } else {
+            $this->error('❌ Cloud to local failed (exit code: ' . $exitCodeFromCloud . ')');
+            if (!empty($errorFromCloud)) {
+                $this->line('Errors:');
+                $this->line($errorFromCloud);
+            }
+        }
+        
+        $this->newLine();
+        $this->info('📤 Local to Cloud Results:');
+        if ($exitCodeToCloud === 0) {
+            $this->info('✅ Local to cloud completed successfully');
+            // Try to extract summary from output
+            if (preg_match('/Total records synced: (\d+)/', $outputToCloud, $matches)) {
+                $this->line("   Records synced: {$matches[1]}");
+            }
+        } else {
+            $this->error('❌ Local to cloud failed (exit code: ' . $exitCodeToCloud . ')');
+            if (!empty($errorToCloud)) {
+                $this->line('Errors:');
+                $this->line($errorToCloud);
+            }
+        }
+        
+        $this->newLine();
+        $this->info("⏱️  Total sync duration: {$duration} seconds");
+        $this->info('✨ Bidirectional sync completed!');
+        
+        return Command::SUCCESS;
     }
     
     /**
      * Run sequential sync: Cloud to Local FIRST, then Local to Cloud
      * This ensures deletions from cloud are processed before syncing local data
+     * (Fallback method - kept for reference)
      */
     private function runSequentialSync($startTime = null)
     {
