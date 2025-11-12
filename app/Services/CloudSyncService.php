@@ -247,6 +247,64 @@ class CloudSyncService
     }
     
     /**
+     * Delete records locally that were deleted on cloud
+     * This prevents local from syncing deleted records back to cloud
+     * @param string $endpoint API endpoint (e.g., 'users', 'leaves', 'passes')
+     * @param string $tableName Table name (e.g., 'tbl_user', 'tbl_leave_pass')
+     * @param string $idKey Primary key field name (e.g., 'user_id', 'lp_id')
+     */
+    protected function deleteLocalRecordsDeletedOnCloud(string $endpoint, string $tableName, string $idKey)
+    {
+        try {
+            $cloudDeletedIds = $this->getDeletedIdsFromCloud($endpoint);
+            
+            if (empty($cloudDeletedIds)) {
+                return;
+            }
+            
+            foreach ($cloudDeletedIds as $deletedId) {
+                // Special handling for leaves and passes (they share the same table)
+                if ($tableName === 'tbl_leave_pass') {
+                    // Get the record to check its type before deletion
+                    $record = DB::table($tableName)->where($idKey, $deletedId)->first();
+                    if (!$record) {
+                        continue;
+                    }
+                    
+                    $lpType = $record->lp_type ?? null;
+                    
+                    // Filter by lp_type based on endpoint
+                    if ($endpoint === 'leaves' && $lpType !== 'Leave') {
+                        continue; // This is not a leave, skip it
+                    } elseif ($endpoint === 'passes' && $lpType !== 'Pass') {
+                        continue; // This is not a pass, skip it
+                    }
+                    
+                    // Delete the record with type filter
+                    DB::table($tableName)
+                        ->where($idKey, $deletedId)
+                        ->where('lp_type', $lpType)
+                        ->delete();
+                    
+                    // Track deletion with lp_type metadata
+                    $this->trackDeletion($tableName, $deletedId, 90, ['lp_type' => $lpType]);
+                    Log::info("Deleted {$tableName} #{$deletedId} (type: {$lpType}) locally (was deleted on cloud)");
+                } else {
+                    // Standard deletion for other tables
+                    $exists = DB::table($tableName)->where($idKey, $deletedId)->exists();
+                    if ($exists) {
+                        DB::table($tableName)->where($idKey, $deletedId)->delete();
+                        $this->trackDeletion($tableName, $deletedId);
+                        Log::info("Deleted {$tableName} #{$deletedId} locally (was deleted on cloud)");
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error("Error deleting local records that were deleted on cloud for {$tableName}: " . $e->getMessage());
+        }
+    }
+    
+    /**
      * Process deletions for a specific table by triggering delete endpoints on cloud
      * NEW APPROACH: Call delete endpoints on cloud controller for each deleted record
      * @param string $tableName Table name (e.g., 'tbl_user')
@@ -310,6 +368,18 @@ class CloudSyncService
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('rooms');
+            
+            // CRITICAL: If a record was deleted on cloud, delete it locally too
+            if (!empty($cloudDeletedIds)) {
+                foreach ($cloudDeletedIds as $deletedId) {
+                    $exists = DB::table('tbl_room')->where('room_no', $deletedId)->exists();
+                    if ($exists) {
+                        DB::table('tbl_room')->where('room_no', $deletedId)->delete();
+                        $this->trackDeletion('tbl_room', $deletedId);
+                        Log::info("Deleted room {$deletedId} locally (was deleted on cloud)");
+                    }
+                }
+            }
             
             // Get existing cloud records with their data for comparison
             $existingCloudRecords = $this->getExistingCloudRecords('rooms', 'room_no');
@@ -408,6 +478,9 @@ class CloudSyncService
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('cameras');
+            
+            // CRITICAL: If a record was deleted on cloud, delete it locally too
+            $this->deleteLocalRecordsDeletedOnCloud('cameras', 'tbl_camera', 'camera_id');
             
             // Get existing cloud records with their data for comparison
             $existingCloudRecords = $this->getExistingCloudRecords('cameras', 'camera_id');
@@ -516,6 +589,9 @@ class CloudSyncService
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('faculties');
             
+            // CRITICAL: If a record was deleted on cloud, delete it locally too
+            $this->deleteLocalRecordsDeletedOnCloud('faculties', 'tbl_faculty', 'faculty_id');
+            
             // Get existing cloud records with their data for comparison
             $existingCloudRecords = $this->getExistingCloudRecords('faculties', 'faculty_id');
             
@@ -623,6 +699,9 @@ class CloudSyncService
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('teaching-loads');
             
+            // CRITICAL: If a record was deleted on cloud, delete it locally too
+            $this->deleteLocalRecordsDeletedOnCloud('teaching-loads', 'tbl_teaching_load', 'teaching_load_id');
+            
             // Get existing cloud records with their data for comparison
             $existingCloudRecords = $this->getExistingCloudRecords('teaching-loads', 'teaching_load_id');
             
@@ -722,6 +801,9 @@ class CloudSyncService
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('attendance-records');
+            
+            // CRITICAL: If a record was deleted on cloud, delete it locally too
+            $this->deleteLocalRecordsDeletedOnCloud('attendance-records', 'tbl_attendance_record', 'record_id');
             
             // Get existing cloud records with their data for comparison (last 30 days for performance)
             $existingCloudRecords = $this->getExistingCloudRecords('attendance-records', 'record_id', ['days' => 30]);
@@ -843,6 +925,10 @@ class CloudSyncService
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('leaves');
+            
+            // CRITICAL: If a record was deleted on cloud, delete it locally too (with lp_type filter)
+            // Note: For leaves/passes, we need special handling since they share the same table
+            $this->deleteLocalRecordsDeletedOnCloud('leaves', 'tbl_leave_pass', 'lp_id');
             
             // Get existing cloud records with their data for comparison (last 90 days for performance)
             $existingCloudRecords = $this->getExistingCloudRecords('leaves', 'lp_id', ['days' => 90]);
@@ -973,6 +1059,10 @@ class CloudSyncService
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('passes');
+            
+            // CRITICAL: If a record was deleted on cloud, delete it locally too (with lp_type filter)
+            // Note: For leaves/passes, we need special handling since they share the same table
+            $this->deleteLocalRecordsDeletedOnCloud('passes', 'tbl_leave_pass', 'lp_id');
             
             // Get existing cloud records with their data for comparison (last 90 days for performance)
             $existingCloudRecords = $this->getExistingCloudRecords('passes', 'lp_id', ['days' => 90]);
@@ -1370,6 +1460,9 @@ class CloudSyncService
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('subjects');
             
+            // CRITICAL: If a record was deleted on cloud, delete it locally too
+            $this->deleteLocalRecordsDeletedOnCloud('subjects', 'tbl_subject', 'subject_id');
+            
             // Get existing cloud records with their data for comparison
             $existingCloudRecords = $this->getExistingCloudRecords('subjects', 'subject_id');
             
@@ -1459,6 +1552,9 @@ class CloudSyncService
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('users');
+            
+            // CRITICAL: If a record was deleted on cloud, delete it locally too
+            $this->deleteLocalRecordsDeletedOnCloud('users', 'tbl_user', 'user_id');
             
             // Get existing cloud records with their data for comparison
             $existingCloudRecords = $this->getExistingCloudRecords('users', 'user_id');
@@ -4479,6 +4575,9 @@ class CloudSyncService
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('official-matters');
+            
+            // CRITICAL: If a record was deleted on cloud, delete it locally too
+            $this->deleteLocalRecordsDeletedOnCloud('official-matters', 'tbl_official_matters', 'om_id');
             
             // Get existing cloud records with their data for comparison
             $existingCloudRecords = $this->getExistingCloudRecords('official-matters', 'om_id', ['days' => 90]);
