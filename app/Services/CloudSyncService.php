@@ -184,16 +184,17 @@ class CloudSyncService
         }
         
         try {
-            // LOCAL_API_URL should be the base URL (e.g., http://localhost:8000)
+            // LOCAL_API_URL should be the base URL (e.g., http://127.0.0.1:8000 or http://localhost:8000)
             // We append /api/sync/local/{endpoint}/{id}
             // Remove trailing slash and /api if present to avoid duplication
             $baseUrl = rtrim($this->localApiUrl, '/');
             $baseUrl = preg_replace('#/api/?$#', '', $baseUrl); // Remove /api if it's at the end
             $url = "{$baseUrl}/api/sync/local/{$endpoint}/{$recordId}";
             
-            Log::info("Attempting to trigger deletion on local: {$url}");
+            Log::info("Attempting to trigger immediate deletion on local server: {$url}");
+            Log::info("Local API URL configured as: {$this->localApiUrl}");
             
-            $response = Http::timeout(5) // Shorter timeout for faster failure detection
+            $response = Http::timeout(10) // Increased timeout to allow for network delays
                 ->withHeaders([
                     'Authorization' => 'Bearer ' . $this->localApiKey,
                     'Accept' => 'application/json',
@@ -201,17 +202,21 @@ class CloudSyncService
                 ->delete($url);
             
             if ($response->successful()) {
-                Log::info("Successfully triggered deletion on local for {$endpoint} ID: {$recordId}");
+                Log::info("✅ Successfully triggered immediate deletion on local for {$endpoint} ID: {$recordId}");
                 return true;
             } else {
-                Log::warning("Failed to trigger deletion on local for {$endpoint} ID: {$recordId} - Status: {$response->status()}, Body: " . $response->body());
+                Log::warning("⚠️ Failed to trigger immediate deletion on local for {$endpoint} ID: {$recordId} - Status: {$response->status()}, Body: " . $response->body());
+                Log::warning("Deletion is tracked and will be processed during next sync");
                 // Deletion is already tracked, so it will be processed during next sync
                 return false;
             }
         } catch (\Exception $e) {
-            // Connection failed - this is expected if local server is not publicly accessible
+            // Connection failed - log the error but don't fail the deletion
             // The deletion is already tracked, so it will be processed during next sync
-            Log::info("Could not immediately trigger deletion on local for {$endpoint} ID: {$recordId} - " . $e->getMessage() . " (Deletion will be processed during next sync)");
+            Log::warning("❌ Could not immediately trigger deletion on local for {$endpoint} ID: {$recordId}");
+            Log::warning("Error: " . $e->getMessage());
+            Log::warning("URL attempted: {$url}");
+            Log::warning("This is expected if local server is not accessible from cloud. Deletion will be processed during next sync.");
             return false;
         }
     }
