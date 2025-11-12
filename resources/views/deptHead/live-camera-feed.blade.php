@@ -700,45 +700,50 @@
                     // Ensure start_time exists (from tbl_stream_recordings.start_time column)
                     if (!recording.start_time) return false;
                     
-                    // Parse start_time - datetime type from database
-                    // IMPORTANT: Python service stores time as "YYYY-MM-DD HH:MM:SS" in Asia/Manila timezone
-                    // Laravel serializes it as ISO 8601 UTC (with 'Z'), but the original value is Asia/Manila
-                    let recordingDate;
-                    if (typeof recording.start_time === 'string') {
-                        // Check if it's ISO format (contains 'T')
-                        if (recording.start_time.includes('T')) {
-                            // ISO 8601 format (e.g., 2025-11-06T15:08:00.000000Z)
-                            // Problem: Python stores "2025-11-06 15:08:00" as Asia/Manila time
-                            // Laravel serializes it as "2025-11-06T15:08:00Z" (treating as UTC)
-                            // JavaScript then converts UTC to local timezone, making it 23:08 in Asia/Manila
-                            // Solution: Extract UTC components and treat them as Asia/Manila time directly
-                            const utcDate = new Date(recording.start_time);
-                            const utcHours = utcDate.getUTCHours();
-                            const utcMinutes = utcDate.getUTCMinutes();
-                            const utcSeconds = utcDate.getUTCSeconds();
-                            const utcYear = utcDate.getUTCFullYear();
-                            const utcMonth = utcDate.getUTCMonth();
-                            const utcDay = utcDate.getUTCDate();
-                            // Create a date object using UTC components but interpret as local (Asia/Manila)
-                            recordingDate = new Date(utcYear, utcMonth, utcDay, utcHours, utcMinutes, utcSeconds || 0);
-                        } else if (recording.start_time.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)) {
-                            // MySQL format (e.g., 2025-11-05 10:33:37) - already in Asia/Manila timezone
-                            const [datePart, timePart] = recording.start_time.split(' ');
-                            const [year, month, day] = datePart.split('-').map(Number);
-                            const [hour, minute, second] = timePart.split(':').map(Number);
-                            recordingDate = new Date(year, month - 1, day, hour, minute, second || 0);
-                        } else {
-                            recordingDate = new Date(recording.start_time);
-                        }
+                // Parse start_time - use formatted version if available, otherwise parse original
+                // IMPORTANT: Use start_time_formatted (MySQL format) if available to avoid timezone issues
+                let recordingHours, recordingMins, recordingTimeStr, recordingMinutes;
+                
+                // Prefer start_time_formatted (MySQL format: YYYY-MM-DD HH:MM:SS) which is already in Asia/Manila timezone
+                const timeString = recording.start_time_formatted || recording.start_time;
+                
+                if (!timeString) {
+                    return false;
+                }
+                
+                if (typeof timeString === 'string') {
+                    // Check if it's MySQL format (YYYY-MM-DD HH:MM:SS) - preferred format
+                    if (timeString.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)) {
+                        // MySQL format (e.g., 2025-11-12 21:14:33) - already in Asia/Manila timezone
+                        const [datePart, timePart] = timeString.split(' ');
+                        const [hour, minute] = timePart.split(':').map(Number);
+                        recordingHours = hour;
+                        recordingMins = minute;
+                        recordingTimeStr = `${String(recordingHours).padStart(2, '0')}:${String(recordingMins).padStart(2, '0')}`;
+                        recordingMinutes = recordingHours * 60 + recordingMins;
+                    } else if (timeString.includes('T')) {
+                        // ISO 8601 format (e.g., 2025-11-12T21:14:33.000000Z)
+                        // Extract UTC components directly - they represent the original Asia/Manila time
+                        const utcDate = new Date(timeString);
+                        recordingHours = utcDate.getUTCHours();
+                        recordingMins = utcDate.getUTCMinutes();
+                        recordingTimeStr = `${String(recordingHours).padStart(2, '0')}:${String(recordingMins).padStart(2, '0')}`;
+                        recordingMinutes = recordingHours * 60 + recordingMins;
                     } else {
-                        recordingDate = new Date(recording.start_time);
+                        // Fallback: try to parse as date
+                        const date = new Date(timeString);
+                        recordingHours = date.getUTCHours();
+                        recordingMins = date.getUTCMinutes();
+                        recordingTimeStr = `${String(recordingHours).padStart(2, '0')}:${String(recordingMins).padStart(2, '0')}`;
+                        recordingMinutes = recordingHours * 60 + recordingMins;
                     }
-                    
-                    // Extract time directly from the date components (treating as Asia/Manila)
-                    const recordingHours = recordingDate.getHours();
-                    const recordingMins = recordingDate.getMinutes();
-                    const recordingTimeStr = `${String(recordingHours).padStart(2, '0')}:${String(recordingMins).padStart(2, '0')}`;
-                    const recordingMinutes = recordingHours * 60 + recordingMins;
+                } else {
+                    // If it's already a Date object, extract UTC components
+                    recordingHours = timeString.getUTCHours();
+                    recordingMins = timeString.getUTCMinutes();
+                    recordingTimeStr = `${String(recordingHours).padStart(2, '0')}:${String(recordingMins).padStart(2, '0')}`;
+                    recordingMinutes = recordingHours * 60 + recordingMins;
+                }
                     
                     // Check if recording start_time falls within the teaching load time range
                     const inRange = recordingMinutes != null && recordingMinutes >= timeIn && recordingMinutes <= timeOut;

@@ -27,6 +27,19 @@ class StreamRecording extends Model
     ];
     
     /**
+     * Get start_time formatted as MySQL datetime string (YYYY-MM-DD HH:MM:SS)
+     * This ensures the time is sent to frontend in the correct format without timezone conversion
+     */
+    public function getStartTimeFormattedAttribute()
+    {
+        if (!$this->start_time) {
+            return null;
+        }
+        // Format as MySQL datetime string (no timezone info, treated as Asia/Manila)
+        return $this->start_time->format('Y-m-d H:i:s');
+    }
+    
+    /**
      * Get the camera that owns the recording
      */
     public function camera()
