@@ -37,6 +37,7 @@ class CloudSyncService
     
     /**
      * Sync all data to cloud
+     * NEW APPROACH: Process deletions per table before syncing each table's data
      */
     public function syncAllToCloud()
     {
@@ -48,15 +49,10 @@ class CloudSyncService
         ];
         
         try {
-            Log::info('Starting cloud sync...');
+            Log::info('Starting cloud sync (with per-table deletion processing)...');
             
-            // STEP 1: Process deletions FIRST - sync all local deletions to cloud
-            // This ensures deletions are synced before any data sync happens
-            Log::info('STEP 1: Syncing all local deletions to cloud...');
-            $this->syncAllDeletionsToCloud();
-            
-            // STEP 2: Sync data in order of dependencies - users first
-            Log::info('STEP 2: Syncing data to cloud...');
+            // Sync data in order of dependencies - process deletions before each table
+            // Each sync method now handles its own deletions before syncing data
             $results['synced']['users'] = $this->syncUsers();
             $results['synced']['subjects'] = $this->syncSubjects();
             $results['synced']['rooms'] = $this->syncRooms();
@@ -72,11 +68,6 @@ class CloudSyncService
             $results['synced']['activity_logs'] = $this->syncActivityLogs();
             $results['synced']['teaching_load_archives'] = $this->syncTeachingLoadArchives();
             $results['synced']['attendance_record_archives'] = $this->syncAttendanceRecordArchives();
-            
-            // Final pass: Sync any deletions that happened during the sync process
-            // This ensures deletions are synced even if they occur while sync is running
-            Log::info('STEP 3: Performing final deletion sync to catch deletions that occurred during sync...');
-            $this->syncAllDeletionsToCloud();
             
             // Calculate summary
             foreach ($results['synced'] as $key => $value) {
@@ -95,6 +86,40 @@ class CloudSyncService
     }
     
     /**
+     * Sync deletions for a specific table to cloud
+     * @param string $tableName Table name (e.g., 'tbl_user')
+     * @param string $endpoint API endpoint (e.g., 'users')
+     */
+    protected function syncTableDeletionsToCloud(string $tableName, string $endpoint)
+    {
+        try {
+            $deletedIds = $this->getDeletedIds($tableName);
+            if (!empty($deletedIds)) {
+                Log::info("Processing " . count($deletedIds) . " deletions for {$tableName} before syncing to cloud endpoint {$endpoint}");
+                $this->syncDeletionsToCloud($endpoint, $deletedIds);
+            }
+        } catch (\Exception $e) {
+            Log::error("Error syncing deletions for {$tableName} to cloud: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Process deletions from cloud for a specific table
+     * @param string $endpoint API endpoint (e.g., 'users')
+     * @param string $tableName Table name (e.g., 'tbl_user')
+     * @param string $idKey Primary key field name (e.g., 'user_id')
+     */
+    protected function processTableDeletionsFromCloud(string $endpoint, string $tableName, string $idKey)
+    {
+        try {
+            Log::info("Processing deletions from cloud for {$tableName} before syncing data");
+            $this->processDeletionsFromCloud($endpoint, $tableName, $idKey);
+        } catch (\Exception $e) {
+            Log::error("Error processing deletions from cloud for {$tableName}: " . $e->getMessage());
+        }
+    }
+    
+    /**
      * Sync rooms
      */
     protected function syncRooms()
@@ -102,9 +127,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, sync deletions to cloud (notify cloud about locally deleted records)
-            $deletedIds = $this->getDeletedIds('tbl_room');
-            $this->syncDeletionsToCloud('rooms', $deletedIds);
+            // STEP 1: Process deletions for this table before syncing data
+            $this->syncTableDeletionsToCloud('tbl_room', 'rooms');
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('rooms');
@@ -201,9 +225,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, sync deletions to cloud (notify cloud about locally deleted records)
-            $deletedIds = $this->getDeletedIds('tbl_camera');
-            $this->syncDeletionsToCloud('cameras', $deletedIds);
+            // STEP 1: Process deletions for this table before syncing data
+            $this->syncTableDeletionsToCloud('tbl_camera', 'cameras');
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('cameras');
@@ -309,9 +332,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, sync deletions to cloud (notify cloud about locally deleted records)
-            $deletedIds = $this->getDeletedIds('tbl_faculty');
-            $this->syncDeletionsToCloud('faculties', $deletedIds);
+            // STEP 1: Process deletions for this table before syncing data
+            $this->syncTableDeletionsToCloud('tbl_faculty', 'faculties');
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('faculties');
@@ -417,9 +439,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, sync deletions to cloud (notify cloud about locally deleted records)
-            $deletedIds = $this->getDeletedIds('tbl_teaching_load');
-            $this->syncDeletionsToCloud('teaching-loads', $deletedIds);
+            // STEP 1: Process deletions for this table before syncing data
+            $this->syncTableDeletionsToCloud('tbl_teaching_load', 'teaching-loads');
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('teaching-loads');
@@ -518,9 +539,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, sync deletions to cloud (notify cloud about locally deleted records)
-            $deletedIds = $this->getDeletedIds('tbl_attendance_record');
-            $this->syncDeletionsToCloud('attendance-records', $deletedIds);
+            // STEP 1: Process deletions for this table before syncing data
+            $this->syncTableDeletionsToCloud('tbl_attendance_record', 'attendance-records');
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('attendance-records');
@@ -623,7 +643,7 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, sync deletions to cloud (notify cloud about locally deleted records)
+            // STEP 1: Process deletions for leaves before syncing data
             $deletedIds = $this->getDeletedIds('tbl_leave_pass');
             // Filter for leaves only (lp_type = 'Leave') using metadata stored in cache
             $leaveDeletedIds = [];
@@ -635,7 +655,10 @@ class CloudSyncService
                     $leaveDeletedIds[] = $id;
                 }
             }
-            $this->syncDeletionsToCloud('leaves', $leaveDeletedIds);
+            if (!empty($leaveDeletedIds)) {
+                Log::info("Processing " . count($leaveDeletedIds) . " leave deletions before syncing to cloud");
+                $this->syncDeletionsToCloud('leaves', $leaveDeletedIds);
+            }
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('leaves');
@@ -747,7 +770,7 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, sync deletions to cloud (notify cloud about locally deleted records)
+            // STEP 1: Process deletions for passes before syncing data
             $deletedIds = $this->getDeletedIds('tbl_leave_pass');
             // Filter for passes only (lp_type = 'Pass') using metadata stored in cache
             $passDeletedIds = [];
@@ -759,7 +782,10 @@ class CloudSyncService
                     $passDeletedIds[] = $id;
                 }
             }
-            $this->syncDeletionsToCloud('passes', $passDeletedIds);
+            if (!empty($passDeletedIds)) {
+                Log::info("Processing " . count($passDeletedIds) . " pass deletions before syncing to cloud");
+                $this->syncDeletionsToCloud('passes', $passDeletedIds);
+            }
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('passes');
@@ -873,9 +899,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, sync deletions to cloud (notify cloud about locally deleted records)
-            $deletedIds = $this->getDeletedIds('tbl_recognition_logs');
-            $this->syncDeletionsToCloud('recognition-logs', $deletedIds);
+            // STEP 1: Process deletions for this table before syncing data
+            $this->syncTableDeletionsToCloud('tbl_recognition_logs', 'recognition-logs');
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('recognition-logs');
@@ -945,9 +970,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, sync deletions to cloud (notify cloud about locally deleted records)
-            $deletedIds = $this->getDeletedIds('tbl_stream_recordings');
-            $this->syncDeletionsToCloud('stream-recordings', $deletedIds);
+            // STEP 1: Process deletions for this table before syncing data
+            $this->syncTableDeletionsToCloud('tbl_stream_recordings', 'stream-recordings');
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('stream-recordings');
@@ -1156,9 +1180,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, sync deletions to cloud (notify cloud about locally deleted records)
-            $deletedIds = $this->getDeletedIds('tbl_subject');
-            $this->syncDeletionsToCloud('subjects', $deletedIds);
+            // STEP 1: Process deletions for this table before syncing data
+            $this->syncTableDeletionsToCloud('tbl_subject', 'subjects');
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('subjects');
@@ -1247,9 +1270,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, sync deletions to cloud (notify cloud about locally deleted records)
-            $deletedIds = $this->getDeletedIds('tbl_user');
-            $this->syncDeletionsToCloud('users', $deletedIds);
+            // STEP 1: Process deletions for this table before syncing data
+            $this->syncTableDeletionsToCloud('tbl_user', 'users');
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('users');
@@ -1344,9 +1366,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, sync deletions to cloud (notify cloud about locally deleted records)
-            $deletedIds = $this->getDeletedIds('tbl_activity_logs');
-            $this->syncDeletionsToCloud('activity-logs', $deletedIds);
+            // STEP 1: Process deletions for this table before syncing data
+            $this->syncTableDeletionsToCloud('tbl_activity_logs', 'activity-logs');
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('activity-logs');
@@ -1411,9 +1432,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, sync deletions to cloud (notify cloud about locally deleted records)
-            $deletedIds = $this->getDeletedIds('tbl_teaching_load_archive');
-            $this->syncDeletionsToCloud('teaching-load-archives', $deletedIds);
+            // STEP 1: Process deletions for this table before syncing data
+            $this->syncTableDeletionsToCloud('tbl_teaching_load_archive', 'teaching-load-archives');
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('teaching-load-archives');
@@ -1486,9 +1506,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, sync deletions to cloud (notify cloud about locally deleted records)
-            $deletedIds = $this->getDeletedIds('tbl_attendance_record_archive');
-            $this->syncDeletionsToCloud('attendance-record-archives', $deletedIds);
+            // STEP 1: Process deletions for this table before syncing data
+            $this->syncTableDeletionsToCloud('tbl_attendance_record_archive', 'attendance-record-archives');
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('attendance-record-archives');
@@ -2570,10 +2589,10 @@ class CloudSyncService
                     $this->syncDeletionsToCloud('leaves', $leaveDeletedIds);
                 }
                 
-                if (!empty($passDeletedIds)) {
-                    Log::info("Syncing " . count($passDeletedIds) . " pass deletions to cloud");
-                    $this->syncDeletionsToCloud('passes', $passDeletedIds);
-                }
+            if (!empty($passDeletedIds)) {
+                Log::info("Processing " . count($passDeletedIds) . " pass deletions before syncing to cloud");
+                $this->syncDeletionsToCloud('passes', $passDeletedIds);
+            }
             }
             
             Log::info('Final deletion sync completed');
@@ -2748,8 +2767,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, process deletions from cloud (delete records locally that were deleted in cloud)
-            $this->processDeletionsFromCloud('users', 'tbl_user', 'user_id');
+            // STEP 1: Process deletions for this table before syncing data
+            $this->processTableDeletionsFromCloud('users', 'tbl_user', 'user_id');
             
             // Get existing local records with their data for comparison
             $existingLocalRecords = $this->getExistingLocalRecords('tbl_user', 'user_id');
@@ -2843,8 +2862,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, process deletions from cloud (delete records locally that were deleted in cloud)
-            $this->processDeletionsFromCloud('subjects', 'tbl_subject', 'subject_id');
+            // STEP 1: Process deletions for this table before syncing data
+            $this->processTableDeletionsFromCloud('subjects', 'tbl_subject', 'subject_id');
             
             // Get existing local records with their data for comparison
             $existingLocalRecords = $this->getExistingLocalRecords('tbl_subject', 'subject_id');
@@ -2931,8 +2950,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, process deletions from cloud (delete records locally that were deleted in cloud)
-            $this->processDeletionsFromCloud('rooms', 'tbl_room', 'room_no');
+            // STEP 1: Process deletions for this table before syncing data
+            $this->processTableDeletionsFromCloud('rooms', 'tbl_room', 'room_no');
             
             // Get existing local records with their data for comparison
             $existingLocalRecords = $this->getExistingLocalRecords('tbl_room', 'room_no');
@@ -3017,8 +3036,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, process deletions from cloud (delete records locally that were deleted in cloud)
-            $this->processDeletionsFromCloud('cameras', 'tbl_camera', 'camera_id');
+            // STEP 1: Process deletions for this table before syncing data
+            $this->processTableDeletionsFromCloud('cameras', 'tbl_camera', 'camera_id');
             
             // Get existing local records with their data for comparison
             $existingLocalRecords = $this->getExistingLocalRecords('tbl_camera', 'camera_id');
@@ -3111,8 +3130,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, process deletions from cloud (delete records locally that were deleted in cloud)
-            $this->processDeletionsFromCloud('faculties', 'tbl_faculty', 'faculty_id');
+            // STEP 1: Process deletions for this table before syncing data
+            $this->processTableDeletionsFromCloud('faculties', 'tbl_faculty', 'faculty_id');
             
             // Get existing local records with their data for comparison
             $existingLocalRecords = $this->getExistingLocalRecords('tbl_faculty', 'faculty_id');
@@ -3205,8 +3224,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, process deletions from cloud (delete records locally that were deleted in cloud)
-            $this->processDeletionsFromCloud('teaching-loads', 'tbl_teaching_load', 'teaching_load_id');
+            // STEP 1: Process deletions for this table before syncing data
+            $this->processTableDeletionsFromCloud('teaching-loads', 'tbl_teaching_load', 'teaching_load_id');
             
             // Get existing local records with their data for comparison
             $existingLocalRecords = $this->getExistingLocalRecords('tbl_teaching_load', 'teaching_load_id');
@@ -3303,8 +3322,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, process deletions from cloud (delete records locally that were deleted in cloud)
-            $this->processDeletionsFromCloud('attendance-records', 'tbl_attendance_record', 'record_id');
+            // STEP 1: Process deletions for this table before syncing data
+            $this->processTableDeletionsFromCloud('attendance-records', 'tbl_attendance_record', 'record_id');
             
             // Get existing local records with their data for comparison (last 30 days for performance)
             $existingLocalRecords = $this->getExistingLocalRecords('tbl_attendance_record', 'record_id');
@@ -3487,8 +3506,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, process deletions from cloud (delete records locally that were deleted in cloud)
-            $this->processDeletionsFromCloud('leaves', 'tbl_leave_pass', 'lp_id');
+            // STEP 1: Process deletions for this table before syncing data
+            $this->processTableDeletionsFromCloud('leaves', 'tbl_leave_pass', 'lp_id');
             
             // Get existing local records with their data for comparison (last 90 days for performance)
             $existingLocalRecords = $this->getExistingLocalRecords('tbl_leave_pass', 'lp_id');
@@ -3696,8 +3715,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, process deletions from cloud (delete records locally that were deleted in cloud)
-            $this->processDeletionsFromCloud('passes', 'tbl_leave_pass', 'lp_id');
+            // STEP 1: Process deletions for this table before syncing data
+            $this->processTableDeletionsFromCloud('passes', 'tbl_leave_pass', 'lp_id');
             
             // Get existing local records with their data for comparison (last 90 days for performance)
             $existingLocalRecords = $this->getExistingLocalRecords('tbl_leave_pass', 'lp_id');
@@ -3894,8 +3913,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, process deletions from cloud (delete records locally that were deleted in cloud)
-            $this->processDeletionsFromCloud('recognition-logs', 'tbl_recognition_logs', 'log_id');
+            // STEP 1: Process deletions for this table before syncing data
+            $this->processTableDeletionsFromCloud('recognition-logs', 'tbl_recognition_logs', 'log_id');
             
             // Get existing recognition log IDs from local database
             $existingLocalIds = $this->getExistingLocalIds('tbl_recognition_logs', 'log_id');
@@ -3967,8 +3986,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, process deletions from cloud (delete records locally that were deleted in cloud)
-            $this->processDeletionsFromCloud('stream-recordings', 'tbl_stream_recordings', 'recording_id');
+            // STEP 1: Process deletions for this table before syncing data
+            $this->processTableDeletionsFromCloud('stream-recordings', 'tbl_stream_recordings', 'recording_id');
             
             // Get existing stream recording IDs from local database
             $existingLocalIds = $this->getExistingLocalIds('tbl_stream_recordings', 'recording_id');
@@ -4047,8 +4066,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, process deletions from cloud (delete records locally that were deleted in cloud)
-            $this->processDeletionsFromCloud('activity-logs', 'tbl_activity_logs', 'logs_id');
+            // STEP 1: Process deletions for this table before syncing data
+            $this->processTableDeletionsFromCloud('activity-logs', 'tbl_activity_logs', 'logs_id');
             
             // Get existing activity log IDs from local database
             $existingLocalIds = $this->getExistingLocalIds('tbl_activity_logs', 'logs_id');
@@ -4115,8 +4134,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, process deletions from cloud (delete records locally that were deleted in cloud)
-            $this->processDeletionsFromCloud('teaching-load-archives', 'tbl_teaching_load_archive', 'archive_id');
+            // STEP 1: Process deletions for this table before syncing data
+            $this->processTableDeletionsFromCloud('teaching-load-archives', 'tbl_teaching_load_archive', 'archive_id');
             
             // Get existing teaching load archive IDs from local database
             $existingLocalIds = $this->getExistingLocalIds('tbl_teaching_load_archive', 'archive_id');
@@ -4192,8 +4211,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, process deletions from cloud (delete records locally that were deleted in cloud)
-            $this->processDeletionsFromCloud('attendance-record-archives', 'tbl_attendance_record_archive', 'archive_id');
+            // STEP 1: Process deletions for this table before syncing data
+            $this->processTableDeletionsFromCloud('attendance-record-archives', 'tbl_attendance_record_archive', 'archive_id');
             
             // Get existing attendance record archive IDs from local database
             $existingLocalIds = $this->getExistingLocalIds('tbl_attendance_record_archive', 'archive_id');
@@ -4437,8 +4456,8 @@ class CloudSyncService
         $synced = [];
         
         try {
-            // First, process deletions from cloud (delete records locally that were deleted in cloud)
-            $this->processDeletionsFromCloud('official-matters', 'tbl_official_matters', 'om_id');
+            // STEP 1: Process deletions for this table before syncing data
+            $this->processTableDeletionsFromCloud('official-matters', 'tbl_official_matters', 'om_id');
             
             // Get existing local records with their data for comparison (last 90 days for performance)
             $existingLocalRecords = $this->getExistingLocalRecords('tbl_official_matters', 'om_id');
