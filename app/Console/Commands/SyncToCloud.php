@@ -54,6 +54,13 @@ class SyncToCloud extends Command
                     $this->info('✅ Cloud to local sync completed successfully!');
                     $this->newLine();
                     
+                    // Show deletion summary if available
+                    if (isset($results['deletion_summary']) && $results['deletion_summary']['total_deleted'] > 0) {
+                        $this->info('🗑️  Deletions Processed:');
+                        $this->line("   Total records deleted: {$results['deletion_summary']['total_deleted']}");
+                        $this->newLine();
+                    }
+                    
                     $this->info('📊 Summary:');
                     $this->table(
                         ['Data Type', 'Records Synced'],
