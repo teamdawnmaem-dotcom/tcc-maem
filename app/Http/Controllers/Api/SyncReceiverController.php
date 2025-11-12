@@ -1551,6 +1551,13 @@ class SyncReceiverController extends Controller
             $syncService = app(\App\Services\CloudSyncService::class);
             $syncService->trackDeletion('tbl_user', $id);
             
+            // NEW APPROACH: Immediately trigger deletion on local server
+            try {
+                $syncService->triggerDeleteOnLocal('users', $id);
+            } catch (\Exception $e) {
+                Log::error("Failed to trigger user deletion on local: " . $e->getMessage());
+            }
+            
             Log::info("Deleted user {$id} from cloud via API");
             return response()->json(['success' => true, 'message' => 'User deleted successfully']);
         } catch (\Exception $e) {
@@ -1575,6 +1582,13 @@ class SyncReceiverController extends Controller
             // Track deletion locally
             $syncService = app(\App\Services\CloudSyncService::class);
             $syncService->trackDeletion('tbl_subject', $id);
+            
+            // NEW APPROACH: Immediately trigger deletion on local server
+            try {
+                $syncService->triggerDeleteOnLocal('subjects', $id);
+            } catch (\Exception $e) {
+                Log::error("Failed to trigger subject deletion on local: " . $e->getMessage());
+            }
             
             Log::info("Deleted subject {$id} from cloud via API");
             return response()->json(['success' => true, 'message' => 'Subject deleted successfully']);
@@ -1601,6 +1615,13 @@ class SyncReceiverController extends Controller
             $syncService = app(\App\Services\CloudSyncService::class);
             $syncService->trackDeletion('tbl_room', $id);
             
+            // NEW APPROACH: Immediately trigger deletion on local server
+            try {
+                $syncService->triggerDeleteOnLocal('rooms', $id);
+            } catch (\Exception $e) {
+                Log::error("Failed to trigger room deletion on local: " . $e->getMessage());
+            }
+            
             Log::info("Deleted room {$id} from cloud via API");
             return response()->json(['success' => true, 'message' => 'Room deleted successfully']);
         } catch (\Exception $e) {
@@ -1625,6 +1646,13 @@ class SyncReceiverController extends Controller
             // Track deletion locally
             $syncService = app(\App\Services\CloudSyncService::class);
             $syncService->trackDeletion('tbl_camera', $id);
+            
+            // NEW APPROACH: Immediately trigger deletion on local server
+            try {
+                $syncService->triggerDeleteOnLocal('cameras', $id);
+            } catch (\Exception $e) {
+                Log::error("Failed to trigger camera deletion on local: " . $e->getMessage());
+            }
             
             Log::info("Deleted camera {$id} from cloud via API");
             return response()->json(['success' => true, 'message' => 'Camera deleted successfully']);
@@ -1663,6 +1691,13 @@ class SyncReceiverController extends Controller
             $syncService = app(\App\Services\CloudSyncService::class);
             $syncService->trackDeletion('tbl_faculty', $id);
             
+            // NEW APPROACH: Immediately trigger deletion on local server
+            try {
+                $syncService->triggerDeleteOnLocal('faculties', $id);
+            } catch (\Exception $e) {
+                Log::error("Failed to trigger faculty deletion on local: " . $e->getMessage());
+            }
+            
             Log::info("Deleted faculty {$id} from cloud via API");
             return response()->json(['success' => true, 'message' => 'Faculty deleted successfully']);
         } catch (\Exception $e) {
@@ -1687,6 +1722,13 @@ class SyncReceiverController extends Controller
             // Track deletion locally
             $syncService = app(\App\Services\CloudSyncService::class);
             $syncService->trackDeletion('tbl_teaching_load', $id);
+            
+            // NEW APPROACH: Immediately trigger deletion on local server
+            try {
+                $syncService->triggerDeleteOnLocal('teaching-loads', $id);
+            } catch (\Exception $e) {
+                Log::error("Failed to trigger teaching load deletion on local: " . $e->getMessage());
+            }
             
             Log::info("Deleted teaching load {$id} from cloud via API");
             return response()->json(['success' => true, 'message' => 'Teaching load deleted successfully']);
@@ -1726,6 +1768,13 @@ class SyncReceiverController extends Controller
             $remarksService = app(\App\Services\AttendanceRemarksService::class);
             $remarksService->removeLeaveAbsencesInWindow($facultyId, $start, $end);
             
+            // NEW APPROACH: Immediately trigger deletion on local server
+            try {
+                $syncService->triggerDeleteOnLocal('leaves', $id);
+            } catch (\Exception $e) {
+                Log::error("Failed to trigger leave deletion on local: " . $e->getMessage());
+            }
+            
             Log::info("Deleted leave {$id} from cloud via API");
             return response()->json(['success' => true, 'message' => 'Leave deleted successfully']);
         } catch (\Exception $e) {
@@ -1762,6 +1811,13 @@ class SyncReceiverController extends Controller
             // Reconcile attendance
             $remarksService = app(\App\Services\AttendanceRemarksService::class);
             $remarksService->reconcilePassChange($facultyId, $date);
+            
+            // NEW APPROACH: Immediately trigger deletion on local server
+            try {
+                $syncService->triggerDeleteOnLocal('passes', $id);
+            } catch (\Exception $e) {
+                Log::error("Failed to trigger pass deletion on local: " . $e->getMessage());
+            }
             
             Log::info("Deleted pass {$id} from cloud via API");
             return response()->json(['success' => true, 'message' => 'Pass deleted successfully']);
@@ -1810,6 +1866,13 @@ class SyncReceiverController extends Controller
             // Track deletion locally
             $syncService = app(\App\Services\CloudSyncService::class);
             $syncService->trackDeletion('tbl_official_matters', $id);
+            
+            // NEW APPROACH: Immediately trigger deletion on local server
+            try {
+                $syncService->triggerDeleteOnLocal('official-matters', $id);
+            } catch (\Exception $e) {
+                Log::error("Failed to trigger official matter deletion on local: " . $e->getMessage());
+            }
             
             // Remove attendance records
             if (!empty($facultyIds)) {
@@ -1874,6 +1937,13 @@ class SyncReceiverController extends Controller
             $syncService = app(\App\Services\CloudSyncService::class);
             $syncService->trackDeletion('tbl_attendance_record', $id);
             
+            // NEW APPROACH: Immediately trigger deletion on local server
+            try {
+                $syncService->triggerDeleteOnLocal('attendance-records', $id);
+            } catch (\Exception $e) {
+                Log::error("Failed to trigger attendance record deletion on local: " . $e->getMessage());
+            }
+            
             Log::info("Deleted attendance record {$id} from cloud via API");
             return response()->json(['success' => true, 'message' => 'Attendance record deleted successfully']);
         } catch (\Exception $e) {
@@ -1898,6 +1968,13 @@ class SyncReceiverController extends Controller
             // Track deletion locally
             $syncService = app(\App\Services\CloudSyncService::class);
             $syncService->trackDeletion('tbl_recognition_logs', $id);
+            
+            // NEW APPROACH: Immediately trigger deletion on local server
+            try {
+                $syncService->triggerDeleteOnLocal('recognition-logs', $id);
+            } catch (\Exception $e) {
+                Log::error("Failed to trigger recognition log deletion on local: " . $e->getMessage());
+            }
             
             Log::info("Deleted recognition log {$id} from cloud via API");
             return response()->json(['success' => true, 'message' => 'Recognition log deleted successfully']);
@@ -1929,6 +2006,13 @@ class SyncReceiverController extends Controller
             $syncService = app(\App\Services\CloudSyncService::class);
             $syncService->trackDeletion('tbl_stream_recordings', $id);
             
+            // NEW APPROACH: Immediately trigger deletion on local server
+            try {
+                $syncService->triggerDeleteOnLocal('stream-recordings', $id);
+            } catch (\Exception $e) {
+                Log::error("Failed to trigger stream recording deletion on local: " . $e->getMessage());
+            }
+            
             Log::info("Deleted stream recording {$id} from cloud via API");
             return response()->json(['success' => true, 'message' => 'Stream recording deleted successfully']);
         } catch (\Exception $e) {
@@ -1953,6 +2037,13 @@ class SyncReceiverController extends Controller
             // Track deletion locally
             $syncService = app(\App\Services\CloudSyncService::class);
             $syncService->trackDeletion('tbl_activity_logs', $id);
+            
+            // NEW APPROACH: Immediately trigger deletion on local server
+            try {
+                $syncService->triggerDeleteOnLocal('activity-logs', $id);
+            } catch (\Exception $e) {
+                Log::error("Failed to trigger activity log deletion on local: " . $e->getMessage());
+            }
             
             Log::info("Deleted activity log {$id} from cloud via API");
             return response()->json(['success' => true, 'message' => 'Activity log deleted successfully']);
@@ -1979,6 +2070,13 @@ class SyncReceiverController extends Controller
             $syncService = app(\App\Services\CloudSyncService::class);
             $syncService->trackDeletion('tbl_teaching_load_archive', $id);
             
+            // NEW APPROACH: Immediately trigger deletion on local server
+            try {
+                $syncService->triggerDeleteOnLocal('teaching-load-archives', $id);
+            } catch (\Exception $e) {
+                Log::error("Failed to trigger teaching load archive deletion on local: " . $e->getMessage());
+            }
+            
             Log::info("Deleted teaching load archive {$id} from cloud via API");
             return response()->json(['success' => true, 'message' => 'Teaching load archive deleted successfully']);
         } catch (\Exception $e) {
@@ -2003,6 +2101,13 @@ class SyncReceiverController extends Controller
             // Track deletion locally
             $syncService = app(\App\Services\CloudSyncService::class);
             $syncService->trackDeletion('tbl_attendance_record_archive', $id);
+            
+            // NEW APPROACH: Immediately trigger deletion on local server
+            try {
+                $syncService->triggerDeleteOnLocal('attendance-record-archives', $id);
+            } catch (\Exception $e) {
+                Log::error("Failed to trigger attendance record archive deletion on local: " . $e->getMessage());
+            }
             
             Log::info("Deleted attendance record archive {$id} from cloud via API");
             return response()->json(['success' => true, 'message' => 'Attendance record archive deleted successfully']);
