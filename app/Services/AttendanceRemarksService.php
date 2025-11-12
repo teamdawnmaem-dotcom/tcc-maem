@@ -299,6 +299,12 @@ class AttendanceRemarksService
             
             if (!empty($recordIds)) {
                 AttendanceRecord::whereIn('record_id', $recordIds)->delete();
+                
+                // Track deletions for sync - ensure they are deleted on the other end
+                $syncService = app(\App\Services\CloudSyncService::class);
+                foreach ($recordIds as $recordId) {
+                    $syncService->trackDeletion('tbl_attendance_record', $recordId);
+                }
             }
         }
         
@@ -373,14 +379,30 @@ class AttendanceRemarksService
                 ->where('teaching_load_day_of_week', $oldDayOfWeek)
                 ->get();
             
+            $deletedRecordIds = [];
             foreach ($oldTeachingLoads as $load) {
-                // Remove pass slip records from old date
-                AttendanceRecord::where('faculty_id', $facultyId)
+                // Get record IDs before deletion
+                $recordIds = AttendanceRecord::where('faculty_id', $facultyId)
                     ->where('teaching_load_id', $load->teaching_load_id)
                     ->whereDate('record_date', $oldDate)
                     ->where('record_status', 'Absent')
                     ->where('record_remarks', 'With Pass Slip')
-                    ->delete();
+                    ->pluck('record_id')
+                    ->toArray();
+                
+                if (!empty($recordIds)) {
+                    // Delete the records
+                    AttendanceRecord::whereIn('record_id', $recordIds)->delete();
+                    $deletedRecordIds = array_merge($deletedRecordIds, $recordIds);
+                }
+            }
+            
+            // Track deletions for sync - ensure they are deleted on the other end
+            if (!empty($deletedRecordIds)) {
+                $syncService = app(\App\Services\CloudSyncService::class);
+                foreach ($deletedRecordIds as $recordId) {
+                    $syncService->trackDeletion('tbl_attendance_record', $recordId);
+                }
             }
         }
 
@@ -435,16 +457,32 @@ class AttendanceRemarksService
                 }
             } else {
                 // No overlap - remove pass slip records for this date/load if they exist
+                $deletedRecordIds = [];
                 if ($existingRecord && $existingRecord->record_remarks === 'With Pass Slip' && $existingRecord->record_status === 'Absent') {
+                    $deletedRecordIds[] = $existingRecord->record_id;
                     $existingRecord->delete();
                 } else {
                     // Remove any other pass slip records for this date/load
-                    AttendanceRecord::where('faculty_id', $facultyId)
+                    $recordIds = AttendanceRecord::where('faculty_id', $facultyId)
                         ->where('teaching_load_id', $load->teaching_load_id)
                         ->whereDate('record_date', $date)
                         ->where('record_status', 'Absent')
                         ->where('record_remarks', 'With Pass Slip')
-                        ->delete();
+                        ->pluck('record_id')
+                        ->toArray();
+                    
+                    if (!empty($recordIds)) {
+                        AttendanceRecord::whereIn('record_id', $recordIds)->delete();
+                        $deletedRecordIds = array_merge($deletedRecordIds, $recordIds);
+                    }
+                }
+                
+                // Track deletions for sync - ensure they are deleted on the other end
+                if (!empty($deletedRecordIds)) {
+                    $syncService = app(\App\Services\CloudSyncService::class);
+                    foreach ($deletedRecordIds as $recordId) {
+                        $syncService->trackDeletion('tbl_attendance_record', $recordId);
+                    }
                 }
             }
         }
