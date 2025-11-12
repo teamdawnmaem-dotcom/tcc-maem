@@ -579,53 +579,40 @@
             console.log(`[filterRecordingsBySchedule] Today's date (Asia/Manila): ${todayDateStr}`);
             
             // Filter recordings by current date using start_time from tbl_stream_recordings
-            // start_time is datetime type - Laravel serializes as ISO 8601 format (e.g., 2025-11-05T10:33:37.000000Z)
-            // or MySQL format (e.g., 2025-11-05 10:33:37)
+            // Prefer start_time_formatted (MySQL format) to avoid timezone issues
             let filteredRecordings = recordings.filter(recording => {
-                // Check if start_time exists (from tbl_stream_recordings.start_time column)
-                if (!recording.start_time) {
+                // Use start_time_formatted if available, otherwise fall back to start_time
+                const timeString = recording.start_time_formatted || recording.start_time;
+                
+                if (!timeString) {
                     console.log(`[filterRecordingsBySchedule] Recording ${recording.recording_id} has no start_time`);
                     return false;
                 }
                 
-                // Parse start_time - datetime type from database
-                // IMPORTANT: Python service stores time as "YYYY-MM-DD HH:MM:SS" in Asia/Manila timezone
-                // Laravel serializes it as ISO 8601 UTC (with 'Z'), but the original value is Asia/Manila
-                let recordingDate;
-                if (typeof recording.start_time === 'string') {
-                    // Check if it's ISO format (contains 'T')
-                    if (recording.start_time.includes('T')) {
-                        // ISO 8601 format (e.g., 2025-11-06T15:08:00.000000Z)
-                        // Problem: Python stores "2025-11-06 15:08:00" as Asia/Manila time
-                        // Laravel serializes it as "2025-11-06T15:08:00Z" (treating as UTC)
-                        // JavaScript then converts UTC to local timezone, causing date shifts
-                        // Solution: Extract UTC components and treat them as Asia/Manila time directly
-                        const utcDate = new Date(recording.start_time);
-                        
-                        // Get UTC time components (these represent the original Asia/Manila time)
+                // Parse date from time string
+                let recordingDateStr;
+                if (typeof timeString === 'string') {
+                    // Check if it's MySQL format (YYYY-MM-DD HH:MM:SS) - preferred format
+                    if (timeString.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)) {
+                        // MySQL format - extract date part directly
+                        const [datePart] = timeString.split(' ');
+                        recordingDateStr = datePart; // Already in YYYY-MM-DD format
+                    } else if (timeString.includes('T')) {
+                        // ISO 8601 format - extract UTC components to get the original date
+                        const utcDate = new Date(timeString);
                         const utcYear = utcDate.getUTCFullYear();
                         const utcMonth = utcDate.getUTCMonth();
                         const utcDay = utcDate.getUTCDate();
-                        
-                        // Create a date object using UTC components but interpret as local (Asia/Manila)
-                        // This effectively treats the UTC time as if it were already in Asia/Manila
-                        recordingDate = new Date(utcYear, utcMonth, utcDay);
-                    } else if (recording.start_time.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)) {
-                        // MySQL format (e.g., 2025-11-05 10:33:37) - already in Asia/Manila timezone
-                        const [datePart, timePart] = recording.start_time.split(' ');
-                        const [year, month, day] = datePart.split('-').map(Number);
-                        // Create date treating the time as Asia/Manila timezone (local time)
-                        recordingDate = new Date(year, month - 1, day);
+                        recordingDateStr = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${String(utcDay).padStart(2, '0')}`;
                     } else {
-                        recordingDate = new Date(recording.start_time);
+                        // Fallback: try to parse as date
+                        const date = new Date(timeString);
+                        recordingDateStr = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
                     }
                 } else {
-                    recordingDate = new Date(recording.start_time);
+                    // If it's already a Date object, extract UTC components
+                    recordingDateStr = `${timeString.getUTCFullYear()}-${String(timeString.getUTCMonth() + 1).padStart(2, '0')}-${String(timeString.getUTCDate()).padStart(2, '0')}`;
                 }
-                
-                // Extract date directly from the date components (treating as Asia/Manila)
-                // Since we've already adjusted for timezone, we can use local date methods
-                const recordingDateStr = `${recordingDate.getFullYear()}-${String(recordingDate.getMonth() + 1).padStart(2, '0')}-${String(recordingDate.getDate()).padStart(2, '0')}`;
                 
                 // Match recordings from today's date
                 const matches = recordingDateStr === todayDateStr;
@@ -645,15 +632,17 @@
             if (filteredRecordings.length > 0) {
                 const beforeDayFilter = filteredRecordings.length;
                 filteredRecordings = filteredRecordings.filter(recording => {
-                    if (!recording.start_time) return false;
+                    // Use start_time_formatted if available, otherwise fall back to start_time
+                    const timeString = recording.start_time_formatted || recording.start_time;
+                    if (!timeString) return false;
                     
                     // Parse start_time to get the day of week
                     // IMPORTANT: Use same UTC component extraction as date comparison
                     let recordingDate;
-                    if (typeof recording.start_time === 'string') {
-                        if (recording.start_time.includes('T')) {
+                    if (typeof timeString === 'string') {
+                        if (timeString.includes('T')) {
                             // ISO format - extract UTC components and treat as Asia/Manila
-                            const utcDate = new Date(recording.start_time);
+                            const utcDate = new Date(timeString);
                             const utcYear = utcDate.getUTCFullYear();
                             const utcMonth = utcDate.getUTCMonth();
                             const utcDay = utcDate.getUTCDate();
@@ -662,17 +651,17 @@
                             const utcSeconds = utcDate.getUTCSeconds();
                             // Create date using UTC components but interpret as local (Asia/Manila)
                             recordingDate = new Date(utcYear, utcMonth, utcDay, utcHours, utcMinutes, utcSeconds || 0);
-                        } else if (recording.start_time.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)) {
+                        } else if (timeString.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)) {
                             // MySQL format - already in Asia/Manila timezone
-                            const [datePart, timePart] = recording.start_time.split(' ');
+                            const [datePart, timePart] = timeString.split(' ');
                             const [year, month, day] = datePart.split('-').map(Number);
                             const [hour, minute, second] = timePart.split(':').map(Number);
                             recordingDate = new Date(year, month - 1, day, hour, minute, second || 0);
                         } else {
-                            recordingDate = new Date(recording.start_time);
+                            recordingDate = new Date(timeString);
                         }
                     } else {
-                        recordingDate = new Date(recording.start_time);
+                        recordingDate = new Date(timeString);
                     }
                     
                     // Get recording's day of week using local date methods (already adjusted for timezone)
@@ -1119,6 +1108,19 @@
                     });
                     
                     newRecordings.forEach(recording => {
+                        // Ensure start_time_formatted is set (API should provide it, but add as fallback)
+                        if (!recording.start_time_formatted && recording.start_time) {
+                            // Parse and format if not provided by API
+                            const timeStr = recording.start_time;
+                            if (typeof timeStr === 'string' && timeStr.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)) {
+                                recording.start_time_formatted = timeStr;
+                            } else if (typeof timeStr === 'string' && timeStr.includes('T')) {
+                                // ISO format - extract date and time parts
+                                const date = new Date(timeStr);
+                                recording.start_time_formatted = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')} ${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}:${String(date.getUTCSeconds()).padStart(2, '0')}`;
+                            }
+                        }
+                        
                         if (!recordingsByCamera[recording.camera_id]) {
                             recordingsByCamera[recording.camera_id] = [];
                         }

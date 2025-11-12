@@ -57,7 +57,11 @@ class StreamRecordingController extends Controller
         try {
             $recordings = StreamRecording::where('camera_id', $camera_id)
                 ->orderBy('start_time', 'desc')
-                ->get();
+                ->get()
+                ->map(function ($recording) {
+                    $recording->start_time_formatted = $recording->start_time ? $recording->start_time->format('Y-m-d H:i:s') : null;
+                    return $recording;
+                });
             
             return response()->json($recordings);
         } catch (\Exception $e) {
@@ -85,6 +89,12 @@ class StreamRecordingController extends Controller
             }
             
             $recordings = $query->paginate($perPage);
+            
+            // Add start_time_formatted to each recording to avoid timezone issues
+            $recordings->getCollection()->transform(function ($recording) {
+                $recording->start_time_formatted = $recording->start_time ? $recording->start_time->format('Y-m-d H:i:s') : null;
+                return $recording;
+            });
             
             return response()->json($recordings);
         } catch (\Exception $e) {
