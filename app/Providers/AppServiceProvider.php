@@ -104,21 +104,8 @@ class AppServiceProvider extends ServiceProvider
             }
         }
         
-        // Set timezone before every database query using DB::listen
-        // This ensures timezone is set even if connection is reused
-        \DB::listen(function ($query) use ($mysqlTimezone) {
-            static $timezoneSetForQuery = [];
-            $connectionName = $query->connectionName ?? 'default';
-            
-            if (!isset($timezoneSetForQuery[$connectionName])) {
-                try {
-                    \DB::connection($connectionName)->statement("SET SESSION time_zone = '{$mysqlTimezone}'");
-                    $timezoneSetForQuery[$connectionName] = true;
-                } catch (\Exception $e) {
-                    // Ignore errors
-                }
-            }
-        });
+        // Note: DB::listen() can cause infinite loops if we execute queries inside it
+        // Instead, we set timezone on connection establishment and in boot()
         
         // Set it immediately for the default connection
         try {
