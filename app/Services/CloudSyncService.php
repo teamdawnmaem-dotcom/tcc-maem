@@ -252,15 +252,22 @@ class CloudSyncService
      * @param string $endpoint API endpoint (e.g., 'users', 'leaves', 'passes')
      * @param string $tableName Table name (e.g., 'tbl_user', 'tbl_leave_pass')
      * @param string $idKey Primary key field name (e.g., 'user_id', 'lp_id')
+     * @param array|null $cloudDeletedIds Optional: pre-fetched deleted IDs to avoid duplicate API call
      */
-    protected function deleteLocalRecordsDeletedOnCloud(string $endpoint, string $tableName, string $idKey)
+    protected function deleteLocalRecordsDeletedOnCloud(string $endpoint, string $tableName, string $idKey, ?array $cloudDeletedIds = null)
     {
         try {
-            $cloudDeletedIds = $this->getDeletedIdsFromCloud($endpoint);
+            // Use provided IDs or fetch from cloud
+            if ($cloudDeletedIds === null) {
+                $cloudDeletedIds = $this->getDeletedIdsFromCloud($endpoint);
+            }
             
             if (empty($cloudDeletedIds)) {
+                Log::debug("No deleted IDs found on cloud for {$endpoint}");
                 return;
             }
+            
+            Log::info("Processing " . count($cloudDeletedIds) . " deletions from cloud for {$tableName} (endpoint: {$endpoint})");
             
             foreach ($cloudDeletedIds as $deletedId) {
                 // Special handling for leaves and passes (they share the same table)
@@ -366,25 +373,15 @@ class CloudSyncService
             // STEP 1: Process deletions for this table before syncing data
             $this->syncTableDeletionsToCloud('tbl_room', 'rooms');
             
-            // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
-            $cloudDeletedIds = $this->getDeletedIdsFromCloud('rooms');
-            
             // CRITICAL: If a record was deleted on cloud, delete it locally too
-            if (!empty($cloudDeletedIds)) {
-                foreach ($cloudDeletedIds as $deletedId) {
-                    $exists = DB::table('tbl_room')->where('room_no', $deletedId)->exists();
-                    if ($exists) {
-                        DB::table('tbl_room')->where('room_no', $deletedId)->delete();
-                        $this->trackDeletion('tbl_room', $deletedId);
-                        Log::info("Deleted room {$deletedId} locally (was deleted on cloud)");
-                    }
-                }
-            }
+            // Get deleted IDs from cloud and delete locally
+            $cloudDeletedIds = $this->getDeletedIdsFromCloud('rooms');
+            $this->deleteLocalRecordsDeletedOnCloud('rooms', 'tbl_room', 'room_no', $cloudDeletedIds);
             
             // Get existing cloud records with their data for comparison
             $existingCloudRecords = $this->getExistingCloudRecords('rooms', 'room_no');
             
-            // Get all local rooms
+            // Get all local rooms (after deletions, so deleted records won't be in this list)
             $localRooms = Room::all();
             
             if ($localRooms->isEmpty()) {
@@ -2770,18 +2767,27 @@ class CloudSyncService
         try {
             $url = "{$this->cloudApiUrl}/sync/{$endpoint}/deletions";
             
-            $response = Http::withHeaders([
-                'X-API-Key' => $this->cloudApiKey,
-            ])->get($url);
+            Log::info("Fetching deleted IDs from cloud for {$endpoint}: {$url}");
+            
+            $response = Http::timeout(30)
+                ->withHeaders([
+                    'X-API-Key' => $this->cloudApiKey,
+                    'Accept' => 'application/json',
+                ])
+                ->get($url);
             
             if ($response->successful()) {
                 $data = $response->json();
-                return $data['deleted_ids'] ?? [];
+                $deletedIds = $data['deleted_ids'] ?? [];
+                Log::info("Retrieved " . count($deletedIds) . " deleted IDs from cloud for {$endpoint}: " . json_encode($deletedIds));
+                return $deletedIds;
+            } else {
+                Log::warning("Failed to get deleted IDs from cloud for {$endpoint}: Status {$response->status()}, Body: " . $response->body());
+                return [];
             }
-            
-            return [];
         } catch (\Exception $e) {
             Log::error("Error getting deleted IDs from cloud for {$endpoint}: " . $e->getMessage());
+            Log::error("Stack trace: " . $e->getTraceAsString());
             return [];
         }
     }

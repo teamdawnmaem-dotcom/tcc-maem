@@ -2153,6 +2153,7 @@ class SyncReceiverController extends Controller
             
             // Get deleted IDs from cache
             $deletedIds = $syncService->getDeletedIds($tableName);
+            Log::info("Found " . count($deletedIds) . " deleted IDs in cache for table {$tableName} (endpoint: {$endpoint})");
             
             // For leaves and passes, filter by lp_type
             if ($tableName === 'tbl_leave_pass') {
