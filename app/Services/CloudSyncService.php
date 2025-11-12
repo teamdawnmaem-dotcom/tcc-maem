@@ -50,7 +50,13 @@ class CloudSyncService
         try {
             Log::info('Starting cloud sync...');
             
-            // Sync in order of dependencies - users first
+            // STEP 1: Process deletions FIRST - sync all local deletions to cloud
+            // This ensures deletions are synced before any data sync happens
+            Log::info('STEP 1: Syncing all local deletions to cloud...');
+            $this->syncAllDeletionsToCloud();
+            
+            // STEP 2: Sync data in order of dependencies - users first
+            Log::info('STEP 2: Syncing data to cloud...');
             $results['synced']['users'] = $this->syncUsers();
             $results['synced']['subjects'] = $this->syncSubjects();
             $results['synced']['rooms'] = $this->syncRooms();
@@ -69,7 +75,7 @@ class CloudSyncService
             
             // Final pass: Sync any deletions that happened during the sync process
             // This ensures deletions are synced even if they occur while sync is running
-            Log::info('Performing final deletion sync to catch deletions that occurred during sync...');
+            Log::info('STEP 3: Performing final deletion sync to catch deletions that occurred during sync...');
             $this->syncAllDeletionsToCloud();
             
             // Calculate summary
@@ -1956,7 +1962,13 @@ class CloudSyncService
         try {
             Log::info('Starting cloud to local sync...');
             
-            // Sync in order of dependencies - users first
+            // STEP 1: Process deletions FIRST - delete records locally that were deleted in cloud
+            // This ensures deletions are processed before any data sync happens
+            Log::info('STEP 1: Processing all deletions from cloud...');
+            $this->processAllDeletionsFromCloud();
+            
+            // STEP 2: Sync data in order of dependencies - users first
+            Log::info('STEP 2: Syncing data from cloud...');
             $results['synced']['users'] = $this->syncUsersFromCloud();
             $results['synced']['subjects'] = $this->syncSubjectsFromCloud();
             $results['synced']['rooms'] = $this->syncRoomsFromCloud();
@@ -1975,7 +1987,7 @@ class CloudSyncService
             
             // Final pass: Process any deletions from cloud that happened during the sync process
             // This ensures deletions are processed even if they occur while sync is running
-            Log::info('Performing final deletion processing from cloud to catch deletions that occurred during sync...');
+            Log::info('STEP 3: Performing final deletion processing from cloud to catch deletions that occurred during sync...');
             $this->processAllDeletionsFromCloud();
             
             // Calculate summary
@@ -2529,7 +2541,7 @@ class CloudSyncService
                 ['endpoint' => 'leaves', 'table' => 'tbl_leave_pass', 'idKey' => 'lp_id'],
                 ['endpoint' => 'passes', 'table' => 'tbl_leave_pass', 'idKey' => 'lp_id'],
                 ['endpoint' => 'official-matters', 'table' => 'tbl_official_matters', 'idKey' => 'om_id'],
-                ['endpoint' => 'recognition-logs', 'table' => 'tbl_recognition_logs', 'idKey' => 'recognition_log_id'],
+                ['endpoint' => 'recognition-logs', 'table' => 'tbl_recognition_logs', 'idKey' => 'log_id'],
                 ['endpoint' => 'stream-recordings', 'table' => 'tbl_stream_recordings', 'idKey' => 'recording_id'],
                 ['endpoint' => 'activity-logs', 'table' => 'tbl_activity_logs', 'idKey' => 'logs_id'],
                 ['endpoint' => 'teaching-load-archives', 'table' => 'tbl_teaching_load_archive', 'idKey' => 'archive_id'],
