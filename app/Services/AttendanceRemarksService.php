@@ -251,29 +251,83 @@ class AttendanceRemarksService
 
     /**
      * Reconcile attendance records after a Leave date range change.
-     * - Remove 'absent' + 'on leave' records outside the new range
-     * - Ensure records exist inside the new range
+     * Intelligently updates records to preserve IDs when dates overlap.
+     * 
+     * @param int $facultyId Faculty ID
+     * @param string $newStartDate New start date
+     * @param string $newEndDate New end date
+     * @param string|null $oldStartDate Old start date (null if new record)
+     * @param string|null $oldEndDate Old end date (null if new record)
      */
-    public function reconcileLeaveChange($facultyId, $newStartDate, $newEndDate)
+    public function reconcileLeaveChange($facultyId, $newStartDate, $newEndDate, $oldStartDate = null, $oldEndDate = null)
     {
         $newStart = Carbon::parse($newStartDate)->startOfDay();
         $newEnd = Carbon::parse($newEndDate)->endOfDay();
-
-        // Remove leave-generated absent records outside the new window
-        AttendanceRecord::where('faculty_id', $facultyId)
-            ->where('record_status', 'Absent')
-            ->where('record_remarks', 'On Leave')
-            ->where(function ($q) use ($newStart, $newEnd) {
-                $q->where('record_date', '<', $newStart)
-                  ->orWhere('record_date', '>', $newEnd);
-            })
-            ->delete();
-
-        // Recreate/ensure records within the new window (idempotent)
+        
+        // Calculate date ranges
+        $newDates = [];
         $cursor = $newStart->copy();
         while ($cursor->lte($newEnd)) {
-            $this->updateAbsentFacultyRemarks($facultyId, $cursor->toDateString());
+            $newDates[] = $cursor->toDateString();
             $cursor->addDay();
+        }
+        
+        $oldDates = [];
+        if ($oldStartDate && $oldEndDate) {
+            $oldStart = Carbon::parse($oldStartDate)->startOfDay();
+            $oldEnd = Carbon::parse($oldEndDate)->endOfDay();
+            $cursor = $oldStart->copy();
+            while ($cursor->lte($oldEnd)) {
+                $oldDates[] = $cursor->toDateString();
+                $cursor->addDay();
+            }
+        }
+        
+        // Determine which dates to keep, update, and delete
+        $datesToKeep = array_intersect($oldDates, $newDates); // Dates in both ranges - UPDATE
+        $datesToDelete = array_diff($oldDates, $newDates); // Dates only in old range - DELETE
+        $datesToCreate = array_diff($newDates, $oldDates); // Dates only in new range - CREATE
+        
+        // Step 1: Delete records for dates that are no longer in the range
+        if (!empty($datesToDelete)) {
+            $recordIds = AttendanceRecord::where('faculty_id', $facultyId)
+                ->where('record_status', 'Absent')
+                ->where('record_remarks', 'On Leave')
+                ->whereIn('record_date', $datesToDelete)
+                ->pluck('record_id')
+                ->toArray();
+            
+            if (!empty($recordIds)) {
+                AttendanceRecord::whereIn('record_id', $recordIds)->delete();
+            }
+        }
+        
+        // Step 2: Update records for dates that are in both ranges (preserve IDs)
+        foreach ($datesToKeep as $date) {
+            $dayOfWeek = Carbon::parse($date)->format('l');
+            $teachingLoads = TeachingLoad::where('faculty_id', $facultyId)
+                ->where('teaching_load_day_of_week', $dayOfWeek)
+                ->get();
+            
+            foreach ($teachingLoads as $teachingLoad) {
+                $existingRecord = AttendanceRecord::where('faculty_id', $facultyId)
+                    ->where('teaching_load_id', $teachingLoad->teaching_load_id)
+                    ->whereDate('record_date', $date)
+                    ->first();
+                
+                if ($existingRecord) {
+                    // Update existing record - preserve ID
+                    $existingRecord->update([
+                        'record_status' => 'Absent',
+                        'record_remarks' => 'On Leave',
+                    ]);
+                }
+            }
+        }
+        
+        // Step 3: Create/update records for dates that are only in new range
+        foreach ($datesToCreate as $date) {
+            $this->updateAbsentFacultyRemarks($facultyId, $date);
         }
     }
 

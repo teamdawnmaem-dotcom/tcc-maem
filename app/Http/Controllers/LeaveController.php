@@ -130,14 +130,15 @@ class LeaveController extends Controller
         
         $leave->update($validated);
 
-        // Update attendance remarks for the leave period
+        // Intelligently update attendance remarks for the leave period - preserve existing IDs
         $remarksService = new AttendanceRemarksService();
-        
-        // First, remove old leave records that are no longer valid
-        $remarksService->removeLeaveAbsencesInWindow($request->faculty_id, $oldStartDate, $oldEndDate);
-        
-        // Then, reconcile the new leave period
-        $remarksService->reconcileLeaveChange($request->faculty_id, $validated['leave_start_date'], $validated['leave_end_date']);
+        $remarksService->reconcileLeaveChange(
+            $request->faculty_id, 
+            $validated['leave_start_date'], 
+            $validated['leave_end_date'],
+            $oldStartDate,
+            $oldEndDate
+        );
 
          $faculty = Faculty::find($request->faculty_id);
         ActivityLog::create([
