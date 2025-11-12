@@ -339,17 +339,31 @@ class AttendanceRemarksService
 
     /**
      * Remove 'on leave' absent records within a specific window (used when deleting a leave).
+     * Tracks deletions for sync to ensure they are deleted on the other end.
      */
     public function removeLeaveAbsencesInWindow($facultyId, $startDate, $endDate)
     {
         $start = Carbon::parse($startDate)->startOfDay();
         $end = Carbon::parse($endDate)->endOfDay();
 
-        AttendanceRecord::where('faculty_id', $facultyId)
+        // Get record IDs before deletion (for tracking)
+        $recordIds = AttendanceRecord::where('faculty_id', $facultyId)
             ->where('record_status', 'Absent')
             ->where('record_remarks', 'On Leave')
             ->whereBetween('record_date', [$start, $end])
-            ->delete();
+            ->pluck('record_id')
+            ->toArray();
+
+        // Delete the records
+        if (!empty($recordIds)) {
+            AttendanceRecord::whereIn('record_id', $recordIds)->delete();
+            
+            // Track deletions for sync - CRITICAL: ensure they are deleted on the other end
+            $syncService = app(\App\Services\CloudSyncService::class);
+            foreach ($recordIds as $recordId) {
+                $syncService->trackDeletion('tbl_attendance_record', $recordId);
+            }
+        }
     }
 
     /**

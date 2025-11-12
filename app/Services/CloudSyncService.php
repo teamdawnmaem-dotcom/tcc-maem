@@ -3244,8 +3244,75 @@ class CloudSyncService
                     return false;
                 }
                 
-                // If not in local, needs to be synced (new record)
+                // If not in local, needs to be synced (new record) - but first check if it's orphaned
                 if (!isset($existingLocalRecords[$recordId])) {
+                    // CRITICAL: Skip attendance records if they are related to deleted leaves/passes/official matters
+                    // This prevents restoring attendance records when their parent entity was deleted locally
+                    $remarks = $cloudRecord['record_remarks'] ?? null;
+                    $recordDate = $cloudRecord['record_date'] ?? null;
+                    $facultyId = $cloudRecord['faculty_id'] ?? null;
+                    
+                    if ($remarks && $recordDate && $facultyId) {
+                        // Check for leave-related records
+                        if ($remarks === 'On Leave' || stripos($remarks, 'leave') !== false) {
+                            // Check if any leave exists locally for this faculty and date range
+                            $hasLocalLeave = DB::table('tbl_leave_pass')
+                            ->where('faculty_id', $facultyId)
+                            ->where('lp_type', 'Leave')
+                                ->where('leave_start_date', '<=', $recordDate)
+                                ->where('leave_end_date', '>=', $recordDate)
+                                ->exists();
+                            
+                            if (!$hasLocalLeave) {
+                                // No leave exists locally - this attendance record is orphaned
+                                // It's likely related to a deleted leave, so skip it
+                                Log::info("Skipping attendance record {$recordId} - related leave does not exist locally (likely deleted)");
+                                return false;
+                            }
+                        }
+                        
+                        // Check for pass-related records
+                        if ($remarks === 'With Pass Slip' || stripos($remarks, 'pass') !== false) {
+                            // Check if any pass exists locally for this faculty and date
+                            $hasLocalPass = DB::table('tbl_leave_pass')
+                                ->where('faculty_id', $facultyId)
+                                ->where('lp_type', 'Pass')
+                                ->where('pass_slip_date', $recordDate)
+                                ->exists();
+                            
+                            if (!$hasLocalPass) {
+                                // No pass exists locally - this attendance record is orphaned
+                                // It's likely related to a deleted pass, so skip it
+                                Log::info("Skipping attendance record {$recordId} - related pass does not exist locally (likely deleted)");
+                                return false;
+                            }
+                        }
+                        
+                        // Check for official matter-related records
+                        // Official matter remarks are stored in record_remarks, so we match by exact remarks
+                        if (stripos($remarks, 'official') !== false || 
+                            (stripos($remarks, 'om') !== false && strlen($remarks) > 10)) {
+                            // Check if any official matter exists locally for this faculty/date with matching remarks
+                            $hasLocalOM = DB::table('tbl_official_matters')
+                                ->where(function($q) use ($facultyId) {
+                                    $q->where('faculty_id', $facultyId)
+                                      ->orWhere('om_department', 'All Instructor');
+                                })
+                                ->where('om_start_date', '<=', $recordDate)
+                                ->where('om_end_date', '>=', $recordDate)
+                                ->where('om_remarks', $remarks)
+                                ->exists();
+                            
+                            if (!$hasLocalOM) {
+                                // No official matter exists locally - this attendance record is orphaned
+                                // It's likely related to a deleted official matter, so skip it
+                                Log::info("Skipping attendance record {$recordId} - related official matter does not exist locally (likely deleted)");
+                                return false;
+                            }
+                        }
+                    }
+                    
+                    // If we get here, it's a new record and not orphaned, so sync it
                     return true;
                 }
                 

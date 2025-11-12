@@ -42,14 +42,25 @@ class SyncBidirectional extends Command
      */
     public function handle()
     {
-        $this->info('🔄 Starting bidirectional sync (parallel mode)...');
+        $this->info('🔄 Starting bidirectional sync...');
         $this->newLine();
         
         $startTime = microtime(true);
         
         try {
-            // Run both syncs in parallel using separate processes
-            $this->info('📤📥 Running both syncs in parallel...');
+            // CRITICAL: Process deletions FIRST in both directions sequentially
+            // This ensures deletions are synced before any data sync happens
+            // This prevents race conditions where data is synced before deletions are processed
+            $this->info('🗑️  STEP 1: Processing deletions (sequential - critical for data integrity)...');
+            $this->info('   📤 Syncing local deletions to cloud...');
+            $this->cloudSyncService->syncAllDeletionsToCloud();
+            $this->info('   📥 Processing deletions from cloud...');
+            $this->cloudSyncService->processAllDeletionsFromCloud();
+            $this->info('✅ Deletions processed - both sides are now in sync on deletions');
+            $this->newLine();
+            
+            // Now run data syncs in parallel (they will do a final deletion pass, but most are already done)
+            $this->info('📤📥 STEP 2: Running data syncs in parallel...');
             
             // Use proc_open to run both syncs in parallel
             $descriptorspec = [
