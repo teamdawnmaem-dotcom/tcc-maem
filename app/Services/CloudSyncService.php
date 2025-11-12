@@ -689,6 +689,19 @@ class CloudSyncService
                 return $synced;
             }
             
+            // Store old dates from cloud BEFORE syncing (for attendance reconciliation)
+            $oldDatesMap = [];
+            foreach ($leavesToSync as $leave) {
+                $lpId = $leave->lp_id;
+                if (isset($existingCloudRecords[$lpId])) {
+                    // This is an update - store old dates from cloud
+                    $oldDatesMap[$lpId] = [
+                        'old_start_date' => $existingCloudRecords[$lpId]['leave_start_date'] ?? null,
+                        'old_end_date' => $existingCloudRecords[$lpId]['leave_end_date'] ?? null,
+                    ];
+                }
+            }
+            
             $payload = $leavesToSync->map(function ($leave) {
                 // Sync leave image to cloud and update path
                 $cloudImagePath = $this->syncLeaveImage($leave->lp_image);
@@ -713,8 +726,9 @@ class CloudSyncService
                 Log::info('Synced ' . count($synced) . ' leaves to cloud (' . $newCount . ' new, ' . $updatedCount . ' updated)');
                 
                 // Trigger attendance record updates on cloud for synced leaves
+                // Pass old dates for updates so cloud can properly delete attendance records
                 if (!empty($synced)) {
-                    $this->triggerCloudAttendanceUpdateForLeaves($synced);
+                    $this->triggerCloudAttendanceUpdateForLeaves($synced, $oldDatesMap);
                 }
             }
         } catch (\Exception $e) {
@@ -801,6 +815,18 @@ class CloudSyncService
                 return $synced;
             }
             
+            // Store old dates from cloud BEFORE syncing (for attendance reconciliation)
+            $oldDatesMap = [];
+            foreach ($passesToSync as $pass) {
+                $lpId = $pass->lp_id;
+                if (isset($existingCloudRecords[$lpId])) {
+                    // This is an update - store old date from cloud
+                    $oldDatesMap[$lpId] = [
+                        'old_date' => $existingCloudRecords[$lpId]['pass_slip_date'] ?? null,
+                    ];
+                }
+            }
+            
             $payload = $passesToSync->map(function ($pass) {
                 // Sync pass image to cloud and update path
                 $cloudImagePath = $this->syncPassImage($pass->lp_image);
@@ -827,8 +853,9 @@ class CloudSyncService
                 Log::info('Synced ' . count($synced) . ' passes to cloud (' . $newCount . ' new, ' . $updatedCount . ' updated)');
                 
                 // Trigger attendance record updates on cloud for synced passes
+                // Pass old dates for updates so cloud can properly delete attendance records
                 if (!empty($synced)) {
-                    $this->triggerCloudAttendanceUpdateForPasses($synced);
+                    $this->triggerCloudAttendanceUpdateForPasses($synced, $oldDatesMap);
                 }
             }
         } catch (\Exception $e) {
@@ -1028,6 +1055,31 @@ class CloudSyncService
         }
     }
 
+    /**
+     * Convert cloud timestamp from UTC to Asia/Manila timezone
+     * Cloud database stores timestamps in UTC, but we need to compare with local (Asia/Manila)
+     * @param string|null $cloudTimestamp Timestamp from cloud (assumed to be in UTC)
+     * @return string|null Timestamp in Asia/Manila timezone (Y-m-d H:i:s format)
+     */
+    protected function convertCloudTimestampToLocalTimezone($cloudTimestamp)
+    {
+        if (empty($cloudTimestamp)) {
+            return null;
+        }
+        
+        try {
+            // Parse the cloud timestamp as UTC
+            $utcTime = \Carbon\Carbon::parse($cloudTimestamp)->setTimezone('UTC');
+            // Convert to Asia/Manila timezone
+            $localTime = $utcTime->setTimezone('Asia/Manila');
+            return $localTime->format('Y-m-d H:i:s');
+        } catch (\Exception $e) {
+            Log::warning("Failed to convert cloud timestamp '{$cloudTimestamp}' to local timezone: " . $e->getMessage());
+            // If conversion fails, return as-is (might already be in correct timezone)
+            return $cloudTimestamp;
+        }
+    }
+    
     /**
      * Format datetime for MySQL compatibility
      * Converts Carbon/DateTime objects to MySQL datetime format (Y-m-d H:i:s)
@@ -2164,8 +2216,13 @@ class CloudSyncService
         }
         
         try {
-            $localTime = \Carbon\Carbon::parse($localUpdatedAt);
-            $cloudTime = \Carbon\Carbon::parse($cloudUpdatedAt);
+            // CRITICAL: Convert cloud timestamp from UTC to Asia/Manila before comparison
+            // Cloud database stores timestamps in UTC, but local is in Asia/Manila
+            $cloudUpdatedAtConverted = $this->convertCloudTimestampToLocalTimezone($cloudUpdatedAt);
+            
+            // Parse both timestamps (local is already in Asia/Manila, cloud is now converted)
+            $localTime = \Carbon\Carbon::parse($localUpdatedAt)->setTimezone('Asia/Manila');
+            $cloudTime = \Carbon\Carbon::parse($cloudUpdatedAtConverted)->setTimezone('Asia/Manila');
             
             if ($cloudTime->gt($localTime)) {
                 return 1; // Cloud is newer
@@ -2757,8 +2814,8 @@ class CloudSyncService
                             'user_lname' => $cloudUser['user_lname'] ?? null,
                             'username' => $cloudUser['username'] ?? null,
                             'user_password' => $cloudUser['user_password'] ?? null,
-                            'created_at' => $this->formatDateTime($cloudUser['created_at'] ?? null),
-                            'updated_at' => $this->formatDateTime($cloudUser['updated_at'] ?? null),
+                            'created_at' => $this->convertCloudTimestampToLocalTimezone($cloudUser['created_at'] ?? null),
+                            'updated_at' => $this->convertCloudTimestampToLocalTimezone($cloudUser['updated_at'] ?? null),
                         ]
                     ], ['user_id'], ['user_role', 'user_department', 'user_fname', 'user_lname', 'username', 'user_password', 'created_at', 'updated_at']);
                     
@@ -2845,8 +2902,8 @@ class CloudSyncService
                             'subject_code' => $cloudSubject['subject_code'] ?? null,
                             'subject_description' => $cloudSubject['subject_description'] ?? null,
                             'department' => $cloudSubject['department'] ?? null,
-                            'created_at' => $this->formatDateTime($cloudSubject['created_at'] ?? null),
-                            'updated_at' => $this->formatDateTime($cloudSubject['updated_at'] ?? null),
+                            'created_at' => $this->convertCloudTimestampToLocalTimezone($cloudSubject['created_at'] ?? null),
+                            'updated_at' => $this->convertCloudTimestampToLocalTimezone($cloudSubject['updated_at'] ?? null),
                         ]
                     ], ['subject_id'], ['subject_code', 'subject_description', 'department', 'created_at', 'updated_at']);
                     
@@ -2931,8 +2988,8 @@ class CloudSyncService
                             'room_no' => $cloudRoom['room_no'],
                             'room_name' => $cloudRoom['room_name'] ?? null,
                             'room_building_no' => $cloudRoom['room_building_no'] ?? null,
-                            'created_at' => $this->formatDateTime($cloudRoom['created_at'] ?? null),
-                            'updated_at' => $this->formatDateTime($cloudRoom['updated_at'] ?? null),
+                            'created_at' => $this->convertCloudTimestampToLocalTimezone($cloudRoom['created_at'] ?? null),
+                            'updated_at' => $this->convertCloudTimestampToLocalTimezone($cloudRoom['updated_at'] ?? null),
                         ]
                     ], ['room_no'], ['room_name', 'room_building_no', 'created_at', 'updated_at']);
                     
@@ -3025,8 +3082,8 @@ class CloudSyncService
                             'camera_password' => $cloudCamera['camera_password'] ?? null,
                             'camera_live_feed' => $cloudCamera['camera_live_feed'] ?? null,
                             'room_no' => $cloudCamera['room_no'] ?? null,
-                            'created_at' => $this->formatDateTime($cloudCamera['created_at'] ?? null),
-                            'updated_at' => $this->formatDateTime($cloudCamera['updated_at'] ?? null),
+                            'created_at' => $this->convertCloudTimestampToLocalTimezone($cloudCamera['created_at'] ?? null),
+                            'updated_at' => $this->convertCloudTimestampToLocalTimezone($cloudCamera['updated_at'] ?? null),
                         ]
                     ], ['camera_id'], ['camera_name', 'camera_ip_address', 'camera_username', 'camera_password', 'camera_live_feed', 'room_no', 'created_at', 'updated_at']);
                     
@@ -3119,8 +3176,8 @@ class CloudSyncService
                             'faculty_department' => $cloudFaculty['faculty_department'] ?? null,
                             'faculty_images' => $localImages,
                             'faculty_face_embedding' => $cloudFaculty['faculty_face_embedding'] ?? null,
-                            'created_at' => $this->formatDateTime($cloudFaculty['created_at'] ?? null),
-                            'updated_at' => $this->formatDateTime($cloudFaculty['updated_at'] ?? null),
+                            'created_at' => $this->convertCloudTimestampToLocalTimezone($cloudFaculty['created_at'] ?? null),
+                            'updated_at' => $this->convertCloudTimestampToLocalTimezone($cloudFaculty['updated_at'] ?? null),
                         ]
                     ], ['faculty_id'], ['faculty_fname', 'faculty_lname', 'faculty_department', 'faculty_images', 'faculty_face_embedding', 'created_at', 'updated_at']);
                     
@@ -3217,8 +3274,8 @@ class CloudSyncService
                             'teaching_load_time_in' => $cloudLoad['teaching_load_time_in'] ?? null,
                             'teaching_load_time_out' => $cloudLoad['teaching_load_time_out'] ?? null,
                             'room_no' => $cloudLoad['room_no'] ?? null,
-                            'created_at' => $this->formatDateTime($cloudLoad['created_at'] ?? null),
-                            'updated_at' => $this->formatDateTime($cloudLoad['updated_at'] ?? null),
+                            'created_at' => $this->convertCloudTimestampToLocalTimezone($cloudLoad['created_at'] ?? null),
+                            'updated_at' => $this->convertCloudTimestampToLocalTimezone($cloudLoad['updated_at'] ?? null),
                         ]
                     ], ['teaching_load_id'], ['faculty_id', 'teaching_load_course_code', 'teaching_load_subject', 'teaching_load_day_of_week', 'teaching_load_class_section', 'teaching_load_time_in', 'teaching_load_time_out', 'room_no', 'created_at', 'updated_at']);
                     
@@ -3401,8 +3458,8 @@ class CloudSyncService
                             'camera_id' => $cloudRecord['camera_id'] ?? null,
                             'time_in_snapshot' => $localTimeInSnapshot,
                             'time_out_snapshot' => $localTimeOutSnapshot,
-                            'created_at' => $this->formatDateTime($cloudRecord['created_at'] ?? null),
-                            'updated_at' => $this->formatDateTime($cloudRecord['updated_at'] ?? null),
+                            'created_at' => $this->convertCloudTimestampToLocalTimezone($cloudRecord['created_at'] ?? null),
+                            'updated_at' => $this->convertCloudTimestampToLocalTimezone($cloudRecord['updated_at'] ?? null),
                         ]
                     ], ['record_id'], ['record_date', 'faculty_id', 'teaching_load_id', 'record_time_in', 'record_time_out', 'time_duration_seconds', 'record_status', 'record_remarks', 'camera_id', 'time_in_snapshot', 'time_out_snapshot', 'created_at', 'updated_at']);
                     
@@ -3564,8 +3621,8 @@ class CloudSyncService
                             'leave_start_date' => $leaveStartDate,
                             'leave_end_date' => $leaveEndDate,
                             'lp_image' => $localImagePath,
-                            'created_at' => $this->formatDateTime($cloudLeave['created_at'] ?? null),
-                            'updated_at' => $this->formatDateTime($cloudLeave['updated_at'] ?? null),
+                            'created_at' => $this->convertCloudTimestampToLocalTimezone($cloudLeave['created_at'] ?? null),
+                            'updated_at' => $this->convertCloudTimestampToLocalTimezone($cloudLeave['updated_at'] ?? null),
                         ]
                     ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'leave_start_date', 'leave_end_date', 'lp_image', 'created_at', 'updated_at']);
                     
@@ -3765,8 +3822,8 @@ class CloudSyncService
                             'pass_slip_departure_time' => $cloudPass['pass_slip_departure_time'] ?? null,
                             'pass_slip_arrival_time' => $cloudPass['pass_slip_arrival_time'] ?? null,
                             'lp_image' => $localImagePath,
-                            'created_at' => $this->formatDateTime($cloudPass['created_at'] ?? null),
-                            'updated_at' => $this->formatDateTime($cloudPass['updated_at'] ?? null),
+                            'created_at' => $this->convertCloudTimestampToLocalTimezone($cloudPass['created_at'] ?? null),
+                            'updated_at' => $this->convertCloudTimestampToLocalTimezone($cloudPass['updated_at'] ?? null),
                         ]
                     ], ['lp_id'], ['faculty_id', 'lp_type', 'lp_purpose', 'pass_slip_itinerary', 'pass_slip_date', 'pass_slip_departure_time', 'pass_slip_arrival_time', 'lp_image', 'created_at', 'updated_at']);
                     
@@ -3883,8 +3940,8 @@ class CloudSyncService
                             'faculty_name' => $cloudLog['faculty_name'] ?? null,
                             'status' => $cloudLog['status'] ?? null,
                             'distance' => $cloudLog['distance'] ?? null,
-                            'created_at' => $this->formatDateTime($cloudLog['created_at'] ?? null),
-                            'updated_at' => $this->formatDateTime($cloudLog['updated_at'] ?? null),
+                            'created_at' => $this->convertCloudTimestampToLocalTimezone($cloudLog['created_at'] ?? null),
+                            'updated_at' => $this->convertCloudTimestampToLocalTimezone($cloudLog['updated_at'] ?? null),
                         ]
                     ], ['log_id'], ['faculty_id', 'camera_id', 'teaching_load_id', 'recognition_time', 'camera_name', 'room_name', 'building_no', 'faculty_name', 'status', 'distance', 'created_at', 'updated_at']);
                     
@@ -3963,8 +4020,8 @@ class CloudSyncService
                             'filepath' => $localVideoPath,
                             'filename' => $localFilename,
                             'file_size' => $cloudRecording['file_size'] ?? null,
-                            'created_at' => $this->formatDateTime($cloudRecording['created_at'] ?? null),
-                            'updated_at' => $this->formatDateTime($cloudRecording['updated_at'] ?? null),
+                            'created_at' => $this->convertCloudTimestampToLocalTimezone($cloudRecording['created_at'] ?? null),
+                            'updated_at' => $this->convertCloudTimestampToLocalTimezone($cloudRecording['updated_at'] ?? null),
                         ]
                     ], ['recording_id'], ['camera_id', 'start_time', 'duration', 'frames', 'filepath', 'filename', 'file_size', 'created_at', 'updated_at']);
                     
@@ -4031,8 +4088,8 @@ class CloudSyncService
                             'logs_description' => $cloudLog['logs_description'] ?? null,
                             'logs_timestamp' => $this->formatDateTime($cloudLog['logs_timestamp'] ?? null),
                             'logs_module' => $cloudLog['logs_module'] ?? null,
-                            'created_at' => $this->formatDateTime($cloudLog['created_at'] ?? null),
-                            'updated_at' => $this->formatDateTime($cloudLog['updated_at'] ?? null),
+                            'created_at' => $this->convertCloudTimestampToLocalTimezone($cloudLog['created_at'] ?? null),
+                            'updated_at' => $this->convertCloudTimestampToLocalTimezone($cloudLog['updated_at'] ?? null),
                         ]
                     ], ['logs_id'], ['user_id', 'logs_action', 'logs_description', 'logs_timestamp', 'logs_module', 'created_at', 'updated_at']);
                     
@@ -4108,8 +4165,8 @@ class CloudSyncService
                             'archived_at' => $this->formatDateTime($cloudArchive['archived_at'] ?? null),
                             'archived_by' => $cloudArchive['archived_by'] ?? null,
                             'archive_notes' => $cloudArchive['archive_notes'] ?? null,
-                            'created_at' => $this->formatDateTime($cloudArchive['created_at'] ?? null),
-                            'updated_at' => $this->formatDateTime($cloudArchive['updated_at'] ?? null),
+                            'created_at' => $this->convertCloudTimestampToLocalTimezone($cloudArchive['created_at'] ?? null),
+                            'updated_at' => $this->convertCloudTimestampToLocalTimezone($cloudArchive['updated_at'] ?? null),
                         ]
                     ], ['archive_id'], ['original_teaching_load_id', 'faculty_id', 'teaching_load_course_code', 'teaching_load_subject', 'teaching_load_class_section', 'teaching_load_day_of_week', 'teaching_load_time_in', 'teaching_load_time_out', 'room_no', 'school_year', 'semester', 'archived_at', 'archived_by', 'archive_notes', 'created_at', 'updated_at']);
                     
@@ -4186,8 +4243,8 @@ class CloudSyncService
                             'archived_at' => $this->formatDateTime($cloudArchive['archived_at'] ?? null),
                             'archived_by' => $cloudArchive['archived_by'] ?? null,
                             'archive_notes' => $cloudArchive['archive_notes'] ?? null,
-                            'created_at' => $this->formatDateTime($cloudArchive['created_at'] ?? null),
-                            'updated_at' => $this->formatDateTime($cloudArchive['updated_at'] ?? null),
+                            'created_at' => $this->convertCloudTimestampToLocalTimezone($cloudArchive['created_at'] ?? null),
+                            'updated_at' => $this->convertCloudTimestampToLocalTimezone($cloudArchive['updated_at'] ?? null),
                         ]
                     ], ['archive_id'], ['original_record_id', 'faculty_id', 'teaching_load_id', 'camera_id', 'record_date', 'record_time_in', 'record_time_out', 'time_duration_seconds', 'record_status', 'record_remarks', 'school_year', 'semester', 'archived_at', 'archived_by', 'archive_notes', 'created_at', 'updated_at']);
                     
@@ -4270,6 +4327,21 @@ class CloudSyncService
                 return $synced;
             }
             
+            // Store old data from cloud BEFORE syncing (for attendance reconciliation)
+            $oldDataMap = [];
+            foreach ($mattersToSync as $om) {
+                $omId = $om->om_id;
+                if (isset($existingCloudRecords[$omId])) {
+                    // This is an update - store old data from cloud
+                    $oldDataMap[$omId] = [
+                        'old_start_date' => $existingCloudRecords[$omId]['om_start_date'] ?? null,
+                        'old_end_date' => $existingCloudRecords[$omId]['om_end_date'] ?? null,
+                        'old_department' => $existingCloudRecords[$omId]['om_department'] ?? null,
+                        'old_remarks' => $existingCloudRecords[$omId]['om_remarks'] ?? null,
+                    ];
+                }
+            }
+            
             $payload = $mattersToSync->map(function ($om) {
                 // Sync attachment to cloud and update path
                 $cloudAttachmentPath = $this->syncOfficialMatterAttachment($om->om_attachment);
@@ -4298,8 +4370,9 @@ class CloudSyncService
                 Log::info('Synced ' . count($synced) . ' official matters to cloud (' . $newCount . ' new, ' . $updatedCount . ' updated)');
                 
                 // Trigger attendance record updates on cloud for synced official matters
+                // Pass old data for updates so cloud can properly delete attendance records
                 if (!empty($synced)) {
-                    $this->triggerCloudAttendanceUpdateForOfficialMatters($synced);
+                    $this->triggerCloudAttendanceUpdateForOfficialMatters($synced, $oldDataMap);
                 }
             } elseif ($resp['success'] && $upserted == 0) {
                 Log::warning("Official matters sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
@@ -4476,8 +4549,8 @@ class CloudSyncService
                             'om_start_date' => $cloudOM['om_start_date'] ?? null,
                             'om_end_date' => $cloudOM['om_end_date'] ?? null,
                             'om_attachment' => $localAttachmentPath,
-                            'created_at' => $this->formatDateTime($cloudOM['created_at'] ?? null),
-                            'updated_at' => $this->formatDateTime($cloudOM['updated_at'] ?? null),
+                            'created_at' => $this->convertCloudTimestampToLocalTimezone($cloudOM['created_at'] ?? null),
+                            'updated_at' => $this->convertCloudTimestampToLocalTimezone($cloudOM['updated_at'] ?? null),
                         ]
                     ], ['om_id'], ['faculty_id', 'om_department', 'om_purpose', 'om_remarks', 'om_start_date', 'om_end_date', 'om_attachment', 'created_at', 'updated_at']);
                     
@@ -4807,7 +4880,7 @@ class CloudSyncService
      * Trigger attendance record updates on cloud for synced leaves
      * @param array $leaveIds Array of leave IDs that were synced
      */
-    protected function triggerCloudAttendanceUpdateForLeaves(array $leaveIds)
+    protected function triggerCloudAttendanceUpdateForLeaves(array $leaveIds, array $oldDatesMap = [])
     {
         try {
             if (empty($leaveIds)) {
@@ -4822,12 +4895,19 @@ class CloudSyncService
                     continue;
                 }
                 
+                // Get old dates if this is an update
+                $oldStartDate = $oldDatesMap[$leave->lp_id]['old_start_date'] ?? null;
+                $oldEndDate = $oldDatesMap[$leave->lp_id]['old_end_date'] ?? null;
+                
                 // Call cloud API to trigger attendance update for this leave
+                // Include old dates so cloud can properly delete attendance records for dates no longer in range
                 $this->callCloudAttendanceUpdateTrigger('leave', [
                     'lp_id' => $leave->lp_id,
                     'faculty_id' => $leave->faculty_id,
                     'start_date' => $leave->leave_start_date,
                     'end_date' => $leave->leave_end_date,
+                    'old_start_date' => $oldStartDate,
+                    'old_end_date' => $oldEndDate,
                 ]);
             }
             
@@ -4841,7 +4921,7 @@ class CloudSyncService
      * Trigger attendance record updates on cloud for synced passes
      * @param array $passIds Array of pass IDs that were synced
      */
-    protected function triggerCloudAttendanceUpdateForPasses(array $passIds)
+    protected function triggerCloudAttendanceUpdateForPasses(array $passIds, array $oldDatesMap = [])
     {
         try {
             if (empty($passIds)) {
@@ -4856,11 +4936,16 @@ class CloudSyncService
                     continue;
                 }
                 
+                // Get old date if this is an update
+                $oldDate = $oldDatesMap[$pass->lp_id]['old_date'] ?? null;
+                
                 // Call cloud API to trigger attendance update for this pass
+                // Include old date so cloud can properly delete attendance records for old date
                 $this->callCloudAttendanceUpdateTrigger('pass', [
                     'lp_id' => $pass->lp_id,
                     'faculty_id' => $pass->faculty_id,
                     'date' => $pass->pass_slip_date,
+                    'old_date' => $oldDate,
                 ]);
             }
             
@@ -4874,7 +4959,7 @@ class CloudSyncService
      * Trigger attendance record updates on cloud for synced official matters
      * @param array $omIds Array of official matter IDs that were synced
      */
-    protected function triggerCloudAttendanceUpdateForOfficialMatters(array $omIds)
+    protected function triggerCloudAttendanceUpdateForOfficialMatters(array $omIds, array $oldDataMap = [])
     {
         try {
             if (empty($omIds)) {
@@ -4889,7 +4974,11 @@ class CloudSyncService
                     continue;
                 }
                 
+                // Get old data if this is an update
+                $oldData = $oldDataMap[$om->om_id] ?? [];
+                
                 // Call cloud API to trigger attendance update for this official matter
+                // Include old data so cloud can properly delete attendance records for dates/departments no longer in range
                 $this->callCloudAttendanceUpdateTrigger('official_matter', [
                     'om_id' => $om->om_id,
                     'faculty_id' => $om->faculty_id,
@@ -4897,6 +4986,10 @@ class CloudSyncService
                     'start_date' => $om->om_start_date,
                     'end_date' => $om->om_end_date,
                     'remarks' => $om->om_remarks,
+                    'old_start_date' => $oldData['old_start_date'] ?? null,
+                    'old_end_date' => $oldData['old_end_date'] ?? null,
+                    'old_department' => $oldData['old_department'] ?? null,
+                    'old_remarks' => $oldData['old_remarks'] ?? null,
                 ]);
             }
             

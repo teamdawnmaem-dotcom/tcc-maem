@@ -1299,18 +1299,26 @@ class SyncReceiverController extends Controller
                 $startDate = $data['start_date'] ?? null;
                 $endDate = $data['end_date'] ?? null;
                 
-                if ($facultyId && $startDate && $endDate) {
-                    // Get old leave data if this is an update
+                // CRITICAL: Use old dates from the request if provided (before leave was updated)
+                // If not provided, try to get from database (for backward compatibility)
+                $oldStartDate = $data['old_start_date'] ?? null;
+                $oldEndDate = $data['old_end_date'] ?? null;
+                
+                if (!$oldStartDate || !$oldEndDate) {
+                    // Fallback: Get old leave data from database (may not work if already updated)
                     $oldLeave = null;
                     if ($lpId) {
                         $oldLeave = DB::table('tbl_leave_pass')->where('lp_id', $lpId)->first();
                     }
-                    
+                    $oldStartDate = $oldStartDate ?? $oldLeave->leave_start_date ?? null;
+                    $oldEndDate = $oldEndDate ?? $oldLeave->leave_end_date ?? null;
+                }
+                
+                if ($facultyId && $startDate && $endDate) {
                     // Reconcile leave change to update attendance records - preserve existing IDs
-                    $oldStartDate = $oldLeave->leave_start_date ?? null;
-                    $oldEndDate = $oldLeave->leave_end_date ?? null;
+                    // This will delete attendance records for dates no longer in range
                     $remarksService->reconcileLeaveChange($facultyId, $startDate, $endDate, $oldStartDate, $oldEndDate);
-                    Log::info("Triggered attendance update for leave {$lpId} (faculty: {$facultyId}, dates: {$startDate} to {$endDate})");
+                    Log::info("Triggered attendance update for leave {$lpId} (faculty: {$facultyId}, dates: {$startDate} to {$endDate}, old dates: {$oldStartDate} to {$oldEndDate})");
                 }
                 
             } elseif ($type === 'pass') {
@@ -1318,17 +1326,24 @@ class SyncReceiverController extends Controller
                 $facultyId = $data['faculty_id'] ?? null;
                 $date = $data['date'] ?? null;
                 
-                if ($facultyId && $date) {
-                    // Get old pass data if this is an update
+                // CRITICAL: Use old date from the request if provided (before pass was updated)
+                // If not provided, try to get from database (for backward compatibility)
+                $oldDate = $data['old_date'] ?? null;
+                
+                if (!$oldDate) {
+                    // Fallback: Get old pass data from database (may not work if already updated)
                     $oldPass = null;
                     if ($lpId) {
                         $oldPass = DB::table('tbl_leave_pass')->where('lp_id', $lpId)->first();
                     }
-                    
-                    // Reconcile pass change to update attendance records - preserve existing IDs
                     $oldDate = $oldPass && $oldPass->pass_slip_date !== $date ? $oldPass->pass_slip_date : null;
+                }
+                
+                if ($facultyId && $date) {
+                    // Reconcile pass change to update attendance records - preserve existing IDs
+                    // This will delete attendance records for the old date if date changed
                     $remarksService->reconcilePassChange($facultyId, $date, $oldDate);
-                    Log::info("Triggered attendance update for pass {$lpId} (faculty: {$facultyId}, date: {$date})");
+                    Log::info("Triggered attendance update for pass {$lpId} (faculty: {$facultyId}, date: {$date}, old date: {$oldDate})");
                 }
                 
             } elseif ($type === 'official_matter') {
@@ -1339,7 +1354,85 @@ class SyncReceiverController extends Controller
                 $endDate = $data['end_date'] ?? null;
                 $remarks = $data['remarks'] ?? null;
                 
+                // CRITICAL: Get old data from request if provided (before official matter was updated)
+                $oldStartDate = $data['old_start_date'] ?? null;
+                $oldEndDate = $data['old_end_date'] ?? null;
+                $oldDepartment = $data['old_department'] ?? null;
+                $oldRemarks = $data['old_remarks'] ?? null;
+                
                 if ($startDate && $endDate && $remarks) {
+                    // Step 1: Delete attendance records for old dates/departments if this is an update
+                    if ($oldStartDate && $oldEndDate && $oldRemarks) {
+                        // Get old affected faculty IDs
+                        $oldFacultyIds = [];
+                        if (!empty($oldDepartment)) {
+                            if ($oldDepartment === 'All Instructor') {
+                                $oldFacultyIds = DB::table('tbl_faculty')->pluck('faculty_id')->toArray();
+                            } else {
+                                $oldFacultyIds = DB::table('tbl_faculty')
+                                    ->where('faculty_department', $oldDepartment)
+                                    ->pluck('faculty_id')
+                                    ->toArray();
+                            }
+                        } elseif ($facultyId) {
+                            $oldFacultyIds = [$facultyId];
+                        }
+                        
+                        // Calculate old date range
+                        $oldStart = \Carbon\Carbon::parse($oldStartDate);
+                        $oldEnd = \Carbon\Carbon::parse($oldEndDate);
+                        $oldDates = [];
+                        $cursor = $oldStart->copy();
+                        while ($cursor->lte($oldEnd)) {
+                            $oldDates[] = $cursor->toDateString();
+                            $cursor->addDay();
+                        }
+                        
+                        // Calculate new date range
+                        $newStart = \Carbon\Carbon::parse($startDate);
+                        $newEnd = \Carbon\Carbon::parse($endDate);
+                        $newDates = [];
+                        $cursor = $newStart->copy();
+                        while ($cursor->lte($newEnd)) {
+                            $newDates[] = $cursor->toDateString();
+                            $cursor->addDay();
+                        }
+                        
+                        // Find dates that are in old range but not in new range (or department changed)
+                        $datesToDelete = array_diff($oldDates, $newDates);
+                        $departmentChanged = ($oldDepartment !== $department);
+                        
+                        if (!empty($datesToDelete) || $departmentChanged) {
+                            // Delete attendance records for dates no longer in range or if department changed
+                            $deleteQuery = DB::table('tbl_attendance_record')
+                                ->where('record_status', 'Absent')
+                                ->where('record_remarks', $oldRemarks);
+                            
+                            if (!empty($datesToDelete)) {
+                                $deleteQuery->whereIn('record_date', $datesToDelete);
+                            }
+                            
+                            if (!empty($oldFacultyIds)) {
+                                $deleteQuery->whereIn('faculty_id', $oldFacultyIds);
+                            }
+                            
+                            $deletedRecordIds = $deleteQuery->pluck('record_id')->toArray();
+                            
+                            if (!empty($deletedRecordIds)) {
+                                DB::table('tbl_attendance_record')->whereIn('record_id', $deletedRecordIds)->delete();
+                                
+                                // Track deletions for sync
+                                $syncService = app(\App\Services\CloudSyncService::class);
+                                foreach ($deletedRecordIds as $recordId) {
+                                    $syncService->trackDeletion('tbl_attendance_record', $recordId);
+                                }
+                                
+                                Log::info("Deleted " . count($deletedRecordIds) . " attendance records for official matter {$omId} (old dates/department)");
+                            }
+                        }
+                    }
+                    
+                    // Step 2: Create/update attendance records for new dates
                     // Get affected faculty IDs
                     $facultyIds = [];
                     
