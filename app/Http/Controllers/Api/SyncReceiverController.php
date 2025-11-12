@@ -384,6 +384,16 @@ class SyncReceiverController extends Controller
                 'updated_at' => 'nullable|date',
             ]);
             
+            // Explicitly set timestamps if missing to ensure correct timezone
+            // Use now() which respects APP_TIMEZONE, not MySQL's CURRENT_TIMESTAMP
+            $now = now()->format('Y-m-d H:i:s');
+            if (empty($validated['created_at'])) {
+                $validated['created_at'] = $now;
+            }
+            if (empty($validated['updated_at'])) {
+                $validated['updated_at'] = $now;
+            }
+            
             DB::table('tbl_leave_pass')->updateOrInsert(
                 ['lp_id' => $validated['lp_id']],
                 $validated
@@ -1188,6 +1198,16 @@ class SyncReceiverController extends Controller
                 'created_at' => 'nullable|date',
                 'updated_at' => 'nullable|date',
             ]);
+            
+            // Explicitly set timestamps if missing to ensure correct timezone
+            // Use now() which respects APP_TIMEZONE, not MySQL's CURRENT_TIMESTAMP
+            $now = now()->format('Y-m-d H:i:s');
+            if (empty($validated['created_at'])) {
+                $validated['created_at'] = $now;
+            }
+            if (empty($validated['updated_at'])) {
+                $validated['updated_at'] = $now;
+            }
             
             DB::table('tbl_official_matters')->updateOrInsert(
                 ['om_id' => $validated['om_id']],

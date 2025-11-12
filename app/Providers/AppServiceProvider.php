@@ -118,5 +118,17 @@ class AppServiceProvider extends ServiceProvider
         } catch (\Exception $e) {
             \Log::warning("Failed to set MySQL timezone: " . $e->getMessage());
         }
+        
+        // CRITICAL: Ensure PHP's date.timezone matches Laravel's timezone
+        // This ensures now() uses the correct timezone, not PHP's default
+        try {
+            date_default_timezone_set($appTimezone);
+            if (!app()->bound('php_timezone_set_logged')) {
+                \Log::info("PHP date.timezone set to: {$appTimezone}");
+                app()->instance('php_timezone_set_logged', true);
+            }
+        } catch (\Exception $e) {
+            \Log::warning("Failed to set PHP date.timezone: " . $e->getMessage());
+        }
     }
 }
