@@ -2461,7 +2461,7 @@ class CloudSyncService
      * Sync all deletions to cloud (final pass to catch deletions that occurred during sync)
      * This ensures deletions are synced even if they happen while sync is running
      */
-    protected function syncAllDeletionsToCloud()
+    public function syncAllDeletionsToCloud()
     {
         try {
             // Define all tables and their endpoints
@@ -2526,7 +2526,7 @@ class CloudSyncService
      * Process all deletions from cloud (final pass to catch deletions that occurred during sync)
      * This ensures deletions are processed even if they happen while sync is running
      */
-    protected function processAllDeletionsFromCloud()
+    public function processAllDeletionsFromCloud()
     {
         try {
             // Define all tables, their endpoints, and primary keys
