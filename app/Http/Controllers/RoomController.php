@@ -78,6 +78,13 @@ class RoomController extends Controller
         // Track deletion for sync
         $syncService = app(CloudSyncService::class);
         $syncService->trackDeletion('tbl_room', $roomNo);
+        
+        // NEW APPROACH: Immediately trigger deletion on cloud
+        try {
+            $syncService->triggerDeleteOnCloudByTable('tbl_room', $roomNo);
+        } catch (\Exception $e) {
+            \Log::error("Failed to trigger room deletion on cloud: " . $e->getMessage());
+        }
 
         ActivityLog::create([
             'user_id' => auth()->id(),

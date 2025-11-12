@@ -145,6 +145,13 @@ class PassController extends Controller
         // Track deletion for sync (include lp_type metadata for filtering)
         $syncService = app(CloudSyncService::class);
         $syncService->trackDeletion('tbl_leave_pass', $lpId, 90, ['lp_type' => $lpType]);
+        
+        // NEW APPROACH: Immediately trigger deletion on cloud
+        try {
+            $syncService->triggerDeleteOnCloud('passes', $lpId);
+        } catch (\Exception $e) {
+            \Log::error("Failed to trigger pass deletion on cloud: " . $e->getMessage());
+        }
 
         // Reconcile attendance for the date after deletion
         $remarksService = new AttendanceRemarksService();

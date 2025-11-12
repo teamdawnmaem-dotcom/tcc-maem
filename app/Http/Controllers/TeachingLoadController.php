@@ -365,6 +365,13 @@ public function apiTodaySchedule()
         // Track deletion for sync
         $syncService = app(CloudSyncService::class);
         $syncService->trackDeletion('tbl_teaching_load', $loadId);
+        
+        // NEW APPROACH: Immediately trigger deletion on cloud
+        try {
+            $syncService->triggerDeleteOnCloudByTable('tbl_teaching_load', $loadId);
+        } catch (\Exception $e) {
+            \Log::error("Failed to trigger teaching load deletion on cloud: " . $e->getMessage());
+        }
 
     // Log the action
     $faculty = Faculty::find($load->faculty_id);

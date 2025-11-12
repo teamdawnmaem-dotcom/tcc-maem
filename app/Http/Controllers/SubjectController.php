@@ -67,6 +67,13 @@ class SubjectController extends Controller
         // Track deletion for sync
         $syncService = app(CloudSyncService::class);
         $syncService->trackDeletion('tbl_subject', $subjectId);
+        
+        // NEW APPROACH: Immediately trigger deletion on cloud
+        try {
+            $syncService->triggerDeleteOnCloudByTable('tbl_subject', $subjectId);
+        } catch (\Exception $e) {
+            \Log::error("Failed to trigger subject deletion on cloud: " . $e->getMessage());
+        }
 
         ActivityLog::create([
             'user_id' => Auth::id(),

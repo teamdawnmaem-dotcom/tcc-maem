@@ -171,6 +171,13 @@ class LeaveController extends Controller
         // Track deletion for sync (include lp_type metadata for filtering)
         $syncService = app(CloudSyncService::class);
         $syncService->trackDeletion('tbl_leave_pass', $lpId, 90, ['lp_type' => $lpType]);
+        
+        // NEW APPROACH: Immediately trigger deletion on cloud
+        try {
+            $syncService->triggerDeleteOnCloud('leaves', $lpId);
+        } catch (\Exception $e) {
+            \Log::error("Failed to trigger leave deletion on cloud: " . $e->getMessage());
+        }
 
         // Reconcile attendance records after deletion: remove 'on leave' absences in the former window only
         $remarksService = new AttendanceRemarksService();

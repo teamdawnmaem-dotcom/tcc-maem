@@ -158,4 +158,21 @@ Route::middleware('api.key')->prefix('sync')->group(function () {
     
     // Trigger attendance record updates
     Route::post('/trigger-attendance-update', [SyncReceiverController::class, 'triggerAttendanceUpdate']);
+    
+    // Delete endpoints (called from local server to delete records on cloud)
+    Route::delete('/users/{id}', [SyncReceiverController::class, 'deleteUser']);
+    Route::delete('/subjects/{id}', [SyncReceiverController::class, 'deleteSubject']);
+    Route::delete('/rooms/{id}', [SyncReceiverController::class, 'deleteRoom']);
+    Route::delete('/cameras/{id}', [SyncReceiverController::class, 'deleteCamera']);
+    Route::delete('/faculties/{id}', [SyncReceiverController::class, 'deleteFaculty']);
+    Route::delete('/teaching-loads/{id}', [SyncReceiverController::class, 'deleteTeachingLoad']);
+    Route::delete('/leaves/{id}', [SyncReceiverController::class, 'deleteLeave']);
+    Route::delete('/passes/{id}', [SyncReceiverController::class, 'deletePass']);
+    Route::delete('/official-matters/{id}', [SyncReceiverController::class, 'deleteOfficialMatter']);
+    Route::delete('/attendance-records/{id}', [SyncReceiverController::class, 'deleteAttendanceRecord']);
+    Route::delete('/recognition-logs/{id}', [SyncReceiverController::class, 'deleteRecognitionLog']);
+    Route::delete('/stream-recordings/{id}', [SyncReceiverController::class, 'deleteStreamRecording']);
+    Route::delete('/activity-logs/{id}', [SyncReceiverController::class, 'deleteActivityLog']);
+    Route::delete('/teaching-load-archives/{id}', [SyncReceiverController::class, 'deleteTeachingLoadArchive']);
+    Route::delete('/attendance-record-archives/{id}', [SyncReceiverController::class, 'deleteAttendanceRecordArchive']);
 });

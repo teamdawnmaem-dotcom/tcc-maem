@@ -152,6 +152,13 @@ public function AdminUpdateAccountSettings(Request $request)
         // Track deletion for sync
         $syncService = app(CloudSyncService::class);
         $syncService->trackDeletion('tbl_user', $userId);
+        
+        // NEW APPROACH: Immediately trigger deletion on cloud
+        try {
+            $syncService->triggerDeleteOnCloudByTable('tbl_user', $userId);
+        } catch (\Exception $e) {
+            \Log::error("Failed to trigger user deletion on cloud: " . $e->getMessage());
+        }
 
         // Log the action
         ActivityLog::create([

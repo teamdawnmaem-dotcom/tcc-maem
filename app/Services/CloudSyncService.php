@@ -86,7 +86,84 @@ class CloudSyncService
     }
     
     /**
-     * Sync deletions for a specific table to cloud
+     * Trigger deletion on cloud server by calling the delete endpoint
+     * NEW APPROACH: Call the delete endpoint on cloud controller instead of just syncing deletion IDs
+     * @param string $endpoint API endpoint (e.g., 'users')
+     * @param mixed $recordId Record ID to delete
+     * @return bool True if deletion was successful, false otherwise
+     */
+    public function triggerDeleteOnCloud(string $endpoint, $recordId)
+    {
+        try {
+            $url = "{$this->cloudApiUrl}/sync/{$endpoint}/{$recordId}";
+            
+            $response = Http::timeout(30)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->cloudApiKey,
+                    'Accept' => 'application/json',
+                ])
+                ->delete($url);
+            
+            if ($response->successful()) {
+                Log::info("Successfully triggered deletion on cloud for {$endpoint} ID: {$recordId}");
+                return true;
+            } else {
+                Log::warning("Failed to trigger deletion on cloud for {$endpoint} ID: {$recordId} - " . $response->body());
+                return false;
+            }
+        } catch (\Exception $e) {
+            Log::error("Error triggering deletion on cloud for {$endpoint} ID: {$recordId} - " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Get endpoint name from table name
+     * @param string $tableName Table name (e.g., 'tbl_user')
+     * @return string|null Endpoint name or null if not mappable
+     */
+    public function getEndpointFromTable(string $tableName): ?string
+    {
+        $mapping = [
+            'tbl_user' => 'users',
+            'tbl_subject' => 'subjects',
+            'tbl_room' => 'rooms',
+            'tbl_camera' => 'cameras',
+            'tbl_faculty' => 'faculties',
+            'tbl_teaching_load' => 'teaching-loads',
+            'tbl_attendance_record' => 'attendance-records',
+            'tbl_official_matters' => 'official-matters',
+            'tbl_recognition_logs' => 'recognition-logs',
+            'tbl_stream_recordings' => 'stream-recordings',
+            'tbl_activity_logs' => 'activity-logs',
+            'tbl_teaching_load_archive' => 'teaching-load-archives',
+            'tbl_attendance_record_archive' => 'attendance-record-archives',
+        ];
+        
+        return $mapping[$tableName] ?? null;
+    }
+    
+    /**
+     * Trigger deletion on cloud for a table and record ID
+     * Helper method that automatically maps table name to endpoint
+     * @param string $tableName Table name (e.g., 'tbl_user')
+     * @param mixed $recordId Record ID to delete
+     * @return bool True if deletion was successful, false otherwise
+     */
+    public function triggerDeleteOnCloudByTable(string $tableName, $recordId): bool
+    {
+        $endpoint = $this->getEndpointFromTable($tableName);
+        if (!$endpoint) {
+            Log::warning("Cannot trigger deletion for table {$tableName} - no endpoint mapping found");
+            return false;
+        }
+        
+        return $this->triggerDeleteOnCloud($endpoint, $recordId);
+    }
+    
+    /**
+     * Process deletions for a specific table by triggering delete endpoints on cloud
+     * NEW APPROACH: Call delete endpoints on cloud controller for each deleted record
      * @param string $tableName Table name (e.g., 'tbl_user')
      * @param string $endpoint API endpoint (e.g., 'users')
      */
@@ -95,16 +172,25 @@ class CloudSyncService
         try {
             $deletedIds = $this->getDeletedIds($tableName);
             if (!empty($deletedIds)) {
-                Log::info("Processing " . count($deletedIds) . " deletions for {$tableName} before syncing to cloud endpoint {$endpoint}");
-                $this->syncDeletionsToCloud($endpoint, $deletedIds);
+                Log::info("Triggering " . count($deletedIds) . " deletions for {$tableName} on cloud endpoint {$endpoint}");
+                
+                $successCount = 0;
+                foreach ($deletedIds as $id) {
+                    if ($this->triggerDeleteOnCloud($endpoint, $id)) {
+                        $successCount++;
+                    }
+                }
+                
+                Log::info("Successfully triggered {$successCount} out of " . count($deletedIds) . " deletions for {$tableName} on cloud");
             }
         } catch (\Exception $e) {
-            Log::error("Error syncing deletions for {$tableName} to cloud: " . $e->getMessage());
+            Log::error("Error triggering deletions for {$tableName} on cloud: " . $e->getMessage());
         }
     }
     
     /**
-     * Process deletions from cloud for a specific table
+     * Process deletions from cloud for a specific table by triggering delete endpoints on local
+     * NEW APPROACH: Get deleted IDs from cloud and trigger local delete endpoints
      * @param string $endpoint API endpoint (e.g., 'users')
      * @param string $tableName Table name (e.g., 'tbl_user')
      * @param string $idKey Primary key field name (e.g., 'user_id')
@@ -112,8 +198,15 @@ class CloudSyncService
     protected function processTableDeletionsFromCloud(string $endpoint, string $tableName, string $idKey)
     {
         try {
-            Log::info("Processing deletions from cloud for {$tableName} before syncing data");
-            $this->processDeletionsFromCloud($endpoint, $tableName, $idKey);
+            $deletedIds = $this->getDeletedIdsFromCloud($endpoint);
+            
+            if (!empty($deletedIds)) {
+                Log::info("Processing " . count($deletedIds) . " deletions from cloud for {$tableName}");
+                
+                // For each deleted ID, call the local controller's destroy method logic
+                // We'll use the existing processDeletionsFromCloud which handles this properly
+                $this->processDeletionsFromCloud($endpoint, $tableName, $idKey);
+            }
         } catch (\Exception $e) {
             Log::error("Error processing deletions from cloud for {$tableName}: " . $e->getMessage());
         }
@@ -644,6 +737,7 @@ class CloudSyncService
         
         try {
             // STEP 1: Process deletions for leaves before syncing data
+            // NEW APPROACH: Trigger delete endpoints on cloud for each deleted leave
             $deletedIds = $this->getDeletedIds('tbl_leave_pass');
             // Filter for leaves only (lp_type = 'Leave') using metadata stored in cache
             $leaveDeletedIds = [];
@@ -656,8 +750,10 @@ class CloudSyncService
                 }
             }
             if (!empty($leaveDeletedIds)) {
-                Log::info("Processing " . count($leaveDeletedIds) . " leave deletions before syncing to cloud");
-                $this->syncDeletionsToCloud('leaves', $leaveDeletedIds);
+                Log::info("Triggering " . count($leaveDeletedIds) . " leave deletions on cloud before syncing data");
+                foreach ($leaveDeletedIds as $id) {
+                    $this->triggerDeleteOnCloud('leaves', $id);
+                }
             }
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
@@ -771,6 +867,7 @@ class CloudSyncService
         
         try {
             // STEP 1: Process deletions for passes before syncing data
+            // NEW APPROACH: Trigger delete endpoints on cloud for each deleted pass
             $deletedIds = $this->getDeletedIds('tbl_leave_pass');
             // Filter for passes only (lp_type = 'Pass') using metadata stored in cache
             $passDeletedIds = [];
@@ -783,8 +880,10 @@ class CloudSyncService
                 }
             }
             if (!empty($passDeletedIds)) {
-                Log::info("Processing " . count($passDeletedIds) . " pass deletions before syncing to cloud");
-                $this->syncDeletionsToCloud('passes', $passDeletedIds);
+                Log::info("Triggering " . count($passDeletedIds) . " pass deletions on cloud before syncing data");
+                foreach ($passDeletedIds as $id) {
+                    $this->triggerDeleteOnCloud('passes', $id);
+                }
             }
             
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
