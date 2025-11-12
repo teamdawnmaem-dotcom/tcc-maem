@@ -28,11 +28,16 @@ class CloudSyncService
 {
     protected $cloudApiUrl;
     protected $cloudApiKey;
+    protected $localApiUrl;
+    protected $localApiKey;
     
     public function __construct()
     {
         $this->cloudApiUrl = env('CLOUD_API_URL', 'https://tcc-maem.com/api');
         $this->cloudApiKey = env('CLOUD_API_KEY', 'e5a4466194f624d9e8611bd264a958e54473692ada6280840c118066f18e6815');
+        // For cloud server: URL and key to call back to local server
+        $this->localApiUrl = env('LOCAL_API_URL', null);
+        $this->localApiKey = env('LOCAL_API_KEY', env('CLOUD_API_KEY', 'e5a4466194f624d9e8611bd264a958e54473692ada6280840c118066f18e6815'));
     }
     
     /**
@@ -159,6 +164,74 @@ class CloudSyncService
         }
         
         return $this->triggerDeleteOnCloud($endpoint, $recordId);
+    }
+    
+    /**
+     * Trigger deletion on local server by calling the delete endpoint
+     * NEW APPROACH: Call the delete endpoint on local controller when record is deleted on cloud
+     * @param string $endpoint API endpoint (e.g., 'users')
+     * @param mixed $recordId Record ID to delete
+     * @return bool True if deletion was successful, false otherwise
+     */
+    public function triggerDeleteOnLocal(string $endpoint, $recordId)
+    {
+        // Only trigger if local API URL is configured (cloud server only)
+        if (!$this->localApiUrl) {
+            Log::debug("Local API URL not configured, skipping deletion trigger on local");
+            return false;
+        }
+        
+        try {
+            $url = "{$this->localApiUrl}/api/sync/local/{$endpoint}/{$recordId}";
+            
+            $response = Http::timeout(30)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->localApiKey,
+                    'Accept' => 'application/json',
+                ])
+                ->delete($url);
+            
+            if ($response->successful()) {
+                Log::info("Successfully triggered deletion on local for {$endpoint} ID: {$recordId}");
+                return true;
+            } else {
+                Log::warning("Failed to trigger deletion on local for {$endpoint} ID: {$recordId} - " . $response->body());
+                return false;
+            }
+        } catch (\Exception $e) {
+            Log::error("Error triggering deletion on local for {$endpoint} ID: {$recordId} - " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Trigger deletion on local for a table and record ID
+     * Helper method that automatically maps table name to endpoint
+     * @param string $tableName Table name (e.g., 'tbl_user')
+     * @param mixed $recordId Record ID to delete
+     * @return bool True if deletion was successful, false otherwise
+     */
+    public function triggerDeleteOnLocalByTable(string $tableName, $recordId): bool
+    {
+        $endpoint = $this->getEndpointFromTable($tableName);
+        if (!$endpoint) {
+            // Special handling for leaves and passes
+            if ($tableName === 'tbl_leave_pass') {
+                // We need to check the lp_type from the record
+                $record = DB::table('tbl_leave_pass')->where('lp_id', $recordId)->first();
+                if ($record && isset($record->lp_type)) {
+                    $endpoint = $record->lp_type === 'Leave' ? 'leaves' : 'passes';
+                } else {
+                    Log::warning("Cannot determine endpoint for tbl_leave_pass ID: {$recordId} - record not found or lp_type missing");
+                    return false;
+                }
+            } else {
+                Log::warning("Cannot trigger deletion for table {$tableName} - no endpoint mapping found");
+                return false;
+            }
+        }
+        
+        return $this->triggerDeleteOnLocal($endpoint, $recordId);
     }
     
     /**

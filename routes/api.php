@@ -12,6 +12,7 @@ use App\Http\Controllers\RecognitionLogController;
 use App\Http\Controllers\StreamRecordingController;
 use App\Http\Controllers\CloudSyncController;
 use App\Http\Controllers\Api\SyncReceiverController;
+use App\Http\Controllers\Api\LocalDeleteController;
 
 /*
 |--------------------------------------------------------------------------
@@ -175,4 +176,21 @@ Route::middleware('api.key')->prefix('sync')->group(function () {
     Route::delete('/activity-logs/{id}', [SyncReceiverController::class, 'deleteActivityLog']);
     Route::delete('/teaching-load-archives/{id}', [SyncReceiverController::class, 'deleteTeachingLoadArchive']);
     Route::delete('/attendance-record-archives/{id}', [SyncReceiverController::class, 'deleteAttendanceRecordArchive']);
+    
+    // Delete endpoints (called from cloud server to delete records on local)
+    Route::delete('/local/users/{id}', [LocalDeleteController::class, 'deleteUser']);
+    Route::delete('/local/subjects/{id}', [LocalDeleteController::class, 'deleteSubject']);
+    Route::delete('/local/rooms/{id}', [LocalDeleteController::class, 'deleteRoom']);
+    Route::delete('/local/cameras/{id}', [LocalDeleteController::class, 'deleteCamera']);
+    Route::delete('/local/faculties/{id}', [LocalDeleteController::class, 'deleteFaculty']);
+    Route::delete('/local/teaching-loads/{id}', [LocalDeleteController::class, 'deleteTeachingLoad']);
+    Route::delete('/local/leaves/{id}', [LocalDeleteController::class, 'deleteLeave']);
+    Route::delete('/local/passes/{id}', [LocalDeleteController::class, 'deletePass']);
+    Route::delete('/local/official-matters/{id}', [LocalDeleteController::class, 'deleteOfficialMatter']);
+    Route::delete('/local/attendance-records/{id}', [LocalDeleteController::class, 'deleteAttendanceRecord']);
+    Route::delete('/local/recognition-logs/{id}', [LocalDeleteController::class, 'deleteRecognitionLog']);
+    Route::delete('/local/stream-recordings/{id}', [LocalDeleteController::class, 'deleteStreamRecording']);
+    Route::delete('/local/activity-logs/{id}', [LocalDeleteController::class, 'deleteActivityLog']);
+    Route::delete('/local/teaching-load-archives/{id}', [LocalDeleteController::class, 'deleteTeachingLoadArchive']);
+    Route::delete('/local/attendance-record-archives/{id}', [LocalDeleteController::class, 'deleteAttendanceRecordArchive']);
 });
