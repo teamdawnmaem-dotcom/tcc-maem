@@ -140,6 +140,13 @@ public function update(Request $request, $id)
         // Track deletion for sync
         $syncService = app(CloudSyncService::class);
         $syncService->trackDeletion('tbl_camera', $cameraId);
+        
+        // NEW APPROACH: Immediately trigger deletion on cloud
+        try {
+            $syncService->triggerDeleteOnCloudByTable('tbl_camera', $cameraId);
+        } catch (\Exception $e) {
+            \Log::error("Failed to trigger camera deletion on cloud: " . $e->getMessage());
+        }
 
         ActivityLog::create([
             'user_id' => auth()->id(),

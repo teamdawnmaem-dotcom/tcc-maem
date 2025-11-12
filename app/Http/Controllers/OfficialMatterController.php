@@ -252,6 +252,13 @@ class OfficialMatterController extends Controller
         // Track deletion for sync
         $syncService = app(CloudSyncService::class);
         $syncService->trackDeletion('tbl_official_matters', $omId);
+        
+        // NEW APPROACH: Immediately trigger deletion on cloud
+        try {
+            $syncService->triggerDeleteOnCloud('official-matters', $omId);
+        } catch (\Exception $e) {
+            \Log::error("Failed to trigger official matter deletion on cloud: " . $e->getMessage());
+        }
 
         // Remove attendance records
         $this->removeAttendanceRecordsForOfficialMatter($facultyIds, $startDate, $endDate, $remarks);

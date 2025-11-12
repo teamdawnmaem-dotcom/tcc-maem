@@ -319,6 +319,13 @@ class FacultyController extends Controller
         // Track deletion for sync
         $syncService = app(CloudSyncService::class);
         $syncService->trackDeletion('tbl_faculty', $facultyId);
+        
+        // NEW APPROACH: Immediately trigger deletion on cloud
+        try {
+            $syncService->triggerDeleteOnCloudByTable('tbl_faculty', $facultyId);
+        } catch (\Exception $e) {
+            \Log::error("Failed to trigger faculty deletion on cloud: " . $e->getMessage());
+        }
 
         // Log the action
         ActivityLog::create([

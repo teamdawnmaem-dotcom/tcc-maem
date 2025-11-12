@@ -209,6 +209,13 @@ class StreamRecordingController extends Controller
             $syncService = app(CloudSyncService::class);
             $syncService->trackDeletion('tbl_stream_recordings', $recordingId);
             
+            // NEW APPROACH: Immediately trigger deletion on cloud
+            try {
+                $syncService->triggerDeleteOnCloudByTable('tbl_stream_recordings', $recordingId);
+            } catch (\Exception $e) {
+                \Log::error("Failed to trigger stream recording deletion on cloud: " . $e->getMessage());
+            }
+            
             return response()->json([
                 'message' => 'Recording deleted successfully'
             ]);
