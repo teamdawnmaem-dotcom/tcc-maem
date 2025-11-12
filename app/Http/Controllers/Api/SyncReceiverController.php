@@ -50,6 +50,8 @@ class SyncReceiverController extends Controller
                 'room_no' => 'required|integer|min:1', // Primary key required (BIGINT)
                 'room_name' => 'required|string|max:50',
                 'room_building_no' => 'required|string|max:50',
+                'created_at' => 'nullable|date',
+                'updated_at' => 'nullable|date',
             ]);
             
             DB::table('tbl_room')->updateOrInsert(
@@ -108,6 +110,8 @@ class SyncReceiverController extends Controller
                 'camera_password' => 'required|string|max:50',
                 'camera_live_feed' => 'required|string|max:255',
                 'room_no' => 'required|integer',
+                'created_at' => 'nullable|date',
+                'updated_at' => 'nullable|date',
             ]);
             
             DB::table('tbl_camera')->updateOrInsert(
@@ -300,6 +304,8 @@ class SyncReceiverController extends Controller
                 'time_duration_seconds' => 'required|integer',
                 'time_in_snapshot' => 'nullable|string|max:500',
                 'time_out_snapshot' => 'nullable|string|max:500',
+                'created_at' => 'nullable|date',
+                'updated_at' => 'nullable|date',
             ]);
             
             DB::table('tbl_attendance_record')->updateOrInsert(
@@ -479,6 +485,8 @@ class SyncReceiverController extends Controller
                 'faculty_id' => 'nullable|integer',
                 'camera_id' => 'nullable|integer',
                 'teaching_load_id' => 'nullable|integer',
+                'created_at' => 'nullable|date',
+                'updated_at' => 'nullable|date',
             ]);
             
             DB::table('tbl_recognition_logs')->updateOrInsert(
@@ -624,12 +632,12 @@ class SyncReceiverController extends Controller
             'rooms' => [
                 'table' => 'tbl_room',
                 'unique' => ['room_no'],
-                'columns' => ['room_no','room_name','room_building_no'],
+                'columns' => ['room_no','room_name','room_building_no','created_at','updated_at'],
             ],
             'cameras' => [
                 'table' => 'tbl_camera',
                 'unique' => ['camera_id'],
-                'columns' => ['camera_id','camera_name','camera_ip_address','camera_username','camera_password','camera_live_feed','room_no'],
+                'columns' => ['camera_id','camera_name','camera_ip_address','camera_username','camera_password','camera_live_feed','room_no','created_at','updated_at'],
             ],
             'faculties' => [
                 'table' => 'tbl_faculty',
@@ -644,7 +652,7 @@ class SyncReceiverController extends Controller
             'attendance-records' => [
                 'table' => 'tbl_attendance_record',
                 'unique' => ['record_id'],
-                'columns' => ['record_id','faculty_id','teaching_load_id','camera_id','record_date','record_time_in','record_time_out','record_status','record_remarks','time_duration_seconds','time_in_snapshot','time_out_snapshot'],
+                'columns' => ['record_id','faculty_id','teaching_load_id','camera_id','record_date','record_time_in','record_time_out','record_status','record_remarks','time_duration_seconds','time_in_snapshot','time_out_snapshot','created_at','updated_at'],
             ],
             'leaves' => [
                 'table' => 'tbl_leave_pass',
@@ -659,7 +667,7 @@ class SyncReceiverController extends Controller
             'recognition-logs' => [
                 'table' => 'tbl_recognition_logs',
                 'unique' => ['log_id'],
-                'columns' => ['log_id','recognition_time','camera_name','room_name','building_no','faculty_name','status','distance','faculty_id','camera_id','teaching_load_id'],
+                'columns' => ['log_id','recognition_time','camera_name','room_name','building_no','faculty_name','status','distance','faculty_id','camera_id','teaching_load_id','created_at','updated_at'],
             ],
             'stream-recordings' => [
                 'table' => 'tbl_stream_recordings',
@@ -669,12 +677,12 @@ class SyncReceiverController extends Controller
             'activity-logs' => [
                 'table' => 'tbl_activity_logs',
                 'unique' => ['logs_id'],
-                'columns' => ['logs_id','user_id','logs_action','logs_description','logs_timestamp','logs_module'],
+                'columns' => ['logs_id','user_id','logs_action','logs_description','logs_timestamp','logs_module','created_at','updated_at'],
             ],
             'teaching-load-archives' => [
                 'table' => 'tbl_teaching_load_archive',
                 'unique' => ['archive_id'],
-                'columns' => ['archive_id','original_teaching_load_id','faculty_id','teaching_load_course_code','teaching_load_subject','teaching_load_class_section','teaching_load_day_of_week','teaching_load_time_in','teaching_load_time_out','room_no','school_year','semester','archived_at','archived_by','archive_notes'],
+                'columns' => ['archive_id','original_teaching_load_id','faculty_id','teaching_load_course_code','teaching_load_subject','teaching_load_class_section','teaching_load_day_of_week','teaching_load_time_in','teaching_load_time_out','room_no','school_year','semester','archived_at','archived_by','archive_notes','created_at','updated_at'],
             ],
             'attendance-record-archives' => [
                 'table' => 'tbl_attendance_record_archive',
@@ -733,7 +741,8 @@ class SyncReceiverController extends Controller
             }
 
             // Use DB::table()->upsert for bulk idempotent insert/update
-            // Temporarily disable FK checks to prevent ordering issues on first seed
+            // IMPORTANT: We explicitly set created_at and updated_at to preserve exact timestamps
+            // When explicitly set in UPDATE, MySQL will use our values instead of ON UPDATE CURRENT_TIMESTAMP
             $updateCols = array_values(array_diff($cfg['columns'], $cfg['unique']));
             $total = 0;
             $errors = [];
@@ -741,6 +750,19 @@ class SyncReceiverController extends Controller
             DB::statement('SET FOREIGN_KEY_CHECKS=0');
             try {
                 foreach (array_chunk($rows, 500) as $chunk) {
+                    // Ensure all records have created_at and updated_at if the table supports them
+                    foreach ($chunk as &$row) {
+                        // If created_at/updated_at are in allowed columns but missing, set to null (will use DB default)
+                        // But we prefer to use the values from sync to preserve exact timestamps
+                        if (in_array('created_at', $cfg['columns']) && !isset($row['created_at'])) {
+                            $row['created_at'] = now()->format('Y-m-d H:i:s');
+                        }
+                        if (in_array('updated_at', $cfg['columns']) && !isset($row['updated_at'])) {
+                            $row['updated_at'] = now()->format('Y-m-d H:i:s');
+                        }
+                    }
+                    unset($row); // Break reference
+                    
                     DB::table($cfg['table'])->upsert($chunk, $cfg['unique'], $updateCols);
                     $total += count($chunk);
                 }
@@ -751,6 +773,14 @@ class SyncReceiverController extends Controller
                 DB::beginTransaction();
                 foreach ($rows as $row) {
                     try {
+                        // Ensure timestamps are set
+                        if (in_array('created_at', $cfg['columns']) && !isset($row['created_at'])) {
+                            $row['created_at'] = now()->format('Y-m-d H:i:s');
+                        }
+                        if (in_array('updated_at', $cfg['columns']) && !isset($row['updated_at'])) {
+                            $row['updated_at'] = now()->format('Y-m-d H:i:s');
+                        }
+                        
                         DB::table($cfg['table'])->upsert([$row], $cfg['unique'], $updateCols);
                         $total += 1;
                     } catch (\Throwable $ie) {
@@ -940,6 +970,8 @@ class SyncReceiverController extends Controller
                 'logs_description' => 'required|string',
                 'logs_timestamp' => 'required',
                 'logs_module' => 'required|string',
+                'created_at' => 'nullable|date',
+                'updated_at' => 'nullable|date',
             ]);
             
             DB::table('tbl_activity_logs')->updateOrInsert(
@@ -1008,6 +1040,8 @@ class SyncReceiverController extends Controller
                 'archived_at' => 'required',
                 'archived_by' => 'required|integer',
                 'archive_notes' => 'nullable|string',
+                'created_at' => 'nullable|date',
+                'updated_at' => 'nullable|date',
             ]);
             
             DB::table('tbl_teaching_load_archive')->updateOrInsert(
