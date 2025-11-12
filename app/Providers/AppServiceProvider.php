@@ -12,11 +12,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Set MySQL timezone early in the connection lifecycle
-        // This ensures timezone is set before any database queries
-        $this->app->resolving('db', function ($db) {
+        // Override database connection options to set timezone
+        $this->app->afterResolving('db', function ($db) {
             try {
-                $appTimezone = config('app.timezone', 'UTC');
+                // Get timezone from env directly (before config cache)
+                $appTimezone = env('APP_TIMEZONE', config('app.timezone', 'UTC'));
                 
                 // Always convert to offset format to avoid timezone table dependency
                 $mysqlTimezone = '+00:00'; // Default to UTC offset
@@ -31,8 +31,21 @@ class AppServiceProvider extends ServiceProvider
                     $mysqlTimezone = '+00:00';
                 }
                 
-                // Set timezone for the default connection
-                \DB::statement("SET time_zone = '{$mysqlTimezone}'");
+                // Set timezone for all active connections
+                foreach ($db->getConnections() as $connection) {
+                    try {
+                        $connection->statement("SET time_zone = '{$mysqlTimezone}'");
+                    } catch (\Exception $e) {
+                        // Ignore errors for individual connections
+                    }
+                }
+                
+                // Also set for default connection
+                try {
+                    \DB::statement("SET time_zone = '{$mysqlTimezone}'");
+                } catch (\Exception $e) {
+                    // Ignore if connection not ready
+                }
             } catch (\Exception $e) {
                 // Silently fail - timezone setting is not critical
             }
@@ -58,7 +71,8 @@ class AppServiceProvider extends ServiceProvider
         // Note: MySQL requires timezone tables to be populated for named timezones
         // We use offset format (e.g., '+08:00') which works without timezone tables
         try {
-            $appTimezone = config('app.timezone', 'UTC');
+            // Read from env() directly to work even with config cache
+            $appTimezone = env('APP_TIMEZONE', config('app.timezone', 'UTC'));
             
             // Always convert to offset format to avoid timezone table dependency
             // MySQL offset format: '+08:00', '-05:00', '+00:00' for UTC

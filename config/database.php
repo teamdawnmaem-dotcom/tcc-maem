@@ -59,24 +59,8 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-                PDO::MYSQL_ATTR_INIT_COMMAND => (function() {
-                    // Get app timezone and convert to MySQL offset format
-                    $appTimezone = config('app.timezone', 'UTC');
-                    $mysqlTimezone = '+00:00'; // Default to UTC offset
-                    
-                    try {
-                        $dt = new \DateTime('now', new \DateTimeZone($appTimezone));
-                        $offset = $dt->getOffset();
-                        $hours = intval($offset / 3600);
-                        $minutes = abs(intval(($offset % 3600) / 60));
-                        $mysqlTimezone = sprintf('%+03d:%02d', $hours, $minutes);
-                    } catch (\Exception $e) {
-                        // If conversion fails, use UTC offset
-                        $mysqlTimezone = '+00:00';
-                    }
-                    
-                    return "SET time_zone='{$mysqlTimezone}'";
-                })(),
+                // Timezone will be set via AppServiceProvider after connection is established
+                // Using PDO INIT_COMMAND with closure doesn't work well with config cache
             ]) : [],
         ],
 
