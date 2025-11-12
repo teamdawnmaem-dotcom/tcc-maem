@@ -1280,8 +1280,16 @@ class SyncReceiverController extends Controller
                 $endDate = $data['end_date'] ?? null;
                 
                 if ($facultyId && $startDate && $endDate) {
-                    // Reconcile leave change to update attendance records
-                    $remarksService->reconcileLeaveChange($facultyId, $startDate, $endDate);
+                    // Get old leave data if this is an update
+                    $oldLeave = null;
+                    if ($lpId) {
+                        $oldLeave = DB::table('tbl_leave_pass')->where('lp_id', $lpId)->first();
+                    }
+                    
+                    // Reconcile leave change to update attendance records - preserve existing IDs
+                    $oldStartDate = $oldLeave->leave_start_date ?? null;
+                    $oldEndDate = $oldLeave->leave_end_date ?? null;
+                    $remarksService->reconcileLeaveChange($facultyId, $startDate, $endDate, $oldStartDate, $oldEndDate);
                     Log::info("Triggered attendance update for leave {$lpId} (faculty: {$facultyId}, dates: {$startDate} to {$endDate})");
                 }
                 

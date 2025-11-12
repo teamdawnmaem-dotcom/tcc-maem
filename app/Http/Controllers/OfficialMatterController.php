@@ -198,20 +198,16 @@ class OfficialMatterController extends Controller
         }
         $officialMatter->update($updateData);
 
-        // Remove old attendance records
-        $this->removeAttendanceRecordsForOfficialMatter(
-            $oldFacultyIds,
-            $oldStartDate,
-            $oldEndDate,
-            $oldRemarks
-        );
-
-        // Update attendance records for all affected faculty
+        // Intelligently update attendance records - preserve existing IDs where possible
         $this->updateAttendanceRecordsForOfficialMatter(
             $newFacultyIds,
             $validated['om_start_date'],
             $validated['om_end_date'],
-            $validated['om_remarks']
+            $validated['om_remarks'],
+            $oldFacultyIds,
+            $oldStartDate,
+            $oldEndDate,
+            $oldRemarks
         );
 
         // Log activity
@@ -305,45 +301,141 @@ class OfficialMatterController extends Controller
     /**
      * Update attendance records for official matter.
      */
-    private function updateAttendanceRecordsForOfficialMatter($facultyIds, $startDate, $endDate, $remarks)
-    {
-        $start = Carbon::parse($startDate);
-        $end = Carbon::parse($endDate);
-        $cursor = $start->copy();
-
-        while ($cursor->lte($end)) {
-            $date = $cursor->toDateString();
-            $dayOfWeek = $cursor->format('l');
-
-            foreach ($facultyIds as $facultyId) {
-                // Get all teaching loads for this faculty on this day
+    /**
+     * Intelligently update attendance records for official matter.
+     * Preserves existing record IDs when dates overlap between old and new ranges.
+     * 
+     * @param array $newFacultyIds New faculty IDs affected
+     * @param string $newStartDate New start date
+     * @param string $newEndDate New end date
+     * @param string $newRemarks New remarks
+     * @param array|null $oldFacultyIds Old faculty IDs (null if new record)
+     * @param string|null $oldStartDate Old start date (null if new record)
+     * @param string|null $oldEndDate Old end date (null if new record)
+     * @param string|null $oldRemarks Old remarks (null if new record)
+     */
+    private function updateAttendanceRecordsForOfficialMatter(
+        $newFacultyIds, 
+        $newStartDate, 
+        $newEndDate, 
+        $newRemarks,
+        $oldFacultyIds = null,
+        $oldStartDate = null,
+        $oldEndDate = null,
+        $oldRemarks = null
+    ) {
+        $newStart = Carbon::parse($newStartDate);
+        $newEnd = Carbon::parse($newEndDate);
+        
+        // Calculate date ranges
+        $newDates = [];
+        $cursor = $newStart->copy();
+        while ($cursor->lte($newEnd)) {
+            $newDates[] = $cursor->toDateString();
+            $cursor->addDay();
+        }
+        
+        $oldDates = [];
+        if ($oldStartDate && $oldEndDate) {
+            $oldStart = Carbon::parse($oldStartDate);
+            $oldEnd = Carbon::parse($oldEndDate);
+            $cursor = $oldStart->copy();
+            while ($cursor->lte($oldEnd)) {
+                $oldDates[] = $cursor->toDateString();
+                $cursor->addDay();
+            }
+        }
+        
+        // Determine which dates to keep, update, and delete
+        $datesToKeep = array_intersect($oldDates, $newDates); // Dates in both ranges - UPDATE
+        $datesToDelete = array_diff($oldDates, $newDates); // Dates only in old range - DELETE
+        $datesToCreate = array_diff($newDates, $oldDates); // Dates only in new range - CREATE
+        
+        // Get all affected faculty IDs (union of old and new)
+        $allFacultyIds = array_unique(array_merge($newFacultyIds, $oldFacultyIds ?? []));
+        
+        // Step 1: Delete records for dates that are no longer in the range
+        if (!empty($datesToDelete) && !empty($oldFacultyIds)) {
+            $deleteStart = min($datesToDelete);
+            $deleteEnd = max($datesToDelete);
+            
+            $recordIds = AttendanceRecord::whereIn('faculty_id', $oldFacultyIds)
+                ->whereBetween('record_date', [$deleteStart, $deleteEnd])
+                ->where('record_remarks', $oldRemarks)
+                ->where('record_status', 'Absent')
+                ->whereIn('record_date', $datesToDelete)
+                ->pluck('record_id')
+                ->toArray();
+            
+            if (!empty($recordIds)) {
+                AttendanceRecord::whereIn('record_id', $recordIds)->delete();
+                
+                // Track deletions for sync
+                $syncService = app(CloudSyncService::class);
+                foreach ($recordIds as $recordId) {
+                    $syncService->trackDeletion('tbl_attendance_record', $recordId);
+                }
+            }
+        }
+        
+        // Step 2: Update records for dates that are in both ranges
+        foreach ($datesToKeep as $date) {
+            $dayOfWeek = Carbon::parse($date)->format('l');
+            
+            // Use new faculty IDs for updates (in case faculty changed)
+            foreach ($newFacultyIds as $facultyId) {
                 $teachingLoads = TeachingLoad::where('faculty_id', $facultyId)
                     ->where('teaching_load_day_of_week', $dayOfWeek)
                     ->get();
-
+                
                 foreach ($teachingLoads as $teachingLoad) {
-                    // Check if attendance record already exists
+                    // Find existing record (may have been created by old or new faculty)
                     $existingRecord = AttendanceRecord::where('faculty_id', $facultyId)
                         ->where('teaching_load_id', $teachingLoad->teaching_load_id)
                         ->whereDate('record_date', $date)
                         ->first();
-
-                    // Find a valid camera assigned to the teaching load's room
-                    $cameraId = Camera::where('room_no', $teachingLoad->room_no)->value('camera_id');
-
-                    // If no camera is mapped to the room, skip creation to avoid FK violation
-                    if (!$cameraId) {
-                        continue;
-                    }
-
+                    
                     if ($existingRecord) {
-                        // Update existing record - append remarks
+                        // Update existing record - preserve ID
                         $existingRecord->update([
-                            'record_remarks' => $remarks,
-                            'record_status' => 'Absent', // Mark as absent for official matters
+                            'record_remarks' => $newRemarks,
+                            'record_status' => 'Absent',
+                        ]);
+                    }
+                }
+            }
+        }
+        
+        // Step 3: Create records for dates that are only in new range
+        foreach ($datesToCreate as $date) {
+            $dayOfWeek = Carbon::parse($date)->format('l');
+            
+            foreach ($newFacultyIds as $facultyId) {
+                $teachingLoads = TeachingLoad::where('faculty_id', $facultyId)
+                    ->where('teaching_load_day_of_week', $dayOfWeek)
+                    ->get();
+                
+                foreach ($teachingLoads as $teachingLoad) {
+                    // Check if record already exists
+                    $existingRecord = AttendanceRecord::where('faculty_id', $facultyId)
+                        ->where('teaching_load_id', $teachingLoad->teaching_load_id)
+                        ->whereDate('record_date', $date)
+                        ->first();
+                    
+                    if ($existingRecord) {
+                        // Update if exists
+                        $existingRecord->update([
+                            'record_remarks' => $newRemarks,
+                            'record_status' => 'Absent',
                         ]);
                     } else {
-                        // Create new record
+                        // Create new record only if doesn't exist
+                        $cameraId = Camera::where('room_no', $teachingLoad->room_no)->value('camera_id');
+                        
+                        if (!$cameraId) {
+                            continue;
+                        }
+                        
                         AttendanceRecord::create([
                             'faculty_id' => $facultyId,
                             'teaching_load_id' => $teachingLoad->teaching_load_id,
@@ -353,13 +445,11 @@ class OfficialMatterController extends Controller
                             'record_time_out' => null,
                             'time_duration_seconds' => 0,
                             'record_status' => 'Absent',
-                            'record_remarks' => $remarks,
+                            'record_remarks' => $newRemarks,
                         ]);
                     }
                 }
             }
-
-            $cursor->addDay();
         }
     }
 

@@ -3469,14 +3469,15 @@ class CloudSyncService
                             try {
                                 $remarksService = new AttendanceRemarksService();
                                 
-                                // First, remove old leave records that are no longer valid
-                                if ($oldStartDate && $oldEndDate) {
-                                    $remarksService->removeLeaveAbsencesInWindow($cloudLeave['faculty_id'], $oldStartDate, $oldEndDate);
-                                }
-                                
-                                // Then, reconcile the new leave period
+                                // Intelligently reconcile leave change - preserve existing IDs
                                 if ($newStartDate && $newEndDate) {
-                                    $remarksService->reconcileLeaveChange($cloudLeave['faculty_id'], $newStartDate, $newEndDate);
+                                    $remarksService->reconcileLeaveChange(
+                                        $cloudLeave['faculty_id'], 
+                                        $newStartDate, 
+                                        $newEndDate,
+                                        $oldStartDate,
+                                        $oldEndDate
+                                    );
                                 }
                                 
                                 Log::info("Updated attendance records for leave {$cloudLeave['lp_id']} due to date range change");
@@ -4352,11 +4353,6 @@ class CloudSyncService
                         $remarksChanged = ($oldRemarks !== $newRemarks);
                         
                         $needsAttendanceUpdate = $dateRangeChanged || $facultyChanged || $departmentChanged || $remarksChanged;
-                        
-                        // If attendance records need updating, remove old ones first (before updating the official matter)
-                        if ($needsAttendanceUpdate) {
-                            $this->removeAttendanceRecordsForOfficialMatterSync($oldRecord);
-                        }
                     }
                     
                     // Download attachment from cloud
@@ -4377,9 +4373,9 @@ class CloudSyncService
                         ]
                     ], ['om_id'], ['faculty_id', 'om_department', 'om_purpose', 'om_remarks', 'om_start_date', 'om_end_date', 'om_attachment', 'created_at', 'updated_at']);
                     
-                    // If this is an update and date range/faculty/department/remarks changed, create new attendance records
-                    if ($needsAttendanceUpdate) {
-                        $this->createAttendanceRecordsForOfficialMatterSync($cloudOM);
+                    // Intelligently update attendance records - preserve existing IDs where possible
+                    if ($needsAttendanceUpdate && $isUpdate && $oldRecord) {
+                        $this->updateAttendanceRecordsForOfficialMatterSync($cloudOM, $oldRecord);
                     } elseif (!$isUpdate) {
                         // If this is a new record, create attendance records
                         $this->createAttendanceRecordsForOfficialMatterSync($cloudOM);
@@ -4405,65 +4401,187 @@ class CloudSyncService
      * Remove attendance records for official matter during sync (before updating)
      * This removes old attendance records based on old official matter data
      */
-    protected function removeAttendanceRecordsForOfficialMatterSync(array $oldOfficialMatter)
+    /**
+     * Intelligently update attendance records for official matter during sync.
+     * Preserves existing record IDs when dates overlap between old and new ranges.
+     */
+    protected function updateAttendanceRecordsForOfficialMatterSync(array $newOfficialMatter, array $oldOfficialMatter)
     {
         try {
-            $omId = $oldOfficialMatter['om_id'] ?? null;
+            $omId = $newOfficialMatter['om_id'] ?? null;
             if (!$omId) {
                 return;
             }
             
-            // Get affected faculty IDs based on old data
-            $isDepartmentMode = !empty($oldOfficialMatter['om_department']);
-            $facultyIds = [];
+            // Get new affected faculty IDs
+            $newIsDepartmentMode = !empty($newOfficialMatter['om_department']);
+            $newFacultyIds = [];
             
-            if ($isDepartmentMode) {
-                if (($oldOfficialMatter['om_department'] ?? null) === 'All Instructor') {
-                    $facultyIds = Faculty::pluck('faculty_id')->toArray();
+            if ($newIsDepartmentMode) {
+                if (($newOfficialMatter['om_department'] ?? null) === 'All Instructor') {
+                    $newFacultyIds = Faculty::pluck('faculty_id')->toArray();
                 } else {
-                    $facultyIds = Faculty::where('faculty_department', $oldOfficialMatter['om_department'] ?? null)
+                    $newFacultyIds = Faculty::where('faculty_department', $newOfficialMatter['om_department'] ?? null)
+                        ->pluck('faculty_id')
+                        ->toArray();
+                }
+            } else {
+                if ($newOfficialMatter['faculty_id'] ?? null) {
+                    $newFacultyIds = [$newOfficialMatter['faculty_id']];
+                }
+            }
+            
+            // Get old affected faculty IDs
+            $oldIsDepartmentMode = !empty($oldOfficialMatter['om_department']);
+            $oldFacultyIds = [];
+            
+            if ($oldIsDepartmentMode) {
+                if (($oldOfficialMatter['om_department'] ?? null) === 'All Instructor') {
+                    $oldFacultyIds = Faculty::pluck('faculty_id')->toArray();
+                } else {
+                    $oldFacultyIds = Faculty::where('faculty_department', $oldOfficialMatter['om_department'] ?? null)
                         ->pluck('faculty_id')
                         ->toArray();
                 }
             } else {
                 if ($oldOfficialMatter['faculty_id'] ?? null) {
-                    $facultyIds = [$oldOfficialMatter['faculty_id']];
+                    $oldFacultyIds = [$oldOfficialMatter['faculty_id']];
                 }
             }
             
-            if (empty($facultyIds)) {
+            $newStartDate = $newOfficialMatter['om_start_date'] ?? null;
+            $newEndDate = $newOfficialMatter['om_end_date'] ?? null;
+            $newRemarks = $newOfficialMatter['om_remarks'] ?? null;
+            
+            $oldStartDate = $oldOfficialMatter['om_start_date'] ?? null;
+            $oldEndDate = $oldOfficialMatter['om_end_date'] ?? null;
+            $oldRemarks = $oldOfficialMatter['om_remarks'] ?? null;
+            
+            if (!$newStartDate || !$newEndDate || !$newRemarks) {
                 return;
             }
             
-            $startDate = $oldOfficialMatter['om_start_date'] ?? null;
-            $endDate = $oldOfficialMatter['om_end_date'] ?? null;
-            $remarks = $oldOfficialMatter['om_remarks'] ?? null;
-            
-            if (!$startDate || !$endDate || !$remarks) {
-                return;
+            // Calculate date ranges
+            $newStart = \Carbon\Carbon::parse($newStartDate);
+            $newEnd = \Carbon\Carbon::parse($newEndDate);
+            $newDates = [];
+            $cursor = $newStart->copy();
+            while ($cursor->lte($newEnd)) {
+                $newDates[] = $cursor->toDateString();
+                $cursor->addDay();
             }
             
-            // Get record IDs before deletion (for tracking)
-            $recordIds = AttendanceRecord::whereIn('faculty_id', $facultyIds)
-                ->whereBetween('record_date', [$startDate, $endDate])
-                ->where('record_remarks', $remarks)
-                ->where('record_status', 'Absent')
-                ->pluck('record_id')
-                ->toArray();
-            
-            // Delete the records
-            if (!empty($recordIds)) {
-                AttendanceRecord::whereIn('record_id', $recordIds)->delete();
-                
-                // Track all deletions for sync
-                foreach ($recordIds as $recordId) {
-                    $this->trackDeletion('tbl_attendance_record', $recordId);
+            $oldDates = [];
+            if ($oldStartDate && $oldEndDate) {
+                $oldStart = \Carbon\Carbon::parse($oldStartDate);
+                $oldEnd = \Carbon\Carbon::parse($oldEndDate);
+                $cursor = $oldStart->copy();
+                while ($cursor->lte($oldEnd)) {
+                    $oldDates[] = $cursor->toDateString();
+                    $cursor->addDay();
                 }
-                
-                Log::info("Removed " . count($recordIds) . " old attendance records for official matter {$omId} during sync");
             }
+            
+            // Determine which dates to keep, update, and delete
+            $datesToKeep = array_intersect($oldDates, $newDates); // Dates in both ranges - UPDATE
+            $datesToDelete = array_diff($oldDates, $newDates); // Dates only in old range - DELETE
+            $datesToCreate = array_diff($newDates, $oldDates); // Dates only in new range - CREATE
+            
+            // Step 1: Delete records for dates that are no longer in the range
+            if (!empty($datesToDelete) && !empty($oldFacultyIds)) {
+                $recordIds = AttendanceRecord::whereIn('faculty_id', $oldFacultyIds)
+                    ->whereIn('record_date', $datesToDelete)
+                    ->where('record_remarks', $oldRemarks)
+                    ->where('record_status', 'Absent')
+                    ->pluck('record_id')
+                    ->toArray();
+                
+                if (!empty($recordIds)) {
+                    AttendanceRecord::whereIn('record_id', $recordIds)->delete();
+                    
+                    // Track deletions for sync
+                    foreach ($recordIds as $recordId) {
+                        $this->trackDeletion('tbl_attendance_record', $recordId);
+                    }
+                    
+                    Log::info("Deleted " . count($recordIds) . " attendance records for dates no longer in range for official matter {$omId}");
+                }
+            }
+            
+            // Step 2: Update records for dates that are in both ranges
+            foreach ($datesToKeep as $date) {
+                $dayOfWeek = \Carbon\Carbon::parse($date)->format('l');
+                
+                foreach ($newFacultyIds as $facultyId) {
+                    $teachingLoads = TeachingLoad::where('faculty_id', $facultyId)
+                        ->where('teaching_load_day_of_week', $dayOfWeek)
+                        ->get();
+                    
+                    foreach ($teachingLoads as $teachingLoad) {
+                        $existingRecord = AttendanceRecord::where('faculty_id', $facultyId)
+                            ->where('teaching_load_id', $teachingLoad->teaching_load_id)
+                            ->whereDate('record_date', $date)
+                            ->first();
+                        
+                        if ($existingRecord) {
+                            // Update existing record - preserve ID
+                            $existingRecord->update([
+                                'record_remarks' => $newRemarks,
+                                'record_status' => 'Absent',
+                            ]);
+                        }
+                    }
+                }
+            }
+            
+            // Step 3: Create records for dates that are only in new range
+            foreach ($datesToCreate as $date) {
+                $dayOfWeek = \Carbon\Carbon::parse($date)->format('l');
+                
+                foreach ($newFacultyIds as $facultyId) {
+                    $teachingLoads = TeachingLoad::where('faculty_id', $facultyId)
+                        ->where('teaching_load_day_of_week', $dayOfWeek)
+                        ->get();
+                    
+                    foreach ($teachingLoads as $teachingLoad) {
+                        $existingRecord = AttendanceRecord::where('faculty_id', $facultyId)
+                            ->where('teaching_load_id', $teachingLoad->teaching_load_id)
+                            ->whereDate('record_date', $date)
+                            ->first();
+                        
+                        if ($existingRecord) {
+                            // Update if exists
+                            $existingRecord->update([
+                                'record_remarks' => $newRemarks,
+                                'record_status' => 'Absent',
+                            ]);
+                        } else {
+                            // Create new record only if doesn't exist
+                            $cameraId = Camera::where('room_no', $teachingLoad->room_no)->value('camera_id');
+                            
+                            if (!$cameraId) {
+                                continue;
+                            }
+                            
+                            AttendanceRecord::create([
+                                'faculty_id' => $facultyId,
+                                'teaching_load_id' => $teachingLoad->teaching_load_id,
+                                'camera_id' => $cameraId,
+                                'record_date' => $date,
+                                'record_time_in' => null,
+                                'record_time_out' => null,
+                                'time_duration_seconds' => 0,
+                                'record_status' => 'Absent',
+                                'record_remarks' => $newRemarks,
+                            ]);
+                        }
+                    }
+                }
+            }
+            
+            Log::info("Updated attendance records for official matter {$omId} (kept: " . count($datesToKeep) . ", deleted: " . count($datesToDelete) . ", created: " . count($datesToCreate) . ")");
         } catch (\Exception $e) {
-            Log::error("Error removing attendance records for official matter sync: " . $e->getMessage());
+            Log::error("Error updating attendance records for official matter sync: " . $e->getMessage());
         }
     }
     
