@@ -57,9 +57,9 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            'timezone' => env('DB_TIMEZONE', config('app.timezone', 'UTC')),
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                PDO::MYSQL_ATTR_INIT_COMMAND => "SET time_zone='+00:00'", // Use offset format to avoid timezone table dependency
             ]) : [],
         ],
 
