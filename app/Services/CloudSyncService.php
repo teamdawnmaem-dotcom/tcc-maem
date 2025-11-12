@@ -36,6 +36,8 @@ class CloudSyncService
         $this->cloudApiUrl = env('CLOUD_API_URL', 'https://tcc-maem.com/api');
         $this->cloudApiKey = env('CLOUD_API_KEY', 'e5a4466194f624d9e8611bd264a958e54473692ada6280840c118066f18e6815');
         // For cloud server: URL and key to call back to local server
+        // LOCAL_API_URL should be the base URL WITHOUT /api (e.g., http://localhost:8000 or https://your-public-url.com)
+        // The code will automatically append /api/sync/local/{endpoint}/{id}
         $this->localApiUrl = env('LOCAL_API_URL', null);
         $this->localApiKey = env('LOCAL_API_KEY', env('CLOUD_API_KEY', 'e5a4466194f624d9e8611bd264a958e54473692ada6280840c118066f18e6815'));
     }
@@ -182,7 +184,14 @@ class CloudSyncService
         }
         
         try {
-            $url = "{$this->localApiUrl}/api/sync/local/{$endpoint}/{$recordId}";
+            // LOCAL_API_URL should be the base URL (e.g., http://localhost:8000)
+            // We append /api/sync/local/{endpoint}/{id}
+            // Remove trailing slash and /api if present to avoid duplication
+            $baseUrl = rtrim($this->localApiUrl, '/');
+            $baseUrl = preg_replace('#/api/?$#', '', $baseUrl); // Remove /api if it's at the end
+            $url = "{$baseUrl}/api/sync/local/{$endpoint}/{$recordId}";
+            
+            Log::info("Attempting to trigger deletion on local: {$url}");
             
             $response = Http::timeout(30)
                 ->withHeaders([
@@ -195,11 +204,12 @@ class CloudSyncService
                 Log::info("Successfully triggered deletion on local for {$endpoint} ID: {$recordId}");
                 return true;
             } else {
-                Log::warning("Failed to trigger deletion on local for {$endpoint} ID: {$recordId} - " . $response->body());
+                Log::warning("Failed to trigger deletion on local for {$endpoint} ID: {$recordId} - Status: {$response->status()}, Body: " . $response->body());
                 return false;
             }
         } catch (\Exception $e) {
             Log::error("Error triggering deletion on local for {$endpoint} ID: {$recordId} - " . $e->getMessage());
+            Log::error("URL attempted: {$url}");
             return false;
         }
     }
