@@ -2313,12 +2313,15 @@ class CloudSyncService
         ];
         
         try {
-            Log::info('Starting cloud to local sync...');
+            Log::info('🔄 Starting cloud to local sync...');
             
             // STEP 1: Process deletions FIRST - delete records locally that were deleted in cloud
             // This ensures deletions are processed before any data sync happens
-            Log::info('STEP 1: Processing all deletions from cloud...');
-            $this->processAllDeletionsFromCloud();
+            // CRITICAL: This must happen before syncing any data to prevent deleted records from being restored
+            Log::info('🗑️  STEP 1: Processing all deletions from cloud (this happens FIRST to prevent restoring deleted records)...');
+            $deletionResults = $this->processAllDeletionsFromCloud();
+            $results['deletion_summary'] = $deletionResults;
+            Log::info("✅ Deletion processing completed. Total records deleted: " . ($deletionResults['total_deleted'] ?? 0));
             
             // STEP 2: Sync data in order of dependencies - users first
             Log::info('STEP 2: Syncing data from cloud...');
@@ -2776,7 +2779,7 @@ class CloudSyncService
             
             $response = Http::timeout(30)
                 ->withHeaders([
-                    'X-API-Key' => $this->cloudApiKey,
+                    'Authorization' => 'Bearer ' . $this->cloudApiKey,
                     'Accept' => 'application/json',
                 ])
                 ->get($url);
@@ -2898,6 +2901,7 @@ class CloudSyncService
      */
     public function processAllDeletionsFromCloud()
     {
+        $totalDeleted = 0;
         try {
             // Define all tables, their endpoints, and primary keys
             $tables = [
@@ -2920,12 +2924,16 @@ class CloudSyncService
             
             // Process deletions for each table
             foreach ($tables as $config) {
-                $this->processDeletionsFromCloud($config['endpoint'], $config['table'], $config['idKey']);
+                $deletedCount = $this->processDeletionsFromCloud($config['endpoint'], $config['table'], $config['idKey']);
+                $totalDeleted += $deletedCount;
             }
             
-            Log::info('Final deletion processing from cloud completed');
+            Log::info("✅ Final deletion processing from cloud completed. Total records deleted: {$totalDeleted}");
+            return ['total_deleted' => $totalDeleted];
         } catch (\Exception $e) {
-            Log::error("Error in final deletion processing from cloud: " . $e->getMessage());
+            Log::error("❌ Error in final deletion processing from cloud: " . $e->getMessage());
+            Log::error("Stack trace: " . $e->getTraceAsString());
+            return ['total_deleted' => $totalDeleted, 'error' => $e->getMessage()];
         }
     }
     
@@ -2937,14 +2945,17 @@ class CloudSyncService
      */
     protected function processDeletionsFromCloud(string $endpoint, string $tableName, string $idKey)
     {
+        $deletedCount = 0;
         try {
             $deletedIds = $this->getDeletedIdsFromCloud($endpoint);
             
             if (empty($deletedIds)) {
-                return;
+                Log::debug("No deletions found for {$endpoint} ({$tableName})");
+                return $deletedCount;
             }
             
-            $deletedCount = 0;
+            Log::info("🔍 Found " . count($deletedIds) . " deleted IDs from cloud for {$endpoint} ({$tableName}): " . json_encode($deletedIds));
+            
             foreach ($deletedIds as $deletedId) {
                 try {
                     // Special handling for leaves and passes (they share the same table)
@@ -3000,10 +3011,16 @@ class CloudSyncService
             }
             
             if ($deletedCount > 0) {
-                Log::info("Processed {$deletedCount} deletions from cloud for {$endpoint}");
+                Log::info("✅ Processed {$deletedCount} deletions from cloud for {$endpoint} ({$tableName})");
+            } else {
+                Log::debug("No records to delete locally for {$endpoint} ({$tableName}) - records may not exist locally");
             }
+            
+            return $deletedCount;
         } catch (\Exception $e) {
-            Log::error("Error processing deletions from cloud for {$endpoint}: " . $e->getMessage());
+            Log::error("❌ Error processing deletions from cloud for {$endpoint} ({$tableName}): " . $e->getMessage());
+            Log::error("Stack trace: " . $e->getTraceAsString());
+            return $deletedCount;
         }
     }
     
