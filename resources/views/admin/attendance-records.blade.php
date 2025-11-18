@@ -1210,10 +1210,11 @@
 </div>
 
 <!-- Record Details Modal -->
-<div id="recordDetailsModal" class="modal-overlay">
+<div id="recordDetailsModal" class="modal-overlay" data-prevent-overlay-close="true">
     <div class="modal-box">
         <div class="modal-header-custom">
             ATTENDANCE RECORD DETAILS
+            <button type="button" class="modal-close" onclick="closeRecordModal()" aria-label="Close">&times;</button>
         </div>
         <div class="modal-content" id="recordDetailsContent">
             <div style="text-align: center; padding: 40px;">
@@ -1241,6 +1242,15 @@
 <script>
 // Current filters object
 let currentFilters = {};
+
+function escapeHtml(str = '') {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 // Load initial data
 document.addEventListener('DOMContentLoaded', async function() {
@@ -1607,13 +1617,24 @@ document.querySelector('.search-input').addEventListener('keydown', function(e) 
                 '0';
             
             // Get remarks and determine which attachment to show
-            const remarks = (record.record_remarks || '').toUpperCase().trim();
+            const rawRemarks = (record.record_remarks || '').trim();
+            const remarks = rawRemarks.toUpperCase();
+            const displayRemarks = rawRemarks !== '' ? escapeHtml(rawRemarks) : 'No remarks provided';
             const showPassSlip = remarks === 'WITH PASS SLIP' && passSlip;
             const showLeaveSlip = remarks === 'ON LEAVE' && leaveSlip;
             const showOfficialMatter = officialMatter && officialMatter.om_remarks && remarks === officialMatter.om_remarks.toUpperCase().trim();
             
             // Check if attendance came from recognition (has snapshots)
             const isFromRecognition = !!(record.time_in_snapshot || record.time_out_snapshot);
+
+            const faculty = record.faculty || {};
+            const teachingLoad = record.teaching_load || record.teachingLoad || {};
+            const facultyName = [faculty.faculty_fname, faculty.faculty_lname].filter(Boolean).join(' ') || 'N/A';
+            const department = faculty.faculty_department || 'N/A';
+            const courseCode = teachingLoad.teaching_load_course_code || teachingLoad.course_code || 'N/A';
+            const subjectName = teachingLoad.teaching_load_subject || teachingLoad.subject || 'N/A';
+            const classSection = teachingLoad.teaching_load_class_section || teachingLoad.class_section || 'N/A';
+            const recordStatus = record.record_status ? escapeHtml(record.record_status) : 'N/A';
             
             // Determine what sections to show
             // Priority: If remarks exist, show attachments only. Otherwise, if from recognition, show recognition data.
@@ -1622,14 +1643,36 @@ document.querySelector('.search-input').addEventListener('keydown', function(e) 
             
             // Build HTML
             let html = '';
-            
-            // Only show Time Information and Snapshots if attendance came from recognition AND no attachments
-            if (showRecognitionOnly) {
-                html += `
-                    <!-- Time Information -->
+            let hasDetailSections = false;
+
+            html += `
                     <div class="modal-section">
-                        <div class="modal-section-title">Time Information</div>
+                        <div class="modal-section-title">Record Details</div>
                         <div class="modal-info-grid">
+                            <div class="modal-info-item">
+                                <div class="modal-info-label">Record Date</div>
+                                <div class="modal-info-value">${recordDate}</div>
+                            </div>
+                            <div class="modal-info-item">
+                                <div class="modal-info-label">Faculty</div>
+                                <div class="modal-info-value">${escapeHtml(facultyName)}</div>
+                            </div>
+                            <div class="modal-info-item">
+                                <div class="modal-info-label">Department</div>
+                                <div class="modal-info-value">${escapeHtml(department)}</div>
+                            </div>
+                            <div class="modal-info-item">
+                                <div class="modal-info-label">Course / Subject</div>
+                                <div class="modal-info-value">${escapeHtml(courseCode)} / ${escapeHtml(subjectName)}</div>
+                            </div>
+                            <div class="modal-info-item">
+                                <div class="modal-info-label">Class Section</div>
+                                <div class="modal-info-value">${escapeHtml(classSection)}</div>
+                            </div>
+                            <div class="modal-info-item">
+                                <div class="modal-info-label">Status</div>
+                                <div class="modal-info-value">${recordStatus}</div>
+                            </div>
                             <div class="modal-info-item">
                                 <div class="modal-info-label">Time In</div>
                                 <div class="modal-info-value">${timeIn}</div>
@@ -1642,8 +1685,18 @@ document.querySelector('.search-input').addEventListener('keydown', function(e) 
                                 <div class="modal-info-label">Duration</div>
                                 <div class="modal-info-value">${duration}</div>
                             </div>
+                            <div class="modal-info-item">
+                                <div class="modal-info-label">Remarks</div>
+                                <div class="modal-info-value">${displayRemarks}</div>
+                            </div>
                         </div>
                     </div>
+            `;
+            hasDetailSections = true;
+            
+            // Only show Time Information and Snapshots if attendance came from recognition AND no attachments
+            if (showRecognitionOnly) {
+                html += `
                     
                     <!-- Snapshots -->
                     <div class="modal-section">
@@ -1664,6 +1717,7 @@ document.querySelector('.search-input').addEventListener('keydown', function(e) 
                         </div>
                     </div>
                 `;
+                hasDetailSections = true;
             }
             
             // Only show Attachments if remarks is "On Leave" or "With Pass Slip"
@@ -1752,11 +1806,11 @@ document.querySelector('.search-input').addEventListener('keydown', function(e) 
                         </div>
                     </div>
                     `;
+                hasDetailSections = true;
             }
             
-            // If no content was generated, show a message
-            if (!html || html.trim() === '') {
-                html = '<p style="color: #666; text-align: center; padding: 40px;">No details available for this record.</p>';
+            if (!hasDetailSections) {
+                html += '<p style="color: #666; text-align: center; padding: 40px;">No details available for this record.</p>';
             }
             
             content.innerHTML = html;
@@ -1792,25 +1846,6 @@ document.querySelector('.search-input').addEventListener('keydown', function(e) 
     
     // Initialize modal event listeners once on page load
     document.addEventListener('DOMContentLoaded', function() {
-        // Enable click-outside-to-close functionality
-        const recordModal = document.getElementById('recordDetailsModal');
-        if (recordModal) {
-            recordModal.addEventListener('click', function(e) {
-                // Close modal when clicking directly on the overlay background (not on modal-box)
-                if (e.target === recordModal) {
-                    closeRecordModal();
-                }
-            });
-            
-            // Prevent clicks inside modal-box from closing the modal
-            const modalBox = recordModal.querySelector('.modal-box');
-            if (modalBox) {
-                modalBox.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                });
-            }
-        }
-        
         const imageViewer = document.getElementById('imageViewerModal');
         if (imageViewer) {
             imageViewer.addEventListener('click', function(e) {

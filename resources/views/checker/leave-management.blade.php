@@ -1196,7 +1196,7 @@
                             id="add_leave_start_date"></div>
                     <div class="modal-form-group"><label>End Date</label><input type="date" name="leave_end_date"
                             id="add_leave_end_date"></div>
-                    <div class="modal-form-group"><label>Slip Image</label><input type="file" name="lp_image"
+                    <div class="modal-form-group"><label>Leave Form</label><input type="file" name="lp_image"
                             accept="image/*" id="add_lp_image">
                         <div class="validation-message" id="add_lp_image_error"></div>
                     </div>
@@ -1315,7 +1315,7 @@
                             id="edit_leave_start_date"></div>
                     <div class="modal-form-group"><label>End Date</label><input type="date" name="leave_end_date"
                             id="edit_leave_end_date"></div>
-                    <div class="modal-form-group"><label>Slip Image</label><input type="file" name="lp_image"
+                    <div class="modal-form-group"><label>Leave Form</label><input type="file" name="lp_image"
                             accept="image/*" id="edit_lp_image">
                         <div class="validation-message" id="edit_lp_image_error"></div>
                         
@@ -1843,7 +1843,7 @@
             setValidity(edt, vEdt);
             setMessage(edt, vEdt ? '' : 'End date is required');
             setValidity(img, vImg);
-            setMessage(img, vImg ? '' : (isNotEmpty(img && img.value) ? 'Image size must be less than 2MB' : 'Slip image is required'));
+            setMessage(img, vImg ? '' : (isNotEmpty(img && img.value) ? 'Image size must be less than 2MB' : 'Leave form is required'));
             
             const isValid = vFac && vPur && vSdt && vEdt && vImg && logicOk;
             updateAddButtonState(isValid);
