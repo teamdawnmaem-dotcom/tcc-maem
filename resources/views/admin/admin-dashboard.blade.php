@@ -305,9 +305,9 @@
 <!-- User Greeting -->
 <div class="user-greeting">
     <div class="greeting-text">
-        Welcome back, <span class="user-name">{{ Auth::user()->user_fname }} {{ Auth::user()->user_lname }}</span>!
+        Welcome back!, <span class="user-name">{{ Auth::user()->user_fname }} {{ Auth::user()->user_lname }}</span>
         <br>
-        <small style="opacity: 0.9; font-size: 0.9rem;">Ready to manage your department today?</small>
+        <small style="opacity: 0.9; font-size: 0.9rem;">Ready to manage your system today?</small>
     </div>
     <div class="greeting-date">
         <div class="date-text">{{ date('F j Y') }}</div>

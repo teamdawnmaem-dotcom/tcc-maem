@@ -144,6 +144,45 @@
             color: #fff;
         }
 
+        /* Slide animations for Pass Management Modals */
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+        }
+
+        #addModal .modal-box.slide-up {
+            animation: slideUp 0.3s ease-out !important;
+        }
+
+        #editModal .modal-box.slide-up {
+            animation: slideUp 0.3s ease-out !important;
+        }
+
+        #deleteModal .modal-box.slide-up {
+            animation: slideUp 0.3s ease-out !important;
+        }
+
+        #slipModal .modal-box.slide-up {
+            animation: slideUp 0.3s ease-out !important;
+        }
+
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -453,56 +492,127 @@
                 margin: 0;
             }
 
-            /* Table Container */
+            /* Table Container - Card Layout on Mobile */
             .teaching-load-table-container {
                 border-radius: 8px;
-                overflow: hidden;
+                overflow: visible;
+                background: transparent;
+                box-shadow: none;
             }
 
             .teaching-load-table-scroll {
-                max-height: 50vh;
-                overflow-x: auto;
-                overflow-y: auto;
+                max-height: none;
+                overflow: visible;
                 -webkit-overflow-scrolling: touch;
             }
 
-            .teaching-load-table {
-                min-width: 1000px; /* Minimum width to maintain readability */
+            /* Hide table header on mobile */
+            .teaching-load-table thead {
+                display: none;
             }
 
-            .teaching-load-table th {
-                padding: 10px 6px;
-                font-size: 0.7rem;
-                white-space: nowrap;
+            /* Transform table rows into cards */
+            .teaching-load-table {
+                width: 100%;
+                min-width: 0;
+                border-collapse: separate;
+                border-spacing: 0 12px;
+                display: block;
+            }
+
+            .teaching-load-table tbody {
+                display: block;
+            }
+
+            .teaching-load-table tr {
+                display: block;
+                background: #fff;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+                margin-bottom: 12px;
+                padding: 16px;
+                box-sizing: border-box;
+                border: 1px solid #e0e0e0;
+                transition: box-shadow 0.2s ease, transform 0.2s ease;
+            }
+
+            .teaching-load-table tr:hover {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+                transform: translateY(-1px);
+                background: #fff2e6;
+            }
+
+            .teaching-load-table tr:last-child {
+                margin-bottom: 0;
             }
 
             .teaching-load-table td {
-                padding: 8px 6px;
-                font-size: 0.7rem;
-                white-space: nowrap;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 0;
+                font-size: 0.8rem;
+                white-space: normal;
+                border: none;
+                text-align: left;
+                color: #222;
             }
 
-            /* Empty state message */
-            .teaching-load-table td[colspan] {
+            .teaching-load-table td:before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #555;
+                margin-right: 12px;
+                flex-shrink: 0;
+                min-width: 110px;
                 font-size: 0.75rem;
-                padding: 20px 12px;
             }
 
-            /* Action Buttons */
+            .teaching-load-table td:not(:last-child) {
+                border-bottom: 1px solid #f5f5f5;
+            }
+
+            .teaching-load-table td[data-label="Actions"] {
+                justify-content: flex-end;
+                padding-top: 12px;
+                border-top: 1px solid #f0f0f0;
+                margin-top: 8px;
+            }
+
+            .teaching-load-table td[data-label="Actions"]:before {
+                display: none;
+            }
+
             .action-btns {
-                gap: 6px;
+                gap: 8px;
+                justify-content: flex-end;
             }
 
             .edit-btn,
             .delete-btn {
                 width: 40px;
-                height: 28px;
-                font-size: 0.9rem;
+                height: 36px;
+                font-size: 1.1rem;
+                border-radius: 6px;
             }
 
             .view-slip-btn {
-                padding: 6px 10px !important;
-                font-size: 0.7rem !important;
+                padding: 6px 12px !important;
+                font-size: 0.75rem !important;
+            }
+
+            /* Empty state message */
+            .teaching-load-table td[colspan] {
+                display: block;
+                text-align: center;
+                font-size: 0.85rem;
+                padding: 40px 20px;
+                color: #666;
+                font-style: italic;
+            }
+
+            .teaching-load-table td[colspan]:before {
+                display: none;
             }
 
             /* Modals - Mobile Optimized */
@@ -521,174 +631,417 @@
                 overflow-y: auto;
             }
 
-            /* Add Modal */
+            /* Add Modal - Mobile positioning and animation */
+            #addModal.modal-overlay {
+                padding: 0 !important;
+                align-items: flex-start !important;
+                justify-content: center !important;
+            }
+
             #addModal .modal-box {
-                width: 95vw !important;
-                max-width: 95vw !important;
+                width: 100vw !important;
+                max-width: 100vw !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+                animation: slideDown 0.3s ease-out !important;
+            }
+
+            #addModal .modal-box form {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
             }
 
             #addModal .modal-header {
                 font-size: 1.1rem !important;
                 padding: 12px 16px !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
             }
 
             #addModal .modal-content {
-                padding: 16px !important;
+                padding: 20px 24px !important;
+                overflow: visible !important;
+                max-height: none !important;
             }
 
             #addModal .modal-form-group {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 6px;
-                margin-bottom: 12px;
-                padding-bottom: 18px;
+                flex-direction: row;
+                align-items: center;
+                gap: 9.6px;
+                margin-bottom: 9.6px;
+                padding-bottom: 14.4px;
+                width: 100%;
+                box-sizing: border-box;
+                position: relative;
             }
 
             #addModal .modal-form-group label {
-                min-width: auto;
-                width: 100%;
-                margin-bottom: 4px;
+                min-width: 104px;
+                max-width: 104px;
+                flex-shrink: 0;
+                margin-bottom: 0;
                 font-size: 0.85rem;
+                color: #222;
             }
 
             #addModal .modal-form-group input,
             #addModal .modal-form-group select,
             #addModal .modal-form-group textarea {
+                flex: 1;
+                min-width: 0;
                 width: 100%;
                 padding: 10px 12px;
                 font-size: 0.9rem;
+                box-sizing: border-box;
+                height: auto;
+                line-height: 1.5;
             }
 
             #addModal .validation-message {
-                position: relative;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                padding-left: 0;
-                margin-top: 4px;
+                position: absolute;
+                left: 104px;
+                right: 9.6px;
+                bottom: -8px;
+                padding-left: 9.6px;
+                font-size: 0.75rem;
             }
 
             #addModal .modal-buttons {
-                flex-direction: column;
-                gap: 10px;
-                margin-top: 16px;
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                gap: 1rem;
+                margin-top: 12px;
             }
 
             #addModal .modal-btn {
-                width: 100% !important;
-                padding: 12px !important;
-                font-size: 0.9rem !important;
+                flex: 1;
+                max-width: 200px;
+                padding: 11.2px 0 !important;
+                font-size: 0.88rem !important;
+                min-height: 44px;
+                border-radius: 4.8px;
             }
 
-            /* Edit Modal */
+            /* Add button: green background */
+            #addModal .modal-btn.add {
+                background: #2ecc71 !important;
+                border: none !important;
+                color: #fff !important;
+                transition: background-color 0.15s ease, color 0.15s ease;
+            }
+
+            #addModal .modal-btn.add:hover {
+                background: #27ae60 !important;
+                color: #fff !important;
+            }
+
+            /* Cancel button: outlined red */
+            #addModal .modal-btn.cancel {
+                background: #fff !important;
+                border: 2px solid #800000 !important;
+                color: #800000 !important;
+                transition: all 0.3s ease;
+            }
+
+            #addModal .modal-btn.cancel:hover {
+                background: #800000 !important;
+                color: #fff !important;
+            }
+
+            #addModal .modal-box.slide-up {
+                animation: slideUp 0.3s ease-out !important;
+            }
+
+            /* Edit Modal - Mobile positioning and animation */
+            #editModal.modal-overlay {
+                padding: 0 !important;
+                align-items: flex-start !important;
+                justify-content: center !important;
+            }
+
             #editModal .modal-box {
-                width: 95vw !important;
-                max-width: 95vw !important;
+                width: 100vw !important;
+                max-width: 100vw !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+                animation: slideDown 0.3s ease-out !important;
+            }
+
+            #editModal .modal-box form {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
             }
 
             #editModal .modal-header {
                 font-size: 1.1rem !important;
                 padding: 12px 16px !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
             }
 
             #editModal .modal-content {
-                padding: 16px !important;
+                padding: 20px 24px !important;
+                overflow: visible !important;
+                max-height: none !important;
             }
 
             #editModal .modal-form-group {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 6px;
-                margin-bottom: 12px;
-                padding-bottom: 18px;
+                flex-direction: row;
+                align-items: center;
+                gap: 9.6px;
+                margin-bottom: 9.6px;
+                padding-bottom: 14.4px;
+                width: 100%;
+                box-sizing: border-box;
+                position: relative;
             }
 
             #editModal .modal-form-group label {
-                min-width: auto;
-                width: 100%;
-                margin-bottom: 4px;
+                min-width: 104px;
+                max-width: 104px;
+                flex-shrink: 0;
+                margin-bottom: 0;
                 font-size: 0.85rem;
+                color: #222;
             }
 
             #editModal .modal-form-group input,
             #editModal .modal-form-group select,
             #editModal .modal-form-group textarea {
+                flex: 1;
+                min-width: 0;
                 width: 100%;
                 padding: 10px 12px;
                 font-size: 0.9rem;
+                box-sizing: border-box;
+                height: auto;
+                line-height: 1.5;
             }
 
             #editModal .validation-message {
-                position: relative;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                padding-left: 0;
-                margin-top: 4px;
+                position: absolute;
+                left: 104px;
+                right: 9.6px;
+                bottom: -8px;
+                padding-left: 9.6px;
+                font-size: 0.75rem;
             }
 
             #editModal .modal-buttons {
-                flex-direction: column;
-                gap: 10px;
-                margin-top: 16px;
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                gap: 1rem;
+                margin-top: 12px;
             }
 
             #editModal .modal-btn {
-                width: 100% !important;
-                padding: 12px !important;
-                font-size: 0.9rem !important;
+                flex: 1;
+                max-width: 200px;
+                padding: 11.2px 0 !important;
+                font-size: 0.88rem !important;
+                min-height: 44px;
+                border-radius: 4.8px;
             }
 
-            /* Delete Modal */
+            /* Update button: blue background */
+            #editModal .modal-btn.add {
+                background: #7cc6fa !important;
+                border: none !important;
+                color: #fff !important;
+                transition: background-color 0.15s ease, color 0.15s ease;
+            }
+
+            #editModal .modal-btn.add:hover {
+                background: #5bb3f5 !important;
+                color: #fff !important;
+            }
+
+            /* Cancel button: outlined red */
+            #editModal .modal-btn.cancel {
+                background: #fff !important;
+                border: 2px solid #800000 !important;
+                color: #800000 !important;
+                transition: all 0.3s ease;
+            }
+
+            #editModal .modal-btn.cancel:hover {
+                background: #800000 !important;
+                color: #fff !important;
+            }
+
+            #editModal .modal-box.slide-up {
+                animation: slideUp 0.3s ease-out !important;
+            }
+
+            /* Delete Modal - Mobile positioning and animation */
+            #deleteModal.modal-overlay {
+                padding: 0 !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+
             #deleteModal .modal-box {
-                width: 90vw !important;
-                max-width: 90vw !important;
-                padding: 24px 20px !important;
+                width: 85vw !important;
+                max-width: 85vw !important;
+                padding: 20px 16px !important;
+                animation: slideDown 0.3s ease-out !important;
             }
 
             #deleteModal .modal-header {
-                font-size: 1.1rem !important;
-                margin-bottom: 16px !important;
+                font-size: 1rem !important;
+                margin-bottom: 12px !important;
+            }
+
+            #deleteModal .modal-box > div[style*="text-align: center"] {
+                margin: 0 !important;
+            }
+
+            #deleteModal .modal-box > div[style*="text-align: center"] > div:first-of-type {
+                font-size: 2.5rem !important;
+                margin-bottom: 12px !important;
+            }
+
+            #deleteModal .modal-box > div[style*="text-align: center"] > div:nth-of-type(2) {
+                font-size: 0.85rem !important;
+                margin-bottom: 6px !important;
+            }
+
+            #deleteModal .modal-box > div[style*="text-align: center"] > div:nth-of-type(3) {
+                font-size: 0.75rem !important;
+                line-height: 1.4 !important;
             }
 
             #deleteModal .modal-buttons {
-                flex-direction: column;
-                gap: 10px;
-                margin-top: 20px !important;
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: center !important;
+                align-items: center !important;
+                gap: 0.75rem !important;
+                margin-top: 16px !important;
             }
 
             #deleteModal .modal-btn {
-                width: 100% !important;
-                padding: 12px !important;
-                font-size: 0.9rem !important;
+                flex: 1 !important;
+                max-width: 140px !important;
+                width: auto !important;
+                padding: 10px 16px !important;
+                font-size: 0.85rem !important;
+                min-height: 40px !important;
+                box-sizing: border-box !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                text-align: center !important;
+                white-space: nowrap !important;
+                border-radius: 4.8px !important;
             }
 
-            /* Slip Modal */
+            #deleteModal .modal-btn.delete {
+                background: #ff3636 !important;
+                color: #fff !important;
+                border: 2px solid #ff3636 !important;
+            }
+
+            #deleteModal .modal-btn.delete:hover {
+                background: #d32f2f !important;
+                border-color: #d32f2f !important;
+            }
+
+            #deleteModal .modal-btn.cancel {
+                background: #fff !important;
+                color: #800000 !important;
+                border: 2px solid #800000 !important;
+            }
+
+            #deleteModal .modal-btn.cancel:hover {
+                background: #800000 !important;
+                color: #fff !important;
+            }
+
+            #deleteModal .modal-box.slide-up {
+                animation: slideUp 0.3s ease-out !important;
+            }
+
+            /* Slip Modal - Mobile positioning and animation */
+            #slipModal.modal-overlay {
+                padding: 0 !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+
             #slipModal .modal-box {
                 width: 95vw !important;
                 max-width: 95vw !important;
+                max-height: 90vh !important;
                 padding: 0 !important;
+                margin: 0 !important;
+                border-radius: 8px !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                box-sizing: border-box !important;
+                animation: slideDown 0.3s ease-out !important;
             }
 
             #slipModal .modal-header {
                 font-size: 1rem !important;
-                padding: 10px 16px !important;
+                padding: 12px 16px !important;
+                flex-shrink: 0 !important;
+                border-bottom: 1px solid #e0e0e0 !important;
             }
 
             #slipModal .slip-content {
-                padding: 12px !important;
+                padding: 16px !important;
+                flex: 1 !important;
+                overflow: auto !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                min-height: 0 !important;
             }
 
             #slipImage {
-                max-height: 60vh !important;
+                max-width: 100% !important;
+                max-height: calc(90vh - 120px) !important;
+                width: auto !important;
+                height: auto !important;
+                object-fit: contain !important;
+                border-radius: 4px !important;
             }
 
             #slipModal .close {
-                width: 28px !important;
-                height: 28px !important;
-                font-size: 16px !important;
-                top: 8px !important;
-                right: 12px !important;
+                width: 32px !important;
+                height: 32px !important;
+                font-size: 18px !important;
+                top: 10px !important;
+                right: 14px !important;
+                background: rgba(0, 0, 0, 0.7) !important;
+            }
+
+            #slipModal .close:hover {
+                background: rgba(139, 0, 0, 0.9) !important;
+            }
+
+            #slipModal .modal-box.slide-up {
+                animation: slideUp 0.3s ease-out !important;
             }
 
             /* Logic Error Messages */
@@ -741,15 +1094,14 @@
                 <tbody>
                     @forelse ($passes as $pass)
                         <tr>
-
-                            <td>{{ $pass->faculty->faculty_fname }} {{ $pass->faculty->faculty_lname }}</td>
-                            <td>{{ $pass->faculty->faculty_department }}</td>
-                            <td>{{ $pass->lp_purpose }}</td>
-                            <td>{{ \Carbon\Carbon::parse($pass->pass_slip_date)->format('F j, Y') }}</td>
-                            <td>{{ $pass->pass_slip_itinerary }}</td>
-                            <td>{{ \Carbon\Carbon::createFromFormat('H:i:s', $pass->pass_slip_departure_time)->format('g:i a') }}</td>
-                            <td>{{ \Carbon\Carbon::createFromFormat('H:i:s', $pass->pass_slip_arrival_time)->format('g:i a') }}</td>
-                            <td>
+                            <td data-label="Faculty Name">{{ $pass->faculty->faculty_fname }} {{ $pass->faculty->faculty_lname }}</td>
+                            <td data-label="Department">{{ $pass->faculty->faculty_department }}</td>
+                            <td data-label="Purpose">{{ $pass->lp_purpose }}</td>
+                            <td data-label="Date">{{ \Carbon\Carbon::parse($pass->pass_slip_date)->format('F j, Y') }}</td>
+                            <td data-label="Itinerary">{{ $pass->pass_slip_itinerary }}</td>
+                            <td data-label="Departure Time">{{ \Carbon\Carbon::createFromFormat('H:i:s', $pass->pass_slip_departure_time)->format('g:i a') }}</td>
+                            <td data-label="Arrival Time">{{ \Carbon\Carbon::createFromFormat('H:i:s', $pass->pass_slip_arrival_time)->format('g:i a') }}</td>
+                            <td data-label="Attachment">
                                 @if ($pass->lp_image)
                                     <button class="view-slip-btn"
                                         onclick="viewSlip('{{ asset('storage/' . $pass->lp_image) }}')">View</button>
@@ -757,7 +1109,7 @@
                                     N/A
                                 @endif
                             </td>
-                            <td>
+                            <td data-label="Actions">
                                 <div class="action-btns">
                                     <button class="edit-btn"
                                         onclick="openUpdateModal(
@@ -1118,7 +1470,19 @@
         });
 
         function openModal(id) {
-            document.getElementById(id).style.display = 'flex';
+            const modal = document.getElementById(id);
+            if (!modal) return;
+            
+            // For Add, Edit, Delete, and Slip Pass Modals, ensure slide-up class is removed for slide-down animation
+            if (id === 'addModal' || id === 'editModal' || id === 'deleteModal' || id === 'slipModal') {
+                const modalBox = modal.querySelector('.modal-box');
+                if (modalBox) {
+                    modalBox.classList.remove('slide-up');
+                }
+            }
+            
+            modal.style.display = 'flex';
+            
             // Initialize button states
             if (id === 'addModal') {
                 updateAddButtonState(false);
@@ -1133,7 +1497,79 @@
             const modal = document.getElementById(id);
             if (!modal) return;
             
+            // For Add, Edit, Delete, and Slip Pass Modals, add slide-up animation on mobile
+            if (id === 'addModal' || id === 'editModal' || id === 'deleteModal' || id === 'slipModal') {
+                const modalBox = modal.querySelector('.modal-box');
+                if (modalBox) {
+                    // Add slide-up animation class
+                    modalBox.classList.add('slide-up');
+                    
+                    // Wait for animation to complete, then hide modal
+                    setTimeout(() => {
+                        modal.style.display = 'none';
+                        modalBox.classList.remove('slide-up');
+            
             // Clear form and validation for add modal
+                        if (id === 'addModal') {
+                            const form = modal.querySelector('form');
+                            if (form) {
+                                // Reset form
+                                form.reset();
+                                
+                                // Clear validation states
+                                const inputs = form.querySelectorAll('input, select, textarea');
+                                inputs.forEach(input => {
+                                    input.classList.remove('valid', 'invalid');
+                                    input.dataset.touched = 'false';
+                                });
+                                
+                                // Clear validation messages
+                                const messages = form.querySelectorAll('.validation-message');
+                                messages.forEach(msg => msg.textContent = '');
+                                
+                                // Hide logic error
+                                const logicError = form.querySelector('.logic-error');
+                                if (logicError) {
+                                    logicError.style.display = 'none';
+                                    logicError.textContent = '';
+                                }
+                            }
+                        }
+                        
+                        // Clear validation for edit modal (keep values)
+                        if (id === 'editModal') {
+                            const form = modal.querySelector('form');
+                            if (form) {
+                                // Clear validation states
+                                const inputs = form.querySelectorAll('input, select, textarea');
+                                inputs.forEach(input => {
+                                    input.classList.remove('valid', 'invalid');
+                                    input.dataset.touched = 'false';
+                                });
+                                
+                                // Clear validation messages
+                                const messages = form.querySelectorAll('.validation-message');
+                                messages.forEach(msg => msg.textContent = '');
+                                
+                                // Hide logic error
+                                const logicError = form.querySelector('.logic-error');
+                                if (logicError) {
+                                    logicError.style.display = 'none';
+                                    logicError.textContent = '';
+                                }
+                            }
+                        }
+                        
+                        // Remove server error shown at the bottom
+                        modal.querySelectorAll('.server-error').forEach(function(node) {
+                            node.remove();
+                        });
+                    }, 300); // Match animation duration
+                    return;
+                }
+            }
+            
+            // Clear form and validation for add modal (if no animation)
             if (id === 'addModal') {
                 const form = modal.querySelector('form');
                 if (form) {
@@ -1270,6 +1706,7 @@
             let searchTerm = this.value.toLowerCase();
             let rows = document.querySelectorAll('.teaching-load-table tbody tr');
             let anyVisible = false;
+            let isMobile = window.innerWidth <= 430;
 
             rows.forEach(row => {
                 // Skip the "no results" row if it exists
@@ -1277,7 +1714,8 @@
 
                 let text = row.textContent.toLowerCase();
                 if (text.includes(searchTerm)) {
-                    row.style.display = '';
+                    // Use block for mobile (cards), table-row for desktop
+                    row.style.display = isMobile ? 'block' : '';
                     anyVisible = true;
                 } else {
                     row.style.display = 'none';
@@ -1296,6 +1734,8 @@
                         `<td colspan="9" style="text-align:center; padding:20px; color:#999; font-style:italic;">No results found</td>`;
                     tbody.appendChild(noResultsRow);
                 }
+                // Ensure no-results row is visible
+                noResultsRow.style.display = isMobile ? 'block' : '';
             } else {
                 if (noResultsRow) noResultsRow.remove();
             }

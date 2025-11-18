@@ -156,6 +156,524 @@
             box-shadow: 0 0 0 2px #2222;
         }
 
+        /* Delete Modal - Scaled button styles (80%) */
+        #deleteCameraModal .modal-btn {
+            width: 160px;
+            padding: 11.2px 0;
+            font-size: 0.88rem;
+            border-radius: 4.8px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        #deleteCameraModal .modal-btn.delete {
+            padding: 11.2px 0;
+            border-radius: 4.8px;
+        }
+
+        #deleteCameraModal .modal-btn.cancel {
+            padding: 11.2px 0;
+            border-radius: 4.8px;
+        }
+
+        #deleteCameraModal .modal-buttons {
+            gap: 9.6px;
+            margin-top: 14.4px;
+        }
+
+        #deleteCameraModal .modal-header {
+            font-size: 1.152rem;
+            margin-bottom: 16px;
+        }
+
+        #deleteCameraModal .modal-box {
+            padding: 25.6px;
+        }
+
+        /* Slide-down animation for Add/Update Camera Modals (mobile only) */
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Slide-up animation for Add/Update Camera Modals (mobile only) */
+        @keyframes slideUp {
+            from {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+        }
+
+        #addCameraModal .modal-box.slide-up {
+            animation: slideUp 0.3s ease-out !important;
+        }
+
+        #updateCameraModal .modal-box.slide-up {
+            animation: slideUp 0.3s ease-out !important;
+        }
+
+        /* Mobile responsive design for 430px width */
+        @media (max-width: 430px) {
+            /* Faculty Header */
+            .faculty-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+                margin-top: 0;
+                margin-bottom: 24px;
+                position: relative;
+            }
+
+            .faculty-title-group {
+                width: 100%;
+            }
+
+            .faculty-title {
+                font-size: 1.4rem;
+                margin-bottom: 4px;
+            }
+
+            .faculty-subtitle {
+                font-size: 0.75rem;
+                margin-bottom: 0;
+            }
+
+            /* Actions Row - Side by side on mobile (matching User Management) */
+            .faculty-actions-row {
+                position: relative;
+                top: 0;
+                right: 0;
+                width: 100%;
+                flex-direction: row;
+                gap: 8px;
+                z-index: 1;
+                margin: 0;
+                padding: 0;
+            }
+
+            .search-input {
+                width: 75% !important;
+                flex: 0 0 calc(75% - 4px);
+                padding: 10px 12px;
+                font-size: 0.9rem;
+                border-radius: 6px;
+                margin: 0;
+            }
+
+            .add-btn {
+                width: 25%;
+                flex: 0 0 calc(25% - 4px);
+                padding: 10px 8px;
+                font-size: 0.85rem;
+                border-radius: 6px;
+                font-weight: bold;
+                white-space: nowrap;
+                margin: 0;
+            }
+
+            /* Table Container - Card Layout on Mobile */
+            .faculty-table-container {
+                border-radius: 8px;
+                overflow: visible;
+                background: transparent;
+                box-shadow: none;
+            }
+
+            .faculty-table-scroll {
+                max-height: none;
+                overflow: visible;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Hide table header on mobile */
+            .faculty-table thead {
+                display: none;
+            }
+
+            /* Transform table rows into cards */
+            .faculty-table {
+                width: 100%;
+                min-width: 0;
+                border-collapse: separate;
+                border-spacing: 0 12px;
+                display: block;
+            }
+
+            .faculty-table tbody {
+                display: block;
+            }
+
+            .faculty-table tr {
+                display: block;
+                background: #fff;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+                margin-bottom: 12px;
+                padding: 16px;
+                box-sizing: border-box;
+                border: 1px solid #e0e0e0;
+                transition: box-shadow 0.2s ease, transform 0.2s ease;
+            }
+
+            .faculty-table tr:hover {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+                transform: translateY(-1px);
+            }
+
+            .faculty-table tr:last-child {
+                margin-bottom: 0;
+            }
+
+            .faculty-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 0;
+                font-size: 0.85rem;
+                white-space: normal;
+                border: none;
+                text-align: left;
+                color: #222;
+            }
+
+            .faculty-table td:before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #555;
+                margin-right: 12px;
+                flex-shrink: 0;
+                min-width: 100px;
+                font-size: 0.8rem;
+            }
+
+            .faculty-table td:not([data-label="Action"]) {
+                border-bottom: 1px solid #f5f5f5;
+            }
+
+            .faculty-table td:last-child:not([data-label="Action"]) {
+                border-bottom: none;
+            }
+
+            /* Action column styling */
+            .faculty-table td[data-label="Action"] {
+                justify-content: flex-end;
+                padding-top: 12px;
+                border-top: 1px solid #f0f0f0;
+                margin-top: 8px;
+            }
+
+            .faculty-table td[data-label="Action"]:before {
+                display: none;
+            }
+
+            /* Empty state message */
+            .faculty-table td[colspan] {
+                display: block;
+                text-align: center;
+                font-size: 0.85rem;
+                padding: 40px 20px;
+                color: #666;
+                font-style: italic;
+            }
+
+            .faculty-table td[colspan]:before {
+                display: none;
+            }
+
+            /* Action Buttons */
+            .action-btns {
+                gap: 8px;
+                justify-content: flex-end;
+            }
+
+            .edit-btn,
+            .delete-btn {
+                width: 40px;
+                height: 36px;
+                font-size: 1.1rem;
+                border-radius: 6px;
+            }
+
+            /* Add Camera Modal - Mobile */
+            #addCameraModal.modal-overlay {
+                padding: 0 !important;
+                align-items: flex-start !important;
+                justify-content: center !important;
+            }
+
+            #addCameraModal .modal-box {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                max-height: 100vh !important;
+                box-sizing: border-box !important;
+                border-radius: 0 !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+                animation: slideDown 0.3s ease-out !important;
+            }
+
+            #addCameraModal .modal-box form {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+            }
+
+            #addCameraModal .modal-header {
+                font-size: 1rem !important;
+                padding: 10px 14px !important;
+                flex-shrink: 0 !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+            }
+
+            #addCameraModal .modal-form {
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                -webkit-overflow-scrolling: touch !important;
+                padding: 12px 14px !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                margin: 0 !important;
+                max-height: calc(100vh - 60px) !important;
+            }
+
+            #addCameraModal .modal-form-group {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 2px !important;
+                margin-bottom: 6px !important;
+                padding-bottom: 10px !important;
+            }
+
+            #addCameraModal .modal-form-group label {
+                min-width: auto !important;
+                width: 100% !important;
+                margin-bottom: 2px !important;
+                font-size: 0.7rem !important;
+            }
+
+            #addCameraModal .modal-form-group input,
+            #addCameraModal .modal-form-group select {
+                width: 100% !important;
+                padding: 8px 10px !important;
+                font-size: 0.85rem !important;
+            }
+
+            #addCameraModal .validation-message {
+                position: relative !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                padding-left: 0 !important;
+                margin-top: 2px !important;
+                font-size: 0.65rem !important;
+            }
+
+            #addCameraModal .modal-buttons {
+                flex-direction: row !important;
+                justify-content: center !important;
+                align-items: center !important;
+                gap: 0.75rem !important;
+                margin-top: 12px !important;
+                position: sticky !important;
+                bottom: 0 !important;
+                background: #fff !important;
+                padding-top: 12px !important;
+                padding-bottom: 12px !important;
+            }
+
+            #addCameraModal .modal-btn {
+                flex: 1 !important;
+                max-width: none !important;
+                padding: 10px !important;
+                font-size: 0.85rem !important;
+                min-height: 44px !important;
+            }
+
+            /* Update Camera Modal - Mobile */
+            #updateCameraModal.modal-overlay {
+                padding: 0 !important;
+                align-items: flex-start !important;
+                justify-content: center !important;
+            }
+
+            #updateCameraModal .modal-box {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                max-height: 100vh !important;
+                box-sizing: border-box !important;
+                border-radius: 0 !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+                animation: slideDown 0.3s ease-out !important;
+            }
+
+            #updateCameraModal .modal-box form {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+            }
+
+            #updateCameraModal .modal-header {
+                font-size: 1rem !important;
+                padding: 10px 14px !important;
+                flex-shrink: 0 !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+            }
+
+            #updateCameraModal .modal-form {
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                -webkit-overflow-scrolling: touch !important;
+                padding: 12px 14px !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                margin: 0 !important;
+                max-height: calc(100vh - 60px) !important;
+            }
+
+            #updateCameraModal .modal-form-group {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 2px !important;
+                margin-bottom: 6px !important;
+                padding-bottom: 10px !important;
+            }
+
+            #updateCameraModal .modal-form-group label {
+                min-width: auto !important;
+                width: 100% !important;
+                margin-bottom: 2px !important;
+                font-size: 0.7rem !important;
+            }
+
+            #updateCameraModal .modal-form-group input,
+            #updateCameraModal .modal-form-group select {
+                width: 100% !important;
+                padding: 8px 10px !important;
+                font-size: 0.85rem !important;
+            }
+
+            #updateCameraModal .validation-message {
+                position: relative !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                padding-left: 0 !important;
+                margin-top: 2px !important;
+                font-size: 0.65rem !important;
+            }
+
+            #updateCameraModal .modal-buttons {
+                flex-direction: row !important;
+                justify-content: center !important;
+                align-items: center !important;
+                gap: 0.75rem !important;
+                margin-top: 12px !important;
+                position: sticky !important;
+                bottom: 0 !important;
+                background: #fff !important;
+                padding-top: 12px !important;
+                padding-bottom: 12px !important;
+            }
+
+            #updateCameraModal .modal-btn {
+                flex: 1 !important;
+                max-width: none !important;
+                padding: 10px !important;
+                font-size: 0.85rem !important;
+                min-height: 44px !important;
+            }
+
+            /* Delete Camera Modal - Mobile Compact */
+            #deleteCameraModal .modal-box {
+                width: 85vw !important;
+                max-width: 85vw !important;
+                padding: 20px 16px !important;
+                transform: scale(1) !important;
+            }
+
+            #deleteCameraModal .modal-header {
+                font-size: 1rem !important;
+                margin-bottom: 12px !important;
+            }
+
+            /* Warning Icon and Message - More Compact */
+            #deleteCameraModal .modal-box > div[style*="text-align: center"] {
+                margin: 0 !important;
+            }
+
+            #deleteCameraModal .modal-box > div[style*="text-align: center"] > div:first-of-type {
+                font-size: 2.5rem !important;
+                margin-bottom: 12px !important;
+            }
+
+            #deleteCameraModal .modal-box > div[style*="text-align: center"] > div:nth-of-type(2) {
+                font-size: 0.85rem !important;
+                margin-bottom: 6px !important;
+            }
+
+            #deleteCameraModal .modal-box > div[style*="text-align: center"] > div:nth-of-type(3) {
+                font-size: 0.75rem !important;
+                line-height: 1.4 !important;
+            }
+
+            #deleteCameraModal .modal-buttons {
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: center !important;
+                align-items: center !important;
+                gap: 0.75rem !important;
+                margin-top: 16px !important;
+            }
+
+            #deleteCameraModal .modal-btn {
+                flex: 1 !important;
+                max-width: 140px !important;
+                width: auto !important;
+                padding: 10px 16px !important;
+                font-size: 0.85rem !important;
+                min-height: 40px !important;
+                box-sizing: border-box !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                text-align: center !important;
+                white-space: nowrap !important;
+            }
+        }
+
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -556,13 +1074,13 @@
             <tbody id="cameraTable">
                 @forelse($cameras as $camera)
                     <tr>
-                        <td>{{ $camera->camera_id }}</td>
-                        <td>{{ $camera->camera_name }}</td>
-                        <td>{{ $camera->camera_ip_address }}</td>
-                        <td>{{ $camera->camera_username }}</td>
-                        <td>{{ $camera->camera_password }}</td>
-                        <td>{{ $camera->room_no ?? 'N/A' }}</td>
-                        <td>
+                        <td data-label="Camera ID">{{ $camera->camera_id }}</td>
+                        <td data-label="Camera Name">{{ $camera->camera_name }}</td>
+                        <td data-label="Camera IP Address">{{ $camera->camera_ip_address }}</td>
+                        <td data-label="Username">{{ $camera->camera_username }}</td>
+                        <td data-label="Password">{{ $camera->camera_password }}</td>
+                        <td data-label="Room No.">{{ $camera->room_no ?? 'N/A' }}</td>
+                        <td data-label="Action">
                             <div class="action-btns">
                                 <button class="edit-btn"
                                     onclick="openUpdateModal({{ $camera->camera_id }})">&#9998;</button>
@@ -598,9 +1116,9 @@
                         #addCameraModal .modal-form-group {
                             display: flex;
                             align-items: center;
-                            gap: 6px;
-                            margin-bottom: 4px;
-                            padding-bottom: 6px;
+                            gap: 4px;
+                            margin-bottom: 2px;
+                            padding-bottom: 4px;
                             position: relative;
                         }
 
@@ -625,7 +1143,7 @@
                             font-size: 0.8rem;
                             left: 130px;
                             right: 10px;
-                            bottom: -10px;
+                            bottom: -6px;
                             padding-left: 10px;
                             line-height: 1.1;
                             position: absolute;
@@ -712,9 +1230,9 @@
                         #updateCameraModal .modal-form-group {
                             display: flex;
                             align-items: center;
-                            gap: 6px;
-                            margin-bottom: 4px;
-                            padding-bottom: 6px;
+                            gap: 4px;
+                            margin-bottom: 2px;
+                            padding-bottom: 4px;
                             position: relative;
                         }
 
@@ -739,7 +1257,7 @@
                             font-size: 0.8rem;
                             left: 130px;
                             right: 10px;
-                            bottom: -10px;
+                            bottom: -6px;
                             padding-left: 10px;
                             line-height: 1.1;
                             position: absolute;
@@ -811,23 +1329,25 @@
 
     <!-- Delete Camera Modal -->
     <div id="deleteCameraModal" class="modal-overlay" style="display:none;">
-        <form id="deleteCameraForm" method="POST" class="modal-box">
+        <form id="deleteCameraForm" method="POST" class="modal-box" style="transform: scale(0.8); transform-origin: center;">
             @csrf
             @method('DELETE')
             <div class="modal-header delete">DELETE CAMERA</div>
-            <div style="padding: 20px 24px 24px;">
-                <div style="text-align: center; margin: 30px 0;">
-                    <div style="font-size: 4rem; color: #ff3636; margin-bottom: 20px;">⚠️</div>
-                    <div style="font-size: 1.2rem; color: #333; margin-bottom: 10px; font-weight: bold;">Are you sure?
-                    </div>
-                    <div style="font-size: 1rem; color: #666; line-height: 1.5;">This action cannot be undone. The camera
-                        and its live feed will be permanently deleted.</div>
-                </div>
-                <div class="modal-buttons" style="margin-top: 12px;">
-                    <button type="submit" class="modal-btn delete">Delete Camera</button>
-                    <button type="button" class="modal-btn cancel"
-                        onclick="closeModal('deleteCameraModal')">Cancel</button>
-                </div>
+
+            <!-- Warning Icon and Message -->
+            <div style="text-align: center; margin:0 px 0;">
+                <div style="font-size: 3.2rem; color: #ff3636; margin-bottom: 16px;">⚠️</div>
+                <div style="font-size: 0.96rem; color: #333; margin-bottom: 8px; font-weight: bold;">Are you sure?</div>
+                <div style="font-size: 0.8rem; color: #666; line-height: 1.5;">This action cannot be undone.<br> The camera and its live feed will be
+                    permanently deleted.</div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="modal-buttons">
+                <button type="submit" class="modal-btn delete">Delete</button>
+                <button type="button" class="modal-btn cancel" onclick="closeModal('deleteCameraModal')">
+                    Cancel
+                </button>
             </div>
         </form>
     </div>
@@ -836,7 +1356,18 @@
 @section('scripts')
     <script>
         function openModal(modalId) {
-            document.getElementById(modalId).style.display = 'flex';
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+
+            // For Add Camera Modal and Update Camera Modal, ensure slide-up class is removed for slide-down animation
+            if (modalId === 'addCameraModal' || modalId === 'updateCameraModal') {
+                const modalBox = modal.querySelector('.modal-box');
+                if (modalBox) {
+                    modalBox.classList.remove('slide-up');
+                }
+            }
+
+            modal.style.display = 'flex';
             
             // Initialize button states when opening modals
             if (modalId === 'addCameraModal') {
@@ -980,7 +1511,27 @@
 
         function closeModal(modalId) {
             const modal = document.getElementById(modalId);
-            if (modal) modal.style.display = 'none';
+            if (!modal) return;
+
+            // For Add Camera Modal and Update Camera Modal, add slide-up animation on mobile
+            if (modalId === 'addCameraModal' || modalId === 'updateCameraModal') {
+                const modalBox = modal.querySelector('.modal-box');
+                if (modalBox) {
+                    // Add slide-up animation class
+                    modalBox.classList.add('slide-up');
+                    
+                    // Wait for animation to complete, then hide modal
+                    setTimeout(() => {
+                        modal.style.display = 'none';
+                        modalBox.classList.remove('slide-up');
+                        resetModalForm(modalId);
+                    }, 300); // Match animation duration
+                    return;
+                }
+            }
+
+            // For other modals or if animation element not found, hide immediately
+            modal.style.display = 'none';
             if (modalId === 'addCameraModal' || modalId === 'updateCameraModal') {
                 resetModalForm(modalId);
             }
@@ -1407,10 +1958,8 @@
         document.addEventListener('click', function(e) {
             if (e.target.classList && e.target.classList.contains('modal-overlay')) {
                 const overlayId = e.target.id;
-                e.target.style.display = 'none';
-                if (overlayId === 'addCameraModal' || overlayId === 'updateCameraModal') {
-                    resetModalForm(overlayId);
-                }
+                // Use closeModal function to handle animations properly
+                closeModal(overlayId);
             }
         });
     </script>

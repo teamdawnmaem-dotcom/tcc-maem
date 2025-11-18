@@ -1287,7 +1287,7 @@
         
         <div style="display: flex; align-items: center; flex: 1;">
             <div class="header-title-block">
-                <span class="header-title">TAGOLOAN COMMUNITY COLLEGE</span>
+                <span class="header-title">MODERN ATTENDANCE ENHANCED MONITORING</span>
                 <span class="header-address">M.H del Pilar St. Baluarte, Tagoloan, Misamis Oriental</span>
             </div>
         </div>

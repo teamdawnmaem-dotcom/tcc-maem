@@ -172,6 +172,550 @@
             box-shadow: 0 0 0 2px #2222;
         }
 
+        /* Delete Modal - Scaled button styles (80%) */
+        #deleteTeachingLoadModal .modal-btn {
+            width: 160px;
+            padding: 11.2px 0;
+            font-size: 0.88rem;
+            border-radius: 4.8px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        #deleteTeachingLoadModal .modal-btn.delete {
+            padding: 11.2px 0;
+            border-radius: 4.8px;
+        }
+
+        #deleteTeachingLoadModal .modal-btn.cancel {
+            padding: 11.2px 0;
+            border-radius: 4.8px;
+        }
+
+        #deleteTeachingLoadModal .modal-buttons {
+            gap: 9.6px;
+            margin-top: 14.4px;
+        }
+
+        #deleteTeachingLoadModal .modal-header {
+            font-size: 1.152rem;
+            margin-bottom: 16px;
+        }
+
+        #deleteTeachingLoadModal .modal-box {
+            padding: 25.6px;
+        }
+
+        /* Slide-down animation for Add/Update Teaching Load Modals (mobile only) */
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Slide-up animation for Add/Update Teaching Load Modals (mobile only) */
+        @keyframes slideUp {
+            from {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+        }
+
+        #addTeachingLoadModal .modal-box.slide-up {
+            animation: slideUp 0.3s ease-out !important;
+        }
+
+        #updateTeachingLoadModal .modal-box.slide-up {
+            animation: slideUp 0.3s ease-out !important;
+        }
+
+        /* Mobile responsive design for 430px width */
+        @media (max-width: 430px) {
+            /* Faculty Header */
+            .faculty-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+                margin-top: 0;
+                margin-bottom: 24px;
+                position: relative;
+            }
+
+            .faculty-title-group {
+                width: 100%;
+            }
+
+            .faculty-title {
+                font-size: 1.4rem;
+                margin-bottom: 4px;
+            }
+
+            .faculty-subtitle {
+                font-size: 0.75rem;
+                margin-bottom: 0;
+            }
+
+            /* Actions Row - Mobile layout: Search bar on top, buttons below */
+            .faculty-actions-row {
+                position: relative;
+                width: 100%;
+                display: grid !important;
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: auto auto;
+                gap: 12px;
+                margin: 0 0 16px 0;
+                padding: 0;
+                top: auto;
+                right: auto;
+                z-index: 1;
+            }
+
+            .search-input {
+                grid-row: 1;
+                grid-column: 1 / -1;
+                width: 100% !important;
+                padding: 10px 12px !important;
+                font-size: 0.9rem !important;
+                border-radius: 6px;
+                margin: 0;
+                box-sizing: border-box;
+            }
+
+            /* Buttons - horizontal row below search bar */
+            .faculty-actions-row .csv-btn {
+                grid-row: 2;
+                grid-column: 1;
+                flex: 1 !important;
+                min-width: 0 !important;
+                padding: 11.2px 16px !important;
+                font-size: 0.88rem !important;
+                border-radius: 4.8px !important;
+                font-weight: bold;
+                white-space: nowrap;
+                margin: 0;
+                min-height: 44px;
+                box-sizing: border-box;
+            }
+
+            .faculty-actions-row .add-btn {
+                grid-row: 2;
+                grid-column: 2;
+                flex: 1 !important;
+                min-width: 0 !important;
+                padding: 11.2px 20px !important;
+                font-size: 0.88rem !important;
+                border-radius: 4.8px !important;
+                font-weight: bold;
+                white-space: nowrap;
+                margin: 0;
+                min-height: 44px;
+                box-sizing: border-box;
+            }
+
+            /* Table Container - Card Layout on Mobile */
+            .teaching-load-table-container {
+                border-radius: 8px;
+                overflow: visible;
+                background: transparent;
+                box-shadow: none;
+            }
+
+            .teaching-load-table-scroll {
+                max-height: none;
+                overflow: visible;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Hide table header on mobile */
+            .teaching-load-table thead {
+                display: none;
+            }
+
+            /* Transform table rows into cards */
+            .teaching-load-table {
+                width: 100%;
+                min-width: 0;
+                border-collapse: separate;
+                border-spacing: 0 12px;
+                display: block;
+            }
+
+            .teaching-load-table tbody {
+                display: block;
+            }
+
+            .teaching-load-table tr {
+                display: block;
+                background: #fff;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+                margin-bottom: 12px;
+                padding: 16px;
+                box-sizing: border-box;
+                border: 1px solid #e0e0e0;
+                transition: box-shadow 0.2s ease, transform 0.2s ease;
+            }
+
+            .teaching-load-table tr:hover {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+                transform: translateY(-1px);
+            }
+
+            .teaching-load-table tr:last-child {
+                margin-bottom: 0;
+            }
+
+            .teaching-load-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 0;
+                font-size: 0.85rem;
+                white-space: normal;
+                border: none;
+                text-align: left;
+                color: #222;
+            }
+
+            .teaching-load-table td:before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #555;
+                margin-right: 12px;
+                flex-shrink: 0;
+                min-width: 100px;
+                font-size: 0.8rem;
+            }
+
+            .teaching-load-table td:not([data-label="Action"]) {
+                border-bottom: 1px solid #f5f5f5;
+            }
+
+            .teaching-load-table td:last-child:not([data-label="Action"]) {
+                border-bottom: none;
+            }
+
+            /* Action column styling */
+            .teaching-load-table td[data-label="Action"] {
+                justify-content: flex-end;
+                padding-top: 12px;
+                border-top: 1px solid #f0f0f0;
+                margin-top: 8px;
+            }
+
+            .teaching-load-table td[data-label="Action"]:before {
+                display: none;
+            }
+
+            /* Empty state message */
+            .teaching-load-table td[colspan] {
+                display: block;
+                text-align: center;
+                font-size: 0.85rem;
+                padding: 40px 20px;
+                color: #666;
+                font-style: italic;
+            }
+
+            .teaching-load-table td[colspan]:before {
+                display: none;
+            }
+
+            /* Action Buttons */
+            .action-btns {
+                gap: 8px;
+                justify-content: flex-end;
+            }
+
+            .edit-btn,
+            .delete-btn {
+                width: 40px;
+                height: 36px;
+                font-size: 1.1rem;
+                border-radius: 6px;
+            }
+
+            /* Add Teaching Load Modal - Mobile */
+            #addTeachingLoadModal.modal-overlay {
+                padding: 0 !important;
+                align-items: flex-start !important;
+                justify-content: center !important;
+            }
+
+            #addTeachingLoadModal .modal-box {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                max-height: 100vh !important;
+                box-sizing: border-box !important;
+                border-radius: 0 !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+                animation: slideDown 0.3s ease-out !important;
+                transform: scale(1) !important;
+            }
+
+            #addTeachingLoadModal .modal-box form {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+            }
+
+            #addTeachingLoadModal .modal-header {
+                font-size: 1rem !important;
+                padding: 10px 14px !important;
+                flex-shrink: 0 !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+            }
+
+            #addTeachingLoadModal .modal-form {
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                -webkit-overflow-scrolling: touch !important;
+                padding: 12px 14px !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                margin: 0 !important;
+                max-height: calc(100vh - 60px) !important;
+            }
+
+            #addTeachingLoadModal .modal-form-group {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 2px !important;
+                margin-bottom: 6px !important;
+                padding-bottom: 10px !important;
+            }
+
+            #addTeachingLoadModal .modal-form-group label {
+                min-width: auto !important;
+                width: 100% !important;
+                margin-bottom: 2px !important;
+                font-size: 0.7rem !important;
+            }
+
+            #addTeachingLoadModal .modal-form-group input,
+            #addTeachingLoadModal .modal-form-group select {
+                width: 100% !important;
+                padding: 8px 10px !important;
+                font-size: 0.85rem !important;
+            }
+
+            #addTeachingLoadModal .validation-message {
+                position: relative !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                padding-left: 0 !important;
+                margin-top: 2px !important;
+                font-size: 0.65rem !important;
+            }
+
+            #addTeachingLoadModal .modal-buttons {
+                flex-direction: row !important;
+                justify-content: center !important;
+                align-items: center !important;
+                gap: 0.75rem !important;
+                margin-top: 12px !important;
+                position: sticky !important;
+                bottom: 0 !important;
+                background: #fff !important;
+                padding-top: 12px !important;
+                padding-bottom: 12px !important;
+            }
+
+            #addTeachingLoadModal .modal-btn {
+                flex: 1 !important;
+                max-width: none !important;
+                padding: 10px !important;
+                font-size: 0.85rem !important;
+                min-height: 44px !important;
+            }
+
+            /* Update Teaching Load Modal - Mobile */
+            #updateTeachingLoadModal.modal-overlay {
+                padding: 0 !important;
+                align-items: flex-start !important;
+                justify-content: center !important;
+            }
+
+            #updateTeachingLoadModal .modal-box {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                max-height: 100vh !important;
+                box-sizing: border-box !important;
+                border-radius: 0 !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+                animation: slideDown 0.3s ease-out !important;
+                transform: scale(1) !important;
+            }
+
+            #updateTeachingLoadModal .modal-box form {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+            }
+
+            #updateTeachingLoadModal .modal-header {
+                font-size: 1rem !important;
+                padding: 10px 14px !important;
+                flex-shrink: 0 !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+            }
+
+            #updateTeachingLoadModal .modal-form {
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                -webkit-overflow-scrolling: touch !important;
+                padding: 12px 14px !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                margin: 0 !important;
+                max-height: calc(100vh - 60px) !important;
+            }
+
+            #updateTeachingLoadModal .modal-form-group {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 2px !important;
+                margin-bottom: 6px !important;
+                padding-bottom: 10px !important;
+            }
+
+            #updateTeachingLoadModal .modal-form-group label {
+                min-width: auto !important;
+                width: 100% !important;
+                margin-bottom: 2px !important;
+                font-size: 0.7rem !important;
+            }
+
+            #updateTeachingLoadModal .modal-form-group input,
+            #updateTeachingLoadModal .modal-form-group select {
+                width: 100% !important;
+                padding: 8px 10px !important;
+                font-size: 0.85rem !important;
+            }
+
+            #updateTeachingLoadModal .validation-message {
+                position: relative !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                padding-left: 0 !important;
+                margin-top: 2px !important;
+                font-size: 0.65rem !important;
+            }
+
+            #updateTeachingLoadModal .modal-buttons {
+                flex-direction: row !important;
+                justify-content: center !important;
+                align-items: center !important;
+                gap: 0.75rem !important;
+                margin-top: 12px !important;
+                position: sticky !important;
+                bottom: 0 !important;
+                background: #fff !important;
+                padding-top: 12px !important;
+                padding-bottom: 12px !important;
+            }
+
+            #updateTeachingLoadModal .modal-btn {
+                flex: 1 !important;
+                max-width: none !important;
+                padding: 10px !important;
+                font-size: 0.85rem !important;
+                min-height: 44px !important;
+            }
+
+            /* Delete Teaching Load Modal - Mobile Compact */
+            #deleteTeachingLoadModal .modal-box {
+                width: 85vw !important;
+                max-width: 85vw !important;
+                padding: 20px 16px !important;
+                transform: scale(1) !important;
+            }
+
+            #deleteTeachingLoadModal .modal-header {
+                font-size: 1rem !important;
+                margin-bottom: 12px !important;
+            }
+
+            /* Warning Icon and Message - More Compact */
+            #deleteTeachingLoadModal .modal-box > div[style*="text-align: center"] {
+                margin: 0 !important;
+            }
+
+            #deleteTeachingLoadModal .modal-box > div[style*="text-align: center"] > div:first-of-type {
+                font-size: 2.5rem !important;
+                margin-bottom: 12px !important;
+            }
+
+            #deleteTeachingLoadModal .modal-box > div[style*="text-align: center"] > div:nth-of-type(2) {
+                font-size: 0.85rem !important;
+                margin-bottom: 6px !important;
+            }
+
+            #deleteTeachingLoadModal .modal-box > div[style*="text-align: center"] > div:nth-of-type(3) {
+                font-size: 0.75rem !important;
+                line-height: 1.4 !important;
+            }
+
+            #deleteTeachingLoadModal .modal-buttons {
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: center !important;
+                align-items: center !important;
+                gap: 0.75rem !important;
+                margin-top: 16px !important;
+            }
+
+            #deleteTeachingLoadModal .modal-btn {
+                flex: 1 !important;
+                max-width: 140px !important;
+                width: auto !important;
+                padding: 10px 16px !important;
+                font-size: 0.85rem !important;
+                min-height: 40px !important;
+                box-sizing: border-box !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                text-align: center !important;
+                white-space: nowrap !important;
+            }
+        }
+
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -636,18 +1180,18 @@
                             data-department="{{ $department }}" 
                             data-year="{{ $year }}" 
                             data-section="{{ $section }}">
-                            <td>{{ $load->teaching_load_id }}</td>
-                            <td class="faculty" data-id="{{ $load->faculty_id }}">
+                            <td data-label="ID">{{ $load->teaching_load_id }}</td>
+                            <td data-label="Instructor" class="faculty" data-id="{{ $load->faculty_id }}">
                                 {{ $load->faculty->faculty_fname }} {{ $load->faculty->faculty_lname }}
                             </td>
-                            <td class="course">{{ $load->teaching_load_course_code }}</td>
-                            <td class="subject">{{ $load->teaching_load_subject }}</td>
-                            <td class="class-section">{{ $load->teaching_load_class_section }}</td>
-                            <td class="day">{{ $load->teaching_load_day_of_week }}</td>
-                            <td class="time-in">{{ \Carbon\Carbon::createFromFormat('H:i:s', $load->teaching_load_time_in)->format('g:i a') }}</td>
-                            <td class="time-out">{{ \Carbon\Carbon::createFromFormat('H:i:s', $load->teaching_load_time_out)->format('g:i a') }}</td>
-                            <td class="room" data-room-no="{{ $load->room_no }}">{{ $load->room->room_name ?? $load->room_no }}</td>
-                            <td>
+                            <td data-label="Course Code" class="course">{{ $load->teaching_load_course_code }}</td>
+                            <td data-label="Subject" class="subject">{{ $load->teaching_load_subject }}</td>
+                            <td data-label="Class Section" class="class-section">{{ $load->teaching_load_class_section }}</td>
+                            <td data-label="Day" class="day">{{ $load->teaching_load_day_of_week }}</td>
+                            <td data-label="Time In" class="time-in">{{ \Carbon\Carbon::createFromFormat('H:i:s', $load->teaching_load_time_in)->format('g:i a') }}</td>
+                            <td data-label="Time Out" class="time-out">{{ \Carbon\Carbon::createFromFormat('H:i:s', $load->teaching_load_time_out)->format('g:i a') }}</td>
+                            <td data-label="Room Name" class="room" data-room-no="{{ $load->room_no }}">{{ $load->room->room_name ?? $load->room_no }}</td>
+                            <td data-label="Action">
                                 <div class="action-btns">
                                     <button class="edit-btn"
                                         onclick="openUpdateModal({{ $load->teaching_load_id }})">&#9998;</button>
@@ -1137,18 +1681,18 @@
 
             <!-- Warning Icon and Message -->
             <div style="text-align: center; margin:0 px 0;">
-                <div style="font-size: 4rem; color: #ff3636; margin-bottom: 20px;">⚠️</div>
-                <div style="font-size: 1.2rem; color: #333; margin-bottom: 10px; font-weight: bold;">Are you sure?</div>
-                <div style="font-size: 1rem; color: #666; line-height: 1.5;">
-                    This action cannot be undone. The teaching load will be permanently deleted.
-                </div>
+                <div style="font-size: 3.2rem; color: #ff3636; margin-bottom: 16px;">⚠️</div>
+                <div style="font-size: 0.96rem; color: #333; margin-bottom: 8px; font-weight: bold;">Are you sure?</div>
+                <div style="font-size: 0.8rem; color: #666; line-height: 1.5;">This action cannot be undone.<br> The teaching load will be
+                    permanently deleted.</div>
             </div>
 
             <!-- Action Buttons -->
-            <div class="modal-buttons" style="display: flex; gap: 12px; justify-content: center; margin-top: 12px;">
-                <button type="submit" class="modal-btn delete" style="min-width: 250px;">Delete Teaching Load</button>
-                <button type="button" class="modal-btn cancel" style="min-width: 250px;"
-                    onclick="closeModal('deleteTeachingLoadModal')">Cancel</button>
+            <div class="modal-buttons">
+                <button type="submit" class="modal-btn delete">Delete</button>
+                <button type="button" class="modal-btn cancel" onclick="closeModal('deleteTeachingLoadModal')">
+                    Cancel
+                </button>
             </div>
         </form>
     </div>
@@ -1220,7 +1764,18 @@
 @section('scripts')
     <script>
         function openModal(id) {
-            document.getElementById(id).style.display = 'flex';
+            const modal = document.getElementById(id);
+            if (!modal) return;
+
+            // For Add Teaching Load Modal and Update Teaching Load Modal, ensure slide-up class is removed for slide-down animation
+            if (id === 'addTeachingLoadModal' || id === 'updateTeachingLoadModal') {
+                const modalBox = modal.querySelector('.modal-box');
+                if (modalBox) {
+                    modalBox.classList.remove('slide-up');
+                }
+            }
+
+            modal.style.display = 'flex';
             
             // Initialize button states when opening modals
             if (id === 'addTeachingLoadModal') {
@@ -1272,7 +1827,27 @@
 
         function closeModal(id) {
             const modal = document.getElementById(id);
-            if (modal) modal.style.display = 'none';
+            if (!modal) return;
+
+            // For Add Teaching Load Modal and Update Teaching Load Modal, add slide-up animation on mobile
+            if (id === 'addTeachingLoadModal' || id === 'updateTeachingLoadModal') {
+                const modalBox = modal.querySelector('.modal-box');
+                if (modalBox) {
+                    // Add slide-up animation class
+                    modalBox.classList.add('slide-up');
+                    
+                    // Wait for animation to complete, then hide modal
+                    setTimeout(() => {
+                        modal.style.display = 'none';
+                        modalBox.classList.remove('slide-up');
+                        resetModalForm(id);
+                    }, 300); // Match animation duration
+                    return;
+                }
+            }
+
+            // For other modals or if animation element not found, hide immediately
+            modal.style.display = 'none';
             if (id === 'addTeachingLoadModal' || id === 'updateTeachingLoadModal') {
                 resetModalForm(id);
             } else if (id === 'csvUploadModal') {
@@ -1423,21 +1998,8 @@
         document.addEventListener('click', function(e) {
             if (e.target.classList && e.target.classList.contains('modal-overlay')) {
                 const overlayId = e.target.id;
-                e.target.style.display = 'none';
-                if (overlayId === 'addTeachingLoadModal' || overlayId === 'updateTeachingLoadModal') {
-                    resetModalForm(overlayId);
-                } else if (overlayId === 'csvUploadModal') {
-                    const form = document.getElementById('csvUploadForm');
-                    if (form) {
-                        form.reset();
-                    }
-                    // Reset file name display
-                    const fileNameDiv = document.getElementById('csvFileName');
-                    if (fileNameDiv) {
-                        fileNameDiv.style.display = 'none';
-                        fileNameDiv.textContent = '';
-                    }
-                }
+                // Use closeModal function to handle animations properly
+                closeModal(overlayId);
             }
         });
 

@@ -316,6 +316,154 @@
             color: #ff8c00 !important;
             font-weight: bold !important;
         }
+
+        /* Mobile Responsive Design for phones (max-width: 430px) */
+        @media (max-width: 430px) {
+            /* Table Container - Card Layout on Mobile */
+            .teaching-load-table-container {
+                border-radius: 8px;
+                overflow: visible;
+                background: transparent;
+                box-shadow: none;
+            }
+
+            .teaching-load-table-scroll {
+                max-height: none;
+                overflow: visible;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Hide table header on mobile */
+            .teaching-load-table thead {
+                display: none;
+            }
+
+            /* Transform table rows into cards */
+            .teaching-load-table {
+                width: 100%;
+                min-width: 0;
+                border-collapse: separate;
+                border-spacing: 0 12px;
+                display: block;
+            }
+
+            .teaching-load-table tbody {
+                display: block;
+            }
+
+            .teaching-load-table tr {
+                display: block;
+                background: #fff;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+                margin-bottom: 12px;
+                padding: 16px;
+                box-sizing: border-box;
+                border: 1px solid #e0e0e0;
+                transition: box-shadow 0.2s ease, transform 0.2s ease;
+            }
+
+            .teaching-load-table tr:hover {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+                transform: translateY(-1px);
+                background: #fff2e6;
+            }
+
+            .teaching-load-table tr:last-child {
+                margin-bottom: 0;
+            }
+
+            .teaching-load-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 0;
+                font-size: 0.8rem;
+                white-space: normal;
+                border: none;
+                text-align: left;
+                color: #222;
+            }
+
+            .teaching-load-table td:before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #555;
+                margin-right: 12px;
+                flex-shrink: 0;
+                min-width: 110px;
+                font-size: 0.75rem;
+            }
+
+            .teaching-load-table td:not(:last-child) {
+                border-bottom: 1px solid #f5f5f5;
+            }
+
+            /* Archive Info special styling for mobile */
+            .teaching-load-table td[data-label="Archive Info"] {
+                flex-direction: column;
+                align-items: flex-start;
+                padding-bottom: 12px;
+                border-bottom: 2px solid #e0e0e0;
+                margin-bottom: 8px;
+            }
+
+            .teaching-load-table td[data-label="Archive Info"]:before {
+                display: none;
+            }
+
+            .teaching-load-table td[data-label="Archive Info"] .archive-info {
+                width: 100%;
+            }
+
+            .teaching-load-table td[data-label="Archive Info"] .archive-info h4 {
+                font-size: 1rem;
+                margin-bottom: 4px;
+            }
+
+            .teaching-load-table td[data-label="Archive Info"] .archive-info p {
+                font-size: 0.85rem;
+                margin-bottom: 4px;
+            }
+
+            .teaching-load-table td[data-label="Archive Info"] .archive-info small {
+                font-size: 0.7rem;
+            }
+
+            /* Empty state message */
+            .teaching-load-table td[colspan] {
+                display: block;
+                text-align: center;
+                font-size: 0.85rem;
+                padding: 40px 20px;
+                color: #666;
+                font-style: italic;
+            }
+
+            .teaching-load-table td[colspan]:before {
+                display: none;
+            }
+
+            /* Filter section mobile adjustments */
+            .filter-section {
+                padding: 16px;
+                margin-bottom: 16px;
+            }
+
+            .filter-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .search-section {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .search-group {
+                width: 100%;
+            }
+        }
     </style>
 @endsection
 
@@ -417,7 +565,7 @@
                 <tbody>
                     @forelse($archivedRecords as $record)
                         <tr data-school-year="{{ $record->school_year }}" data-semester="{{ $record->semester }}" data-faculty="{{ $record->faculty ? $record->faculty->faculty_fname . ' ' . $record->faculty->faculty_lname : 'Unknown Faculty' }}">
-                            <td>
+                            <td data-label="Archive Info">
                                 <div class="archive-info">
                                     <h4>{{ $record->school_year }}</h4>
                                     <p>{{ $record->semester }}</p>
@@ -433,13 +581,13 @@
                                     </small>
                                 </div>
                             </td>
-                            <td>{{ $record->faculty ? $record->faculty->faculty_fname . ' ' . $record->faculty->faculty_lname : 'Unknown Faculty' }}</td>
-                            <td>{{ $record->faculty ? $record->faculty->faculty_department : 'Unknown Department' }}</td>
-                            <td>{{ $record->teachingLoadArchive ? $record->teachingLoadArchive->teaching_load_course_code : 'N/A' }}</td>
-                            <td>{{ $record->teachingLoadArchive ? $record->teachingLoadArchive->teaching_load_subject : 'N/A' }}</td>
-                            <td>{{ $record->teachingLoadArchive ? $record->teachingLoadArchive->teaching_load_class_section : 'N/A' }}</td>
-                            <td>{{ $record->teachingLoadArchive ? $record->teachingLoadArchive->teaching_load_day_of_week : 'N/A' }}</td>
-                            <td>
+                            <td data-label="Faculty">{{ $record->faculty ? $record->faculty->faculty_fname . ' ' . $record->faculty->faculty_lname : 'Unknown Faculty' }}</td>
+                            <td data-label="Department">{{ $record->faculty ? $record->faculty->faculty_department : 'Unknown Department' }}</td>
+                            <td data-label="Course Code">{{ $record->teachingLoadArchive ? $record->teachingLoadArchive->teaching_load_course_code : 'N/A' }}</td>
+                            <td data-label="Subject">{{ $record->teachingLoadArchive ? $record->teachingLoadArchive->teaching_load_subject : 'N/A' }}</td>
+                            <td data-label="Class Section">{{ $record->teachingLoadArchive ? $record->teachingLoadArchive->teaching_load_class_section : 'N/A' }}</td>
+                            <td data-label="Day">{{ $record->teachingLoadArchive ? $record->teachingLoadArchive->teaching_load_day_of_week : 'N/A' }}</td>
+                            <td data-label="Schedule">
                                 @if($record->teachingLoadArchive)
                                     @php
                                         try {
@@ -455,7 +603,7 @@
                                     N/A
                                 @endif
                             </td>
-                            <td>
+                            <td data-label="Date">
                                 @php
                                     try {
                                         $recordDate = \Carbon\Carbon::parse($record->record_date)->format('M d, Y');
@@ -465,7 +613,7 @@
                                 @endphp
                                 {{ $recordDate }}
                             </td>
-                            <td>
+                            <td data-label="Time In">
                                 @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP' || !$record->record_time_in)
                                     <span style="color: #999;">N/A</span>
                                 @else
@@ -479,7 +627,7 @@
                                     {{ $timeIn }}
                                 @endif
                             </td>
-                            <td>
+                            <td data-label="Time Out">
                                 @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP' || !$record->record_time_out)
                                     <span style="color: #999;">N/A</span>
                                 @else
@@ -493,7 +641,7 @@
                                     {{ $timeOut }}
                                 @endif
                             </td>
-                            <td>
+                            <td data-label="Duration">
                                 @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP')
                                     <span style="color: #999;">0</span>
                                 @elseif($record->time_duration_seconds == 0)
@@ -502,10 +650,10 @@
                                     {{ intval($record->time_duration_seconds / 60) }}m {{ $record->time_duration_seconds % 60 }}s
                                 @endif
                             </td>
-                            <td>{{ $record->camera && $record->camera->room ? $record->camera->room->room_name : 'Unknown Room' }}</td>
-                            <td>{{ $record->camera && $record->camera->room ? $record->camera->room->room_building_no : 'Unknown Building' }}</td>
-                            <td>{{ $record->record_status }}</td>
-                            <td>
+                            <td data-label="Room">{{ $record->camera && $record->camera->room ? $record->camera->room->room_name : 'Unknown Room' }}</td>
+                            <td data-label="Building">{{ $record->camera && $record->camera->room ? $record->camera->room->room_building_no : 'Unknown Building' }}</td>
+                            <td data-label="Status">{{ $record->record_status }}</td>
+                            <td data-label="Remarks">
                                 @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE')
                                     <span class="remarks-on-leave">{{ $record->record_remarks }}</span>
                                 @elseif(strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP')
@@ -541,8 +689,12 @@
             const faculty = document.getElementById('facultyFilter').value;
             
             const rows = document.querySelectorAll('.teaching-load-table tbody tr');
+            let isMobile = window.innerWidth <= 430;
             
             rows.forEach(row => {
+                // Skip the "no results" row if it exists
+                if (row.classList.contains('no-results')) return;
+
                 const rowSchoolYear = row.dataset.schoolYear;
                 const rowSemester = row.dataset.semester;
                 const rowFaculty = row.dataset.faculty;
@@ -553,7 +705,8 @@
                 if (semester && rowSemester !== semester) show = false;
                 if (faculty && rowFaculty !== faculty) show = false;
                 
-                row.style.display = show ? '' : 'none';
+                // Use block for mobile (cards), table-row for desktop
+                row.style.display = show ? (isMobile ? 'block' : '') : 'none';
             });
         }
 
@@ -563,8 +716,14 @@
             document.getElementById('facultyFilter').value = '';
             
             const rows = document.querySelectorAll('.teaching-load-table tbody tr');
+            let isMobile = window.innerWidth <= 430;
+            
             rows.forEach(row => {
-                row.style.display = '';
+                // Skip the "no results" row if it exists
+                if (row.classList.contains('no-results')) return;
+                
+                // Use block for mobile (cards), table-row for desktop
+                row.style.display = isMobile ? 'block' : '';
             });
         }
 
@@ -573,6 +732,7 @@
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
             const rows = document.querySelectorAll('.teaching-load-table tbody tr');
             let anyVisible = false;
+            let isMobile = window.innerWidth <= 430;
 
             rows.forEach(row => {
                 // Skip the "no results" row if it exists
@@ -580,7 +740,8 @@
 
                 let text = row.textContent.toLowerCase();
                 if (text.includes(searchTerm)) {
-                    row.style.display = '';
+                    // Use block for mobile (cards), table-row for desktop
+                    row.style.display = isMobile ? 'block' : '';
                     anyVisible = true;
                 } else {
                     row.style.display = 'none';
@@ -599,6 +760,8 @@
                         `<td colspan="16" style="text-align:center; padding:20px; color:#999; font-style:italic;">No results found</td>`;
                     tbody.appendChild(noResultsRow);
                 }
+                // Ensure no-results row is visible
+                noResultsRow.style.display = isMobile ? 'block' : '';
             } else {
                 if (noResultsRow) noResultsRow.remove();
             }

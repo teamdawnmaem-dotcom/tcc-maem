@@ -154,7 +154,7 @@ class FacultyController extends Controller
             $faculty = Faculty::findOrFail($faculty_id);
             
             // Get faculty images
-            $faculty_images = json_decode($faculty->faculty_images, true) ?? [];
+            $faculty_images = $this->normalizeFacultyImages($faculty->faculty_images);
             
             if (empty($faculty_images)) {
                 return response()->json([
@@ -243,7 +243,7 @@ class FacultyController extends Controller
             'faculty_fname' => $request->faculty_fname,
             'faculty_lname' => $request->faculty_lname,
             'faculty_department' => $request->faculty_department,
-            'faculty_images' => json_encode($images)
+            'faculty_images' => $images
         ]);
 
         // Log the action
@@ -272,7 +272,7 @@ class FacultyController extends Controller
             'faculty_images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
-        $images = json_decode($faculty->faculty_images, true) ?? [];
+        $images = $this->normalizeFacultyImages($faculty->faculty_images);
 
         if($request->hasFile('faculty_images')){
             foreach($request->file('faculty_images') as $image){
@@ -285,7 +285,7 @@ class FacultyController extends Controller
             'faculty_fname' => $request->faculty_fname,
             'faculty_lname' => $request->faculty_lname,
             'faculty_department' => $request->faculty_department,
-            'faculty_images' => json_encode($images)
+            'faculty_images' => $images
         ]);
 
         // Log the action
@@ -307,11 +307,9 @@ class FacultyController extends Controller
     {
         $faculty = Faculty::findOrFail($id);
 
-        if($faculty->faculty_images){
-            $images = json_decode($faculty->faculty_images, true);
-            foreach($images as $img){
-                Storage::disk('public')->delete($img);
-            }
+        $images = $this->normalizeFacultyImages($faculty->faculty_images);
+        foreach($images as $img){
+            Storage::disk('public')->delete($img);
         }
         $facultyId = $faculty->faculty_id;
         $faculty->delete();
@@ -341,6 +339,20 @@ class FacultyController extends Controller
     // -----------------------------
     // Trigger embedding update
     // -----------------------------
+    private function normalizeFacultyImages($value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (is_string($value) && $value !== '') {
+            $decoded = json_decode($value, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return [];
+    }
+
     private function triggerEmbeddingUpdate($faculty_id)
     {
         try {

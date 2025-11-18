@@ -618,51 +618,98 @@
                 text-align: center;
             }
 
-            /* Table Container */
+            /* Table Container - Card Layout on Mobile */
             .teaching-load-table-container {
                 border-radius: 8px;
-                overflow: hidden;
+                overflow: visible;
+                background: transparent;
+                box-shadow: none;
             }
 
             .teaching-load-table-scroll {
-                max-height: 50vh;
-                overflow-x: auto;
-                overflow-y: auto;
+                max-height: none;
+                overflow: visible;
                 -webkit-overflow-scrolling: touch;
             }
 
-            .teaching-load-table {
-                min-width: 900px; /* Minimum width to maintain readability */
+            /* Hide table header on mobile */
+            .teaching-load-table thead {
+                display: none;
             }
 
-            .teaching-load-table th {
-                padding: 10px 6px;
-                font-size: 0.7rem;
-                white-space: nowrap;
+            /* Transform table rows into cards */
+            .teaching-load-table {
+                width: 100%;
+                min-width: 0;
+                border-collapse: separate;
+                border-spacing: 0 12px;
+                display: block;
+            }
+
+            .teaching-load-table tbody {
+                display: block;
+            }
+
+            .teaching-load-table tr {
+                display: block;
+                background: #fff;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+                margin-bottom: 12px;
+                padding: 16px;
+                box-sizing: border-box;
+                border: 1px solid #e0e0e0;
+                transition: box-shadow 0.2s ease, transform 0.2s ease;
+            }
+
+            .teaching-load-table tr:hover {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+                transform: translateY(-1px);
+                background: #fff2e6;
+            }
+
+            .teaching-load-table tr:last-child {
+                margin-bottom: 0;
             }
 
             .teaching-load-table td {
-                padding: 8px 6px;
-                font-size: 0.7rem;
-                white-space: nowrap;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 0;
+                font-size: 0.8rem;
+                white-space: normal;
+                border: none;
+                text-align: left;
+                color: #222;
+            }
+
+            .teaching-load-table td:before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #555;
+                margin-right: 12px;
+                flex-shrink: 0;
+                min-width: 110px;
+                font-size: 0.75rem;
+            }
+
+            .teaching-load-table td:not(:last-child) {
+                border-bottom: 1px solid #f5f5f5;
             }
 
             /* Empty state message */
             .teaching-load-table td[colspan] {
-                font-size: 0.75rem;
-                padding: 20px 12px;
+                display: block;
+                text-align: center;
+                font-size: 0.85rem;
+                padding: 40px 20px;
+                color: #666;
+                font-style: italic;
             }
 
-            /* Action Buttons */
-            .action-btns {
-                gap: 6px;
-            }
-
-            .edit-btn,
-            .delete-btn {
-                width: 32px;
-                height: 28px;
-                font-size: 0.9rem;
+            .teaching-load-table td[colspan]:before {
+                display: none;
             }
 
             /* Modals - Mobile Optimized */
@@ -1027,17 +1074,17 @@
                             data-department="{{ $department }}" 
                             data-year="{{ $year }}" 
                             data-section="{{ $section }}">
-                            <td>{{ $load->teaching_load_id }}</td>
-                            <td class="faculty" data-id="{{ $load->faculty_id }}">
+                            <td data-label="ID">{{ $load->teaching_load_id }}</td>
+                            <td class="faculty" data-id="{{ $load->faculty_id }}" data-label="Instructor">
                                 {{ $load->faculty->faculty_fname }} {{ $load->faculty->faculty_lname }}
                             </td>
-                            <td class="course">{{ $load->teaching_load_course_code }}</td>
-                            <td class="subject">{{ $load->teaching_load_subject }}</td>
-                            <td class="class-section">{{ $load->teaching_load_class_section }}</td>
-                            <td class="day">{{ $load->teaching_load_day_of_week }}</td>
-                            <td class="time-in">{{ \Carbon\Carbon::createFromFormat('H:i:s', $load->teaching_load_time_in)->format('g:i a') }}</td>
-                            <td class="time-out">{{ \Carbon\Carbon::createFromFormat('H:i:s', $load->teaching_load_time_out)->format('g:i a') }}</td>
-                            <td class="room" data-room-no="{{ $load->room_no }}">{{ $load->room->room_name ?? $load->room_no }}</td>
+                            <td class="course" data-label="Course Code">{{ $load->teaching_load_course_code }}</td>
+                            <td class="subject" data-label="Subject">{{ $load->teaching_load_subject }}</td>
+                            <td class="class-section" data-label="Class Section">{{ $load->teaching_load_class_section }}</td>
+                            <td class="day" data-label="Day">{{ $load->teaching_load_day_of_week }}</td>
+                            <td class="time-in" data-label="Time In">{{ \Carbon\Carbon::createFromFormat('H:i:s', $load->teaching_load_time_in)->format('g:i a') }}</td>
+                            <td class="time-out" data-label="Time Out">{{ \Carbon\Carbon::createFromFormat('H:i:s', $load->teaching_load_time_out)->format('g:i a') }}</td>
+                            <td class="room" data-room-no="{{ $load->room_no }}" data-label="Room Name">{{ $load->room->room_name ?? $load->room_no }}</td>
                             
                         </tr>
                     @empty
@@ -1772,6 +1819,7 @@
             let searchTerm = this.value.toLowerCase();
             let rows = document.querySelectorAll('.teaching-load-table tbody tr');
             let anyVisible = false;
+            let isMobile = window.innerWidth <= 430;
 
             rows.forEach(row => {
                 // Skip the "no results" row if it exists
@@ -1779,7 +1827,8 @@
 
                 let text = row.textContent.toLowerCase();
                 if (text.includes(searchTerm)) {
-                    row.style.display = '';
+                    // Use block for mobile (cards), table-row for desktop
+                    row.style.display = isMobile ? 'block' : '';
                     anyVisible = true;
                 } else {
                     row.style.display = 'none';
@@ -1798,6 +1847,8 @@
                         `<td colspan="9" style="text-align:center; padding:20px; color:#999; font-style:italic;">No results found</td>`;
                     tbody.appendChild(noResultsRow);
                 }
+                // Ensure no-results row is visible
+                noResultsRow.style.display = isMobile ? 'block' : '';
             } else {
                 if (noResultsRow) noResultsRow.remove();
             }

@@ -7,7 +7,10 @@
 @section('styles')
     <style>
         .faculty-header {
-            margin-bottom: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 32px;
         }
 
         .faculty-title-group {
@@ -24,38 +27,35 @@
         .faculty-subtitle {
             font-size: 0.8rem;
             color: #666;
-            margin-bottom: 0;
+            margin-bottom: 24px;
         }
 
         .faculty-actions-row {
             display: flex;
             gap: 8px;
-            margin-top: 16px;
-            margin-bottom: 32px;
-            width: 100%;
-            align-items: stretch;
+            position: absolute;
+            top: 104px;
+            right: 32px;
+            z-index: 100;
         }
 
         .search-input {
-            padding: 10px 12px;
-            font-size: 14px;
+            padding: 6.4px;
+            font-size: 11.2px;
             border: 1px solid #ccc;
-            border-radius: 4px;
-            flex: 1;
-            min-width: 0;
-            box-sizing: border-box;
+            border-radius: 3.2px;
+            width: 320px;
         }
 
         .csv-btn {
-            padding: 10px 24px;
-            font-size: 14px;
+            padding: 6px 19px;
+            font-size: 11.2px;
             border: none;
-            border-radius: 4px;
+            border-radius: 3.2px;
             background-color: #3498db;
             color: #fff;
             cursor: pointer;
             font-weight: bold;
-            white-space: nowrap;
             transition: background-color 0.2s;
         }
 
@@ -64,15 +64,35 @@
         }
 
         .add-btn {
-            padding: 10px 24px;
-            font-size: 14px;
+            padding: 6px 19px;
+            font-size: 11.2px;
             border: none;
-            border-radius: 4px;
+            border-radius: 3.2px;
             background-color: #2ecc71;
             color: #fff;
             cursor: pointer;
             font-weight: bold;
-            white-space: nowrap;
+        }
+
+        /* Legacy classes for mobile compatibility */
+        .faculty-actions-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 0;
+            margin-bottom: 32px;
+            width: 100%;
+        }
+
+        .search-row {
+            width: 100%;
+        }
+
+        .buttons-row {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+            align-items: stretch;
         }
 
         .subject-table-container {
@@ -171,6 +191,76 @@
             box-shadow: 0 0 0 2px #2222;
         }
 
+        /* Delete Modal - Scaled button styles (80%) */
+        #deleteSubjectModal .modal-btn {
+            width: 160px;
+            padding: 11.2px 0;
+            font-size: 0.88rem;
+            border-radius: 4.8px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        #deleteSubjectModal .modal-btn.delete {
+            padding: 11.2px 0;
+            border-radius: 4.8px;
+        }
+
+        #deleteSubjectModal .modal-btn.cancel {
+            padding: 11.2px 0;
+            border-radius: 4.8px;
+        }
+
+        #deleteSubjectModal .modal-buttons {
+            gap: 9.6px;
+            margin-top: 14.4px;
+        }
+
+        #deleteSubjectModal .modal-header {
+            font-size: 1.152rem;
+            margin-bottom: 16px;
+        }
+
+        #deleteSubjectModal .modal-box {
+            padding: 25.6px;
+        }
+
+        /* Slide-down animation for Add/Update Subject Modals (mobile only) */
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Slide-up animation for Add/Update Subject Modals (mobile only) */
+        @keyframes slideUp {
+            from {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+        }
+
+        #addSubjectModal .modal-box.slide-up {
+            animation: slideUp 0.3s ease-out !important;
+        }
+
+        #updateSubjectModal .modal-box.slide-up {
+            animation: slideUp 0.3s ease-out !important;
+        }
+
         /* Mobile responsive design for 430px width */
         @media (max-width: 430px) {
             /* Faculty Header */
@@ -178,7 +268,7 @@
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 16px;
-                margin-top: -40px;
+                margin-top: 0;
                 margin-bottom: 24px;
                 position: relative;
             }
@@ -197,266 +287,625 @@
                 margin-bottom: 0;
             }
 
-            /* Actions Row - Side by side on mobile */
+            /* Actions Row - Mobile layout: Search bar on top, buttons below */
             .faculty-actions-row {
                 position: relative;
-                top: 0;
-                right: 0;
                 width: 100%;
-                flex-direction: row;
-                gap: 8px;
-                z-index: 1;
-                margin: 0;
+                display: grid !important;
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: auto auto;
+                gap: 12px;
+                margin: 0 0 16px 0;
                 padding: 0;
+                top: auto;
+                right: auto;
+                z-index: 1;
             }
 
             .search-input {
-                flex: 1;
-                padding: 10px 12px;
-                margin-top: -50px;
-                margin-bottom: 60px;
-                font-size: 0.9rem;
+                grid-row: 1;
+                grid-column: 1 / -1;
+                width: 100% !important;
+                padding: 10px 12px !important;
+                font-size: 0.9rem !important;
                 border-radius: 6px;
                 margin: 0;
+                box-sizing: border-box;
             }
 
-            .csv-btn {
-                padding: 10px 8px;
-                font-size: 0.85rem;
-                border-radius: 6px;
+            /* Buttons - horizontal row below search bar */
+            .faculty-actions-row .csv-btn {
+                grid-row: 2;
+                grid-column: 1;
+                flex: 1 !important;
+                min-width: 0 !important;
+                padding: 11.2px 16px !important;
+                font-size: 0.88rem !important;
+                border-radius: 4.8px !important;
                 font-weight: bold;
                 white-space: nowrap;
                 margin: 0;
+                min-height: 44px;
+                box-sizing: border-box;
             }
 
-            .add-btn {
-                padding: 10px 8px;
-                font-size: 0.85rem;
-                border-radius: 6px;
+            .faculty-actions-row .add-btn {
+                grid-row: 2;
+                grid-column: 2;
+                flex: 1 !important;
+                min-width: 0 !important;
+                padding: 11.2px 20px !important;
+                font-size: 0.88rem !important;
+                border-radius: 4.8px !important;
                 font-weight: bold;
                 white-space: nowrap;
                 margin: 0;
+                min-height: 44px;
+                box-sizing: border-box;
             }
 
-            /* Table Container - Ensure alignment with actions row */
+            /* Table Container - Card Layout on Mobile */
             .subject-table-container {
                 border-radius: 8px;
-                overflow: hidden;
-                margin-top: 1000px;
-                width: 100%;
-                margin: 0;
+                overflow: visible;
+                background: transparent;
+                box-shadow: none;
             }
 
             .subject-table-scroll {
-                max-height: 50vh;
-                overflow-x: auto;
-                overflow-y: auto;
+                max-height: none;
+                overflow: visible;
                 -webkit-overflow-scrolling: touch;
             }
 
-            .subject-table {
-                min-width: 650px; /* Minimum width to maintain readability */
+            /* Hide table header on mobile */
+            .subject-table thead {
+                display: none;
             }
 
-            .subject-table th {
-                padding: 10px 8px;
-                font-size: 0.75rem;
-                white-space: nowrap;
+            /* Transform table rows into cards */
+            .subject-table {
+                width: 100%;
+                min-width: 0;
+                border-collapse: separate;
+                border-spacing: 0 12px;
+                display: block;
+            }
+
+            .subject-table tbody {
+                display: block;
+            }
+
+            .subject-table tr {
+                display: block;
+                background: #fff;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+                margin-bottom: 12px;
+                padding: 16px;
+                box-sizing: border-box;
+                border: 1px solid #e0e0e0;
+                transition: box-shadow 0.2s ease, transform 0.2s ease;
+            }
+
+            .subject-table tr:hover {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+                transform: translateY(-1px);
+            }
+
+            .subject-table tr:last-child {
+                margin-bottom: 0;
             }
 
             .subject-table td {
-                padding: 8px 6px;
-                font-size: 0.75rem;
-                white-space: nowrap;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 0;
+                font-size: 0.85rem;
+                white-space: normal;
+                border: none;
+                text-align: left;
+                color: #222;
+            }
+
+            .subject-table td:before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #555;
+                margin-right: 12px;
+                flex-shrink: 0;
+                min-width: 100px;
+                font-size: 0.8rem;
+            }
+
+            .subject-table td:not([data-label="Action"]) {
+                border-bottom: 1px solid #f5f5f5;
+            }
+
+            .subject-table td:last-child:not([data-label="Action"]) {
+                border-bottom: none;
+            }
+
+            /* Action column styling */
+            .subject-table td[data-label="Action"] {
+                justify-content: flex-end;
+                padding-top: 12px;
+                border-top: 1px solid #f0f0f0;
+                margin-top: 8px;
+            }
+
+            .subject-table td[data-label="Action"]:before {
+                display: none;
             }
 
             /* Empty state message */
             .subject-table td[colspan] {
-                font-size: 0.75rem;
-                padding: 20px 12px;
+                display: block;
+                text-align: center;
+                font-size: 0.85rem;
+                padding: 40px 20px;
+                color: #666;
+                font-style: italic;
+            }
+
+            .subject-table td[colspan]:before {
+                display: none;
             }
 
             /* Action Buttons */
             .action-btns {
-                gap: 6px;
+                gap: 8px;
+                justify-content: flex-end;
             }
 
             .edit-btn,
             .delete-btn {
-                width: 36px;
-                height: 30px;
-                font-size: 1rem;
-            }
-
-            /* Modals - Mobile Optimized */
-            .modal-overlay {
-                padding: 10px;
-            }
-
-            .modal-box {
-                width: 95vw !important;
-                max-width: 95vw !important;
-                padding: 20px 16px !important;
-                margin: 0;
+                width: 40px;
+                height: 36px;
+                font-size: 1.1rem;
+                border-radius: 6px;
             }
 
             /* Add Subject Modal - Mobile */
+            #addSubjectModal.modal-overlay {
+                padding: 0 !important;
+                align-items: flex-start !important;
+                justify-content: center !important;
+            }
+
             #addSubjectModal .modal-box {
-                width: 95vw !important;
-                max-width: 75vw !important;
-                height: 50vh !important;
-                max-height: 50vh !important;
+                width: 100vw !important;
+                max-width: 100vw !important;
                 display: flex !important;
                 flex-direction: column !important;
                 overflow: hidden !important;
                 padding: 0 !important;
+                margin: 0 !important;
+                max-height: 100vh !important;
+                box-sizing: border-box !important;
+                border-radius: 0 !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+                animation: slideDown 0.3s ease-out !important;
             }
 
-            #addSubjectModal .modal-header {
-                font-size: 1.1rem !important;
-                padding: 12px 16px !important;
-                flex-shrink: 0 !important;
-                position: sticky !important;
-                top: 0 !important;
-                z-index: 10 !important;
-            }
-
-            #addSubjectModal .modal-form {
-                flex: 1 !important;
-                overflow-y: auto !important;
-                overflow-x: hidden !important;
-                -webkit-overflow-scrolling: touch !important;
-                padding: 16px 16px !important;
+            #addSubjectModal .modal-box form {
                 width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
                 box-sizing: border-box !important;
             }
 
+            #addSubjectModal .modal-header {
+                font-size: 1rem !important;
+                padding: 10px 14px !important;
+                flex-shrink: 0 !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+            }
+
+            #addSubjectModal .modal-form {
+                overflow: visible !important;
+                padding: 12px 14px !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                margin: 0 !important;
+            }
+
             #addSubjectModal .modal-form-group {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 6px;
-                margin-bottom: 16px;
-                padding-bottom: 20px;
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 2px !important;
+                margin-bottom: 6px !important;
+                padding-bottom: 10px !important;
             }
 
             #addSubjectModal .modal-form-group label {
-                min-width: auto;
-                width: 100%;
-                margin-bottom: 4px;
-                font-size: 0.75rem;
+                min-width: auto !important;
+                width: 100% !important;
+                margin-bottom: 2px !important;
+                font-size: 0.7rem !important;
             }
 
             #addSubjectModal .modal-form-group input,
             #addSubjectModal .modal-form-group select {
-                width: 100%;
-                padding: 10px 12px;
-                font-size: 0.9rem;
+                width: 100% !important;
+                padding: 8px 10px !important;
+                font-size: 0.85rem !important;
             }
 
             #addSubjectModal .validation-message {
-                position: relative;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                padding-left: 0;
-                margin-top: 4px;
+                position: relative !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                padding-left: 0 !important;
+                margin-top: 2px !important;
+                font-size: 0.65rem !important;
             }
 
             #addSubjectModal .modal-buttons {
-                flex-direction: column;
-                gap: 10px;
-                margin-top: 16px;
+                flex-direction: row !important;
+                justify-content: center !important;
+                align-items: center !important;
+                gap: 0.75rem !important;
+                margin-top: 12px !important;
             }
 
             #addSubjectModal .modal-btn {
-                width: 100% !important;
-                padding: 12px !important;
-                font-size: 0.9rem !important;
+                flex: 1 !important;
+                max-width: none !important;
+                padding: 10px !important;
+                font-size: 0.85rem !important;
+                min-height: 44px !important;
             }
 
-            /* Update Subject Modal */
-            #updateSubjectModal .modal-box {
-                width: 95vw !important;
-                max-width: 95vw !important;
-                transform: scale(1) !important;
+            /* Update Subject Modal - Mobile */
+            #updateSubjectModal.modal-overlay {
                 padding: 0 !important;
+                align-items: flex-start !important;
+                justify-content: center !important;
+            }
+
+            #updateSubjectModal .modal-box {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                max-height: 100vh !important;
+                box-sizing: border-box !important;
+                border-radius: 0 !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+                animation: slideDown 0.3s ease-out !important;
+            }
+
+            #updateSubjectModal .modal-box form {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
             }
 
             #updateSubjectModal .modal-header {
-                font-size: 1.1rem !important;
-                padding: 12px 16px !important;
+                font-size: 1rem !important;
+                padding: 10px 14px !important;
+                flex-shrink: 0 !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
             }
 
             #updateSubjectModal .modal-form {
-                padding: 16px !important;
+                overflow: visible !important;
+                padding: 12px 14px !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                margin: 0 !important;
             }
 
             #updateSubjectModal .modal-form-group {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 6px;
-                margin-bottom: 16px;
-                padding-bottom: 20px;
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 2px !important;
+                margin-bottom: 6px !important;
+                padding-bottom: 10px !important;
             }
 
             #updateSubjectModal .modal-form-group label {
-                min-width: auto;
-                width: 100%;
-                margin-bottom: 4px;
-                font-size: 0.75rem;
+                min-width: auto !important;
+                width: 100% !important;
+                margin-bottom: 2px !important;
+                font-size: 0.7rem !important;
             }
 
             #updateSubjectModal .modal-form-group input,
             #updateSubjectModal .modal-form-group select {
-                width: 100%;
-                padding: 10px 12px;
-                font-size: 0.9rem;
+                width: 100% !important;
+                padding: 8px 10px !important;
+                font-size: 0.85rem !important;
             }
 
             #updateSubjectModal .validation-message {
-                position: relative;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                padding-left: 0;
-                margin-top: 4px;
+                position: relative !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                padding-left: 0 !important;
+                margin-top: 2px !important;
+                font-size: 0.65rem !important;
             }
 
             #updateSubjectModal .modal-buttons {
-                flex-direction: column;
-                gap: 10px;
-                margin-top: 16px;
+                flex-direction: row !important;
+                justify-content: center !important;
+                align-items: center !important;
+                gap: 0.75rem !important;
+                margin-top: 12px !important;
             }
 
             #updateSubjectModal .modal-btn {
-                width: 100% !important;
-                padding: 12px !important;
-                font-size: 0.9rem !important;
+                flex: 1 !important;
+                max-width: none !important;
+                padding: 10px !important;
+                font-size: 0.85rem !important;
+                min-height: 44px !important;
             }
 
-            /* Delete Subject Modal */
+            /* Delete Subject Modal - Mobile Compact */
             #deleteSubjectModal .modal-box {
-                width: 90vw !important;
-                max-width: 90vw !important;
-                padding: 24px 20px !important;
+                width: 85vw !important;
+                max-width: 85vw !important;
+                padding: 20px 16px !important;
                 transform: scale(1) !important;
             }
 
             #deleteSubjectModal .modal-header {
-                font-size: 1.1rem !important;
-                margin-bottom: 16px !important;
+                font-size: 1rem !important;
+                margin-bottom: 12px !important;
+            }
+
+            /* Warning Icon and Message - More Compact */
+            #deleteSubjectModal .modal-box > div[style*="text-align: center"] {
+                margin: 0 !important;
+            }
+
+            #deleteSubjectModal .modal-box > div[style*="text-align: center"] > div:first-of-type {
+                font-size: 2.5rem !important;
+                margin-bottom: 12px !important;
+            }
+
+            #deleteSubjectModal .modal-box > div[style*="text-align: center"] > div:nth-of-type(2) {
+                font-size: 0.85rem !important;
+                margin-bottom: 6px !important;
+            }
+
+            #deleteSubjectModal .modal-box > div[style*="text-align: center"] > div:nth-of-type(3) {
+                font-size: 0.75rem !important;
+                line-height: 1.4 !important;
             }
 
             #deleteSubjectModal .modal-buttons {
-                flex-direction: column;
-                gap: 10px;
-                margin-top: 20px !important;
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: center !important;
+                align-items: center !important;
+                gap: 0.75rem !important;
+                margin-top: 16px !important;
             }
 
             #deleteSubjectModal .modal-btn {
+                flex: 1 !important;
+                max-width: 140px !important;
+                width: auto !important;
+                padding: 10px 16px !important;
+                font-size: 0.85rem !important;
+                min-height: 40px !important;
+                box-sizing: border-box !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                text-align: center !important;
+                white-space: nowrap !important;
+            }
+
+            /* CSV Upload Modal - Mobile */
+            #csvUploadModal.modal-overlay {
+                padding: 0 !important;
+                align-items: flex-start !important;
+                justify-content: center !important;
+            }
+
+            #csvUploadModal .modal-box {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                max-height: 100vh !important;
+                box-sizing: border-box !important;
+                border-radius: 0 !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+                animation: slideDown 0.3s ease-out !important;
+                transform: scale(1) !important;
+            }
+
+            #csvUploadModal .modal-box form {
                 width: 100% !important;
-                padding: 12px !important;
-                font-size: 0.9rem !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+            }
+
+            #csvUploadModal .modal-header {
+                font-size: 1rem !important;
+                padding: 10px 14px !important;
+                flex-shrink: 0 !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+            }
+
+            /* Main content container - reduce padding */
+            #csvUploadModal .modal-box form > div:not(.modal-header) {
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                -webkit-overflow-scrolling: touch !important;
+                padding: 12px 14px !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                margin: 0 !important;
+                max-height: calc(100vh - 60px) !important;
+            }
+
+            /* All direct children of content div - reduce margins */
+            #csvUploadModal .modal-box form > div:not(.modal-header) > div {
+                margin-bottom: 10px !important;
+            }
+
+            /* File upload section label */
+            #csvUploadModal label {
+                font-size: 0.7rem !important;
+                margin-bottom: 2px !important;
+                width: 100% !important;
+                font-weight: bold !important;
+            }
+
+            /* File input */
+            #csvUploadModal input[type="file"] {
+                width: 100% !important;
+                padding: 8px 10px !important;
+                font-size: 0.85rem !important;
+                border: 1px solid #bbb !important;
+                border-radius: 4px !important;
+                box-sizing: border-box !important;
+            }
+
+            /* File name display - tighter spacing */
+            #csvUploadModal #csvFileName {
+                margin-top: 4px !important;
+                font-size: 0.75rem !important;
+            }
+
+            /* Download link container and link */
+            #csvUploadModal .modal-box form > div:not(.modal-header) > div > div {
+                margin-top: 4px !important;
+            }
+
+            #csvUploadModal .modal-box form > div:not(.modal-header) > div > div a {
+                font-size: 0.75rem !important;
+            }
+
+            /* Info boxes - reduce padding and margins */
+            #csvUploadModal .modal-box form > div:not(.modal-header) > div[style*="background-color: #f0f8ff"],
+            #csvUploadModal .modal-box form > div:not(.modal-header) > div[style*="background-color: #fff3cd"] {
+                padding: 10px 12px !important;
+                margin-bottom: 10px !important;
+            }
+
+            /* Info box content - reduce font sizes */
+            #csvUploadModal .modal-box form > div:not(.modal-header) > div[style*="background-color: #f0f8ff"] > div,
+            #csvUploadModal .modal-box form > div:not(.modal-header) > div[style*="background-color: #fff3cd"] > div {
+                font-size: 0.75rem !important;
+                line-height: 1.4 !important;
+            }
+
+            /* Info box nested divs */
+            #csvUploadModal .modal-box form > div:not(.modal-header) > div[style*="background-color: #f0f8ff"] > div > div,
+            #csvUploadModal .modal-box form > div:not(.modal-header) > div[style*="background-color: #fff3cd"] > div > div {
+                font-size: 0.7rem !important;
+                margin-bottom: 2px !important;
+            }
+
+            /* Info box headers */
+            #csvUploadModal .modal-box form > div:not(.modal-header) > div[style*="background-color: #f0f8ff"] > div[style*="font-weight: bold"],
+            #csvUploadModal .modal-box form > div:not(.modal-header) > div[style*="background-color: #fff3cd"] > div strong {
+                margin-bottom: 6px !important;
+                font-size: 0.75rem !important;
+            }
+
+            /* List in warning box */
+            #csvUploadModal .modal-box form > div:not(.modal-header) > div[style*="background-color: #fff3cd"] ul {
+                margin: 4px 0 0 0 !important;
+                padding-left: 18px !important;
+            }
+
+            #csvUploadModal .modal-box form > div:not(.modal-header) > div[style*="background-color: #fff3cd"] ul li {
+                font-size: 0.7rem !important;
+                margin-bottom: 2px !important;
+            }
+
+            #csvUploadModal .modal-buttons {
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: center !important;
+                align-items: center !important;
+                gap: 0.75rem !important;
+                margin-top: 12px !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
+                position: sticky !important;
+                bottom: 0 !important;
+                background: #fff !important;
+                padding-top: 12px !important;
+                padding-bottom: 12px !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            #csvUploadModal .modal-btn {
+                padding: 10px !important;
+                font-size: 0.85rem !important;
+                min-height: 44px !important;
+                border-radius: 4px !important;
+                font-weight: bold !important;
+                transition: all 0.3s ease !important;
+                flex-shrink: 0 !important;
+            }
+
+            /* Upload button - transparent background, light blue outline, blue font, wider */
+            #csvUploadModal .modal-btn.add {
+                background: transparent !important;
+                border: 2px solid #7cc6fa !important;
+                color: #7cc6fa !important;
+                min-width: 140px !important;
+                width: auto !important;
+            }
+
+            #csvUploadModal .modal-btn.add:hover {
+                background: #7cc6fa !important;
+                color: #fff !important;
+                border-color: #7cc6fa !important;
+            }
+
+            /* Cancel button - transparent background, red outline, red font */
+            #csvUploadModal .modal-btn.cancel {
+                background: transparent !important;
+                border: 2px solid #ff3636 !important;
+                color: #ff3636 !important;
+                min-width: 120px !important;
+                width: auto !important;
+            }
+
+            #csvUploadModal .modal-btn.cancel:hover {
+                background: #ff3636 !important;
+                color: #fff !important;
+                border-color: #ff3636 !important;
+            }
+
+            #csvUploadModal .modal-box.slide-up {
+                animation: slideUp 0.3s ease-out !important;
             }
 
             /* General Modal Styles */
@@ -492,11 +941,11 @@
             <div class="faculty-title">Subject Management</div>
             <div class="faculty-subtitle"></div>
         </div>
-    </div>
-    <div class="faculty-actions-row">
-        <input type="text" class="search-input" id="subjectSearch" placeholder="Search...">
-        <button class="csv-btn" onclick="openModal && openModal('csvUploadModal')">CSV Upload</button>
-        <button class="add-btn" onclick="openModal && openModal('addSubjectModal')">Add</button>
+        <div class="faculty-actions-row">
+            <input type="text" class="search-input" id="subjectSearch" placeholder="Search...">
+            <button class="csv-btn" onclick="openModal && openModal('csvUploadModal')">CSV Upload</button>
+            <button class="add-btn" onclick="openModal && openModal('addSubjectModal')">Add</button>
+        </div>
     </div>
 
     <div class="subject-table-container">
@@ -555,9 +1004,9 @@
                             display: flex;
                             flex-direction: row;
                             align-items: center;
-                            gap: 6px;
-                            margin-bottom: 4px;
-                            padding-bottom: 6px;
+                            gap: 4px;
+                            margin-bottom: 2px;
+                            padding-bottom: 4px;
                             position: relative;
                         }
 
@@ -583,7 +1032,7 @@
                             font-size: 0.64rem;
                             left: 104px;
                             right: 8px;
-                            bottom: -8px;
+                            bottom: -6px;
                             padding-left: 8px;
                             line-height: 1.1;
                             position: absolute;
@@ -679,9 +1128,9 @@
                             display: flex;
                             flex-direction: row;
                             align-items: center;
-                            gap: 6px;
-                            margin-bottom: 4px;
-                            padding-bottom: 6px;
+                            gap: 4px;
+                            margin-bottom: 2px;
+                            padding-bottom: 4px;
                             position: relative;
                         }
 
@@ -707,7 +1156,7 @@
                             font-size: 0.64rem;
                             left: 104px;
                             right: 8px;
-                            bottom: -8px;
+                            bottom: -6px;
                             padding-left: 8px;
                             line-height: 1.1;
                             position: absolute;
@@ -789,42 +1238,25 @@
 
     <!-- Delete Subject Modal -->
     <div id="deleteSubjectModal" class="modal-overlay" style="display:none;">
-        <form id="deleteSubjectForm" method="POST" class="modal-box">
+        <form id="deleteSubjectForm" method="POST" class="modal-box" style="transform: scale(0.8); transform-origin: center;">
             @csrf
             @method('DELETE')
             <div class="modal-header delete">DELETE SUBJECT</div>
-            <style>
-                /* Scoped hover styles for Delete Subject modal buttons */
-                #deleteSubjectModal .modal-btn.delete:hover {
-                    background: #ff3636 !important;
-                    color: #fff !important;
-                    border-color: #ff3636 !important;
-                }
-
-                #deleteSubjectModal .modal-btn.cancel:hover {
-                    background: #800000 !important;
-                    color: #fff !important;
-                    border-color: #800000 !important;
-                }
-            </style>
 
             <!-- Warning Icon and Message -->
-            <div style="text-align: center; margin: 0 0 10px 0;">
-                <div style="font-size: 4rem; color: #ff3636; margin-bottom: 20px;">⚠️</div>
-                <div style="font-size: 1.2rem; color: #333; margin-bottom: 10px; font-weight: bold;">Are you sure?</div>
-                <div style="font-size: 1rem; color: #666; line-height: 1.5;">
-                    This action cannot be undone. The subject will be permanently deleted.
-                </div>
+            <div style="text-align: center; margin:0 px 0;">
+                <div style="font-size: 3.2rem; color: #ff3636; margin-bottom: 16px;">⚠️</div>
+                <div style="font-size: 0.96rem; color: #333; margin-bottom: 8px; font-weight: bold;">Are you sure?</div>
+                <div style="font-size: 0.8rem; color: #666; line-height: 1.5;">This action cannot be undone.<br> The subject will be
+                    permanently deleted.</div>
             </div>
 
             <!-- Action Buttons -->
-            <div class="modal-buttons" style="display: flex; gap: 9.6px; justify-content: center; margin-top: 9.6px;">
-                <button type="submit" class="modal-btn delete"
-                    style="min-width: 128px; background: transparent; color: #ff3636; border: 1.6px solid #ff3636; border-radius: 8px; transition: background-color 0.15s ease, color 0.15s ease;">Delete
-                    Subject</button>
-                <button type="button" class="modal-btn cancel"
-                    style="min-width: 128px; background: #fff; color: #800000; border: 1.6px solid #800000; border-radius: 6.4px;"
-                    onclick="closeModal('deleteSubjectModal')">Cancel</button>
+            <div class="modal-buttons">
+                <button type="submit" class="modal-btn delete">Delete</button>
+                <button type="button" class="modal-btn cancel" onclick="closeModal('deleteSubjectModal')">
+                    Cancel
+                </button>
             </div>
         </form>
     </div>
@@ -875,8 +1307,8 @@
                     </div>
 
                     <div class="modal-buttons">
-                        <button type="submit" class="modal-btn add" style="width: 50%;">Upload</button>
-                        <button type="button" class="modal-btn cancel" style="width: 50%;"
+                        <button type="submit" class="modal-btn add">Upload</button>
+                        <button type="button" class="modal-btn cancel"
                             onclick="closeModal('csvUploadModal')">Cancel</button>
                     </div>
                 </div>
@@ -923,8 +1355,18 @@
         })();
 
         function openModal(id) {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'flex';
+            const modal = document.getElementById(id);
+            if (!modal) return;
+
+            // For Add Subject Modal, Update Subject Modal, and CSV Upload Modal, ensure slide-up class is removed for slide-down animation
+            if (id === 'addSubjectModal' || id === 'updateSubjectModal' || id === 'csvUploadModal') {
+                const modalBox = modal.querySelector('.modal-box');
+                if (modalBox) {
+                    modalBox.classList.remove('slide-up');
+                }
+            }
+
+            modal.style.display = 'flex';
             
             // Initialize button states
             if (id === 'addSubjectModal') {
@@ -937,23 +1379,58 @@
         }
 
         function closeModal(id) {
-            const el = document.getElementById(id);
-            if (el) {
-                el.style.display = 'none';
-                // Reset CSV upload form if closing CSV modal
-                if (id === 'csvUploadModal') {
-                    const form = document.getElementById('csvUploadForm');
-                    if (form) {
-                        form.reset();
-                        const csvFileName = document.getElementById('csvFileName');
-                        if (csvFileName) csvFileName.style.display = 'none';
-                        const submitButton = form.querySelector('button[type="submit"]');
-                        if (submitButton) {
-                            submitButton.disabled = false;
-                            submitButton.textContent = 'Upload';
-                            submitButton.style.opacity = '1';
-                            submitButton.style.cursor = 'pointer';
+            const modal = document.getElementById(id);
+            if (!modal) return;
+
+            // For Add Subject Modal, Update Subject Modal, and CSV Upload Modal, add slide-up animation on mobile
+            if (id === 'addSubjectModal' || id === 'updateSubjectModal' || id === 'csvUploadModal') {
+                const modalBox = modal.querySelector('.modal-box');
+                if (modalBox) {
+                    // Add slide-up animation class
+                    modalBox.classList.add('slide-up');
+                    
+                    // Wait for animation to complete, then hide modal
+                    setTimeout(() => {
+                        modal.style.display = 'none';
+                        modalBox.classList.remove('slide-up');
+                    }, 300); // Match animation duration
+                    
+                    // Reset CSV upload form if closing CSV modal
+                    if (id === 'csvUploadModal') {
+                        const form = document.getElementById('csvUploadForm');
+                        if (form) {
+                            form.reset();
+                            const csvFileName = document.getElementById('csvFileName');
+                            if (csvFileName) csvFileName.style.display = 'none';
+                            const submitButton = form.querySelector('button[type="submit"]');
+                            if (submitButton) {
+                                submitButton.disabled = false;
+                                submitButton.textContent = 'Upload';
+                                submitButton.style.opacity = '1';
+                                submitButton.style.cursor = 'pointer';
+                            }
                         }
+                    }
+                    return;
+                }
+            }
+
+            // For other modals or if animation element not found, hide immediately
+            modal.style.display = 'none';
+            
+            // Reset CSV upload form if closing CSV modal
+            if (id === 'csvUploadModal') {
+                const form = document.getElementById('csvUploadForm');
+                if (form) {
+                    form.reset();
+                    const csvFileName = document.getElementById('csvFileName');
+                    if (csvFileName) csvFileName.style.display = 'none';
+                    const submitButton = form.querySelector('button[type="submit"]');
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'Upload';
+                        submitButton.style.opacity = '1';
+                        submitButton.style.cursor = 'pointer';
                     }
                 }
             }
@@ -992,7 +1469,9 @@
         // Close modals when clicking on overlay
         document.addEventListener('click', function(e) {
             if (e.target.classList && e.target.classList.contains('modal-overlay')) {
-                e.target.style.display = 'none';
+                const overlayId = e.target.id;
+                // Use closeModal function to handle animations properly
+                closeModal(overlayId);
             }
         });
 
