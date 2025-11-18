@@ -338,7 +338,7 @@
             box-shadow: 0 4px 12px rgba(139, 0, 0, 0.3);
         }
 
-        .profile-icon {
+        .profile-btn .profile-icon {
             display: flex;
             align-items: center;
             justify-content: center;
@@ -346,7 +346,7 @@
             height: 29px;
         }
 
-        .profile-icon svg {
+        .profile-btn .profile-icon svg {
             width: 100%;
             height: 100%;
         }
@@ -947,77 +947,100 @@
             }
         }
 
-        /* Mobile Menu Toggle Button */
+        /* Mobile Menu Toggle Button - will be styled in mobile media query */
         .mobile-menu-toggle {
             display: none;
-            position: fixed;
-            top: 12px;
-            left: 12px;
-            z-index: 1001;
-            background: #8B0000;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 14px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
         }
 
-        .mobile-menu-toggle:hover {
-            background: #6d0000;
-            transform: scale(1.05);
-        }
-
-        .mobile-menu-toggle svg {
-            width: 24px;
-            height: 24px;
-        }
-
-        /* Sidebar Overlay */
-        #sidebarOverlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-        }
-
-        #sidebarOverlay.show {
-            display: block;
-        }
-
-        /* Mobile Responsive Design - 430px */
+        /* Mobile Responsive Design for phones (max-width: 430px) */
         @media (max-width: 430px) {
-            .mobile-menu-toggle {
-                display: flex !important;
-                align-items: center;
-                justify-content: center;
-            }
-
+            /* Sidebar - Hide by default, show on toggle */
             .sidebar {
                 width: 224px;
                 transform: translateX(-100%);
                 transition: transform 0.3s ease;
-                z-index: 1000;
+                z-index: 2000;
             }
 
             .sidebar.mobile-open {
                 transform: translateX(0);
             }
 
+            /* Mobile menu toggle button */
+            .mobile-menu-toggle {
+                position: relative;
+                top: 0;
+                left: 0;
+                z-index: 100;
+                background: #8B0000;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 10px;
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                transition: background 0.3s ease;
+                flex-shrink: 0;
+                min-width: 36px;
+                height: 36px;
+            }
+
+            .mobile-menu-toggle:hover {
+                background: #6d0000;
+            }
+
+            .mobile-menu-toggle:active {
+                transform: scale(0.95);
+            }
+
+            .mobile-menu-toggle svg {
+                width: 20px;
+                height: 20px;
+            }
+
+            /* Overlay when sidebar is open */
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 1999;
+            }
+
+            .sidebar-overlay.active {
+                display: block;
+            }
+
+            /* Main content and header adjustments */
+            .main-content,
             .header {
                 margin-left: 0;
-                padding: 12px 16px;
+                padding: 16px 12px;
+            }
+
+            /* Header layout for mobile: Menu toggle, Title, Profile button in one row */
+            .header {
                 height: auto;
-                min-height: 60px;
+                min-height: auto;
+                padding: 10px 12px;
+                display: flex;
                 flex-direction: row;
                 align-items: center;
                 justify-content: space-between;
-                padding-left: 60px;
+                gap: 8px;
+            }
+
+            /* Hide title/address on very small screens, show only college name */
+            .header > div:nth-child(2) {
+                flex: 1;
+                min-width: 0;
+                overflow: hidden;
             }
 
             .header-title-block {
@@ -1025,116 +1048,118 @@
                 min-width: 0;
             }
 
+            /* Hide address on mobile to save space */
+            .header-address {
+                display: none;
+            }
+
             .header-title {
-                font-size: 1rem;
-                letter-spacing: 0.4px;
+                font-size: 0.75rem;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
 
-            .header-address {
-                display: none;
-            }
 
             .header-profile {
+                width: auto;
                 flex-shrink: 0;
             }
 
             .profile-btn {
-                padding: 8px 12px;
-                font-size: 0.7rem;
+                padding: 6px 10px;
+                font-size: 0.65rem;
+                border-radius: 14px;
+                white-space: nowrap;
             }
 
-            .profile-icon {
-                width: 24px;
-                height: 24px;
+            .profile-btn .profile-icon {
+                width: 20px;
+                height: 20px;
             }
 
-            .profile-text {
-                display: none;
+            .profile-btn .profile-icon svg {
+                width: 18px;
+                height: 18px;
+            }
+
+            .profile-title {
+                font-size: 0.6rem;
             }
 
             .profile-chevron {
-                display: none;
+                font-size: 0.55rem;
+            }
+
+            .logo-container {
+                height: 14vh;
+                margin-bottom: 16px;
+            }
+
+            .sidebar-logo {
+                width: 96px;
+            }
+
+            .nav-item,
+            .sub-nav-item {
+                font-size: 0.75rem;
+                padding: 10px 14px;
+            }
+
+            .nav-icon {
+                width: 18px;
+            }
+
+            .nav-item svg,
+            .sub-nav-item svg {
+                width: 18px;
+                height: 18px;
             }
 
             .main-content {
-                margin-left: 0;
-                padding: 16px;
-                padding-top: 68px;
+                padding: 16px 12px;
             }
 
-            /* Modal Styles for Mobile */
+            /* Profile dropdown adjustments */
+            .profile-dropdown {
+                right: 0;
+                left: auto;
+                min-width: 160px;
+                font-size: 0.75rem;
+            }
+
+            /* Modal adjustments for mobile */
             .modal-box {
-                width: 95vw !important;
-                max-width: 95vw !important;
-                padding: 20px 16px !important;
-                margin: 16px;
+                width: 95vw;
+                max-width: 95vw;
+                padding: 24px 20px;
+                margin: 20px 10px;
             }
 
             .profile-modal .modal-box {
-                width: 95vw !important;
-                max-width: 95vw !important;
-                padding: 20px 16px !important;
-            }
-
-            .profile-modal .modal-header {
-                font-size: 1.2rem !important;
-                margin-bottom: 16px !important;
-            }
-
-            .profile-modal .form-section {
-                padding: 12px !important;
-            }
-
-            .profile-modal .form-row {
-                grid-template-columns: 1fr !important;
-                gap: 12px !important;
-            }
-
-            .profile-modal .modal-form-group {
-                margin-bottom: 12px !important;
-            }
-
-            .profile-modal .modal-buttons {
-                flex-direction: column !important;
-                gap: 10px !important;
-            }
-
-            .profile-modal .modal-btn {
-                width: 100% !important;
-                padding: 12px !important;
-                font-size: 0.85rem !important;
+                width: 95vw;
+                max-width: 95vw;
+                padding: 20px 16px;
             }
 
             .logout-modal .modal-box {
-                width: 95vw !important;
-                max-width: 95vw !important;
+                width: 90vw;
                 height: auto !important;
                 max-height: none !important;
                 min-height: auto !important;
-                padding: 24px 20px !important;
+                padding: 24px 20px;
+            }
+
+            .modal-header {
+                font-size: 1.2rem;
+            }
+
+            .profile-modal .modal-header {
+                font-size: 1.2rem;
             }
 
             .logout-modal .modal-header {
-                font-size: 1.2rem !important;
-            }
-
-            .logout-modal .modal-content {
-                font-size: 0.85rem !important;
-                padding: 0 !important;
-            }
-
-            .logout-modal .modal-buttons {
-                flex-direction: column !important;
-                gap: 10px !important;
-            }
-
-            .logout-modal .modal-btn {
-                width: 100% !important;
-                padding: 12px !important;
-                font-size: 0.85rem !important;
+                font-size: 1.2rem;
             }
         }
 
@@ -1177,6 +1202,9 @@
 </head>
 
 <body>
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
     <div class="sidebar">
         <div class="logo-container">
             <img src="{{ asset('images/tcc-logo.png') }}" alt="TCC Logo" class="sidebar-logo">
@@ -1252,16 +1280,17 @@
             </div>
         </div>
     </div>
-    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 12h18M3 6h18M3 18h18"/>
-        </svg>
-    </button>
-    <div id="sidebarOverlay"></div>
     <div class="header">
-        <div style="display: flex; align-items: center;">
+        <!-- Mobile Menu Toggle Button (only visible on mobile) -->
+        <button class="mobile-menu-toggle" id="mobileMenuToggle" style="display: none;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 12h18M3 6h18M3 18h18" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+        
+        <div style="display: flex; align-items: center; flex: 1;">
             <div class="header-title-block">
-                <span class="header-title">TAGOLOAN COMMUNITY COLLEGE</span>
+                <span class="header-title">MODERN ATTENDANCE ENHANCED MONITORING</span>
                 <span class="header-address">M.H del Pilar St. Baluarte, Tagoloan, Misamis Oriental</span>
             </div>
         </div>
@@ -1464,61 +1493,68 @@
             const sidebar = document.querySelector('.sidebar');
             const sidebarOverlay = document.getElementById('sidebarOverlay');
             
-            // Show/hide mobile menu toggle based on screen width
-            function updateMobileMenuToggle() {
+            // Show/hide mobile menu button based on screen size
+            function checkMobileMenu() {
                 if (window.innerWidth <= 430) {
                     mobileMenuToggle.style.display = 'flex';
                 } else {
                     mobileMenuToggle.style.display = 'none';
                     sidebar.classList.remove('mobile-open');
-                    sidebarOverlay.classList.remove('show');
+                    sidebarOverlay.classList.remove('active');
                 }
             }
-
-            // Initial check
-            updateMobileMenuToggle();
-
-            // Update on resize
-            window.addEventListener('resize', updateMobileMenuToggle);
-
+            
             // Toggle sidebar
             if (mobileMenuToggle) {
                 mobileMenuToggle.addEventListener('click', function(e) {
                     e.stopPropagation();
                     sidebar.classList.toggle('mobile-open');
-                    sidebarOverlay.classList.toggle('show');
+                    sidebarOverlay.classList.toggle('active');
                 });
             }
-
-            // Close sidebar when clicking overlay
+            
+            // Close sidebar when overlay is clicked
             if (sidebarOverlay) {
                 sidebarOverlay.addEventListener('click', function() {
                     sidebar.classList.remove('mobile-open');
-                    sidebarOverlay.classList.remove('show');
+                    sidebarOverlay.classList.remove('active');
                 });
             }
-
-            // Close sidebar when clicking navigation links (not dropdowns)
-            const navItems = document.querySelectorAll('.nav-item:not(.has-dropdown), .sub-nav-item');
-            navItems.forEach(item => {
-                item.addEventListener('click', function() {
-                    if (window.innerWidth <= 430) {
-                        setTimeout(function() {
-                            sidebar.classList.remove('mobile-open');
-                            sidebarOverlay.classList.remove('show');
-                        }, 300);
+            
+            // Close sidebar when clicking outside on mobile
+            document.addEventListener('click', function(e) {
+                if (window.innerWidth <= 430 && sidebar.classList.contains('mobile-open')) {
+                    if (!sidebar.contains(e.target) && !mobileMenuToggle.contains(e.target)) {
+                        sidebar.classList.remove('mobile-open');
+                        sidebarOverlay.classList.remove('active');
                     }
-                });
+                }
             });
-
-            // Don't close sidebar when clicking dropdown items
-            const dropdownItems = document.querySelectorAll('.nav-item.has-dropdown');
-            dropdownItems.forEach(item => {
-                item.addEventListener('click', function(e) {
-                    // Prevent closing sidebar when toggling dropdowns
-                    e.stopPropagation();
+            
+            // Check on load and resize
+            checkMobileMenu();
+            window.addEventListener('resize', checkMobileMenu);
+            
+            // Close sidebar when nav item is clicked on mobile (but not dropdown toggles)
+            if (window.innerWidth <= 430) {
+                const navItems = document.querySelectorAll('.nav-item, .sub-nav-item');
+                navItems.forEach(item => {
+                    item.addEventListener('click', function(e) {
+                        // Don't close sidebar if clicking a dropdown toggle
+                        if (item.classList.contains('has-dropdown')) {
+                            return;
+                        }
+                        
+                        // Only close sidebar when clicking actual navigation links
+                        if (window.innerWidth <= 430) {
+                            setTimeout(() => {
+                                sidebar.classList.remove('mobile-open');
+                                sidebarOverlay.classList.remove('active');
+                            }, 100);
+                        }
+                    });
                 });
-            });
+            }
         });
 
         function openModal(modalId) {

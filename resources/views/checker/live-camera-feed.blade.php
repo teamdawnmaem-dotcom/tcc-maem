@@ -347,6 +347,302 @@
             color: #222;
             cursor: pointer;
         }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            /* Prevent horizontal overflow */
+            body {
+                overflow-x: hidden;
+            }
+
+            .main-content {
+                overflow-x: hidden;
+                padding: 16px 12px;
+            }
+
+            .faculty-header {
+                flex-direction: column;
+                align-items: flex-start;
+                margin-bottom: 20px;
+            }
+
+            .faculty-title {
+                font-size: 1.4rem;
+            }
+
+            .faculty-subtitle {
+                margin-bottom: 16px;
+            }
+
+            .faculty-actions-row {
+                width: 100%;
+                margin-top: 12px;
+            }
+
+            /* Camera Grid - Stack vertically on mobile */
+            .camera-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+                margin-top: 12px;
+            }
+
+            .camera-feed {
+                min-height: 180px;
+            }
+
+            .camera-label {
+                padding: 10px;
+                font-size: 0.8rem;
+            }
+
+            .camera-feed video {
+                height: 140px;
+                min-height: 140px;
+            }
+
+            [id^="video-container-"] {
+                height: 140px;
+                min-height: 140px;
+            }
+
+            .no-feed {
+                height: 140px;
+                min-height: 140px;
+                font-size: 0.75rem;
+            }
+
+            .no-feed-icon {
+                font-size: 2rem;
+                margin-bottom: 6px;
+            }
+
+            /* Camera Detail View - Stack vertically on mobile */
+            .camera-feed-container {
+                flex-direction: column;
+                gap: 12px;
+                margin-top: 12px;
+                height: auto;
+                min-height: auto;
+            }
+
+            .back-btn {
+                position: relative;
+                top: auto;
+                right: auto;
+                width: 100%;
+                margin-bottom: 12px;
+                padding: 10px 16px;
+                font-size: 0.85rem;
+            }
+
+            .main-camera-feed {
+                width: 100%;
+                height: auto;
+                min-height: 250px;
+                order: 1;
+            }
+
+            .main-camera-feed .camera-label {
+                padding: 10px;
+                font-size: 0.8rem;
+            }
+
+            #video-container {
+                min-height: 250px;
+                height: 250px;
+            }
+
+            #recording-player-detail {
+                min-height: 250px;
+                height: 250px;
+            }
+
+            .no-feed {
+                min-height: 250px;
+                height: 250px;
+            }
+
+            .details-panel {
+                width: 100%;
+                order: 2;
+                height: auto;
+            }
+
+            .combined-card {
+                height: auto;
+            }
+
+            .lab-header {
+                padding: 10px 12px;
+                font-size: 0.8rem;
+                flex-wrap: wrap;
+                word-break: break-word;
+                line-height: 1.4;
+            }
+
+            .lab-header span {
+                max-width: 100%;
+                display: block;
+            }
+
+            .combined-card-content {
+                padding: 16px;
+            }
+
+            .schedule-title {
+                font-size: 0.95rem;
+                margin-bottom: 12px;
+            }
+
+            .faculty-image-container {
+                margin-bottom: 12px;
+            }
+
+            .faculty-image,
+            .no-schedule-image {
+                width: 1in;
+                height: 1in;
+            }
+
+            .schedule-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+                padding: 10px 0;
+                margin-bottom: 8px;
+            }
+
+            .schedule-label {
+                min-width: auto;
+                font-size: 0.75rem;
+                font-weight: bold;
+                color: #8B0000;
+            }
+
+            .schedule-value {
+                text-align: left;
+                font-size: 0.85rem;
+                color: #333;
+                word-break: break-word;
+            }
+
+            /* Recording info badges */
+            [id^="recording-info-"] {
+                font-size: 0.75em !important;
+                padding: 4px 10px !important;
+            }
+
+            /* Empty state message */
+            .camera-grid > div[style*="grid-column"] {
+                padding: 24px 16px !important;
+                font-size: 0.85rem !important;
+            }
+
+            .camera-grid > div[style*="grid-column"] > div[style*="font-size:3rem"] {
+                font-size: 2rem !important;
+            }
+        }
+
+        /* Small mobile phones (480px and below) */
+        @media (max-width: 480px) {
+            .faculty-title {
+                font-size: 1.2rem;
+            }
+
+            .camera-grid {
+                gap: 10px;
+            }
+
+            .camera-feed {
+                min-height: 160px;
+            }
+
+            .camera-feed video {
+                height: 120px;
+                min-height: 120px;
+            }
+
+            [id^="video-container-"] {
+                height: 120px;
+                min-height: 120px;
+            }
+
+            .no-feed {
+                height: 120px;
+                min-height: 120px;
+                font-size: 0.7rem;
+            }
+
+            .main-camera-feed {
+                min-height: 220px;
+            }
+
+            #video-container,
+            #recording-player-detail {
+                min-height: 220px;
+                height: 220px;
+            }
+
+            .no-feed {
+                min-height: 220px;
+                height: 220px;
+            }
+
+            .combined-card-content {
+                padding: 12px;
+            }
+
+            .schedule-title {
+                font-size: 0.85rem;
+                margin-bottom: 10px;
+            }
+
+            .faculty-image,
+            .no-schedule-image {
+                width: 0.9in;
+                height: 0.9in;
+            }
+
+            .schedule-item {
+                padding: 8px 0;
+                margin-bottom: 6px;
+            }
+
+            .schedule-label {
+                font-size: 0.7rem;
+            }
+
+            .schedule-value {
+                font-size: 0.8rem;
+            }
+
+            .lab-header {
+                padding: 8px 10px;
+                font-size: 0.75rem;
+                word-break: break-word;
+                line-height: 1.3;
+            }
+
+            .lab-header span {
+                max-width: 100%;
+                display: block;
+            }
+
+            .back-btn {
+                padding: 8px 14px;
+                font-size: 0.8rem;
+            }
+
+            /* Empty state message - smaller screens */
+            .camera-grid > div[style*="grid-column"] {
+                padding: 20px 12px !important;
+                font-size: 0.8rem !important;
+            }
+
+            .camera-grid > div[style*="grid-column"] > div[style*="font-size:3rem"] {
+                font-size: 1.8rem !important;
+            }
+        }
     </style>
 @endsection
 

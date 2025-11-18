@@ -491,12 +491,14 @@
             border-radius: 12px;
             width: 900px;
             height: 600px;
-            overflow-y: auto;
+            overflow: hidden;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             position: relative;
             display: flex;
             flex-direction: column;
             pointer-events: auto;
+            padding: 0;
+            margin: 0;
         }
         
         .modal-header-custom {
@@ -508,9 +510,17 @@
             font-size: 1.4rem;
             border-top-left-radius: 12px;
             border-top-right-radius: 12px;
-            position: sticky;
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+            position: relative;
             top: 0;
+            left: 0;
+            right: 0;
             z-index: 10;
+            width: 100%;
+            box-sizing: border-box;
+            margin: 0;
+            flex-shrink: 0;
         }
         
         .modal-close {
@@ -542,6 +552,10 @@
             padding: 24px;
             flex: 1;
             overflow-y: auto;
+            box-sizing: border-box;
+            width: 100%;
+            margin: 0;
+            margin-top: 0;
         }
         
         .modal-section {
@@ -735,6 +749,79 @@
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+        
+        /* Desktop view only - Modal alignment fixes */
+        @media (min-width: 769px) {
+            #recordDetailsModal .modal-box {
+                overflow: hidden;
+                padding: 0;
+                margin: 0;
+            }
+            
+            #recordDetailsModal .modal-header-custom {
+                width: 100%;
+                box-sizing: border-box;
+                margin: 0;
+                padding: 20px;
+                flex-shrink: 0;
+                border-top-left-radius: 12px;
+                border-top-right-radius: 12px;
+                border-bottom-left-radius: 0;
+                border-bottom-right-radius: 0;
+                position: relative;
+                top: 0;
+                left: 0;
+                right: 0;
+            }
+            
+            #recordDetailsModal .modal-content {
+                box-sizing: border-box;
+                width: 100%;
+                margin: 0;
+                padding: 24px 24px 48px 24px;
+                margin-top: 0;
+            }
+            
+            /* Fixed-size image containers with centered alignment */
+            #recordDetailsModal .snapshot-item {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                min-height: 300px;
+            }
+            
+            #recordDetailsModal .snapshot-image {
+                width: 100%;
+                max-width: 500px;
+                height: 300px;
+                min-height: 300px;
+                object-fit: contain;
+                object-position: center;
+                border-radius: 8px;
+                border: 2px solid #e9ecef;
+                cursor: pointer;
+                transition: transform 0.2s ease;
+                margin: 0 auto;
+                display: block;
+                background-color: #f8f9fa;
+            }
+            
+            #recordDetailsModal .attachment-image {
+                width: 100%;
+                max-width: 400px;
+                height: 300px;
+                min-height: 300px;
+                object-fit: contain;
+                object-position: center;
+                border-radius: 8px;
+                border: 2px solid #e9ecef;
+                cursor: pointer;
+                transition: transform 0.2s ease;
+                margin: 0 auto;
+                display: block;
+                background-color: #f8f9fa;
+            }
         }
         
         @media (max-width: 768px) {
@@ -991,7 +1078,6 @@
         <div class="modal-box">
             <div class="modal-header-custom">
                 ATTENDANCE RECORD DETAILS
-                <button class="modal-close" onclick="closeRecordModal()">&times;</button>
             </div>
             <div class="modal-content" id="recordDetailsContent">
                 <div style="text-align: center; padding: 40px;">
@@ -1690,23 +1776,17 @@
         
         // Initialize modal event listeners once on page load
         document.addEventListener('DOMContentLoaded', function() {
-            // Note: Click-outside-to-close is disabled as per user request
-            // Only the X button can close the modal
+            // Enable click-outside-to-close functionality
             const recordModal = document.getElementById('recordDetailsModal');
             if (recordModal) {
-                // Prevent closing when clicking outside
                 recordModal.addEventListener('click', function(e) {
-                    // Stop event propagation to prevent any default closing behavior
-                    e.stopPropagation();
-                    // Only allow closing if clicking directly on the overlay background (not on modal-box)
+                    // Close modal when clicking directly on the overlay background (not on modal-box)
                     if (e.target === recordModal) {
-                        // Do nothing - prevent closing
-                        e.preventDefault();
-                        return false;
+                        closeRecordModal();
                     }
                 });
                 
-                // Also prevent clicks inside modal-box from closing
+                // Prevent clicks inside modal-box from closing the modal
                 const modalBox = recordModal.querySelector('.modal-box');
                 if (modalBox) {
                     modalBox.addEventListener('click', function(e) {

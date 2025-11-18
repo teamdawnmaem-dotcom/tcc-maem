@@ -439,6 +439,29 @@
             pointer-events: none;
         }
 
+        /* Slide animations for modals */
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+        }
+
         .logic-error {
             display: none;
             color: #ff3636;
@@ -472,8 +495,9 @@
             position: relative;
         }
 
-        /* Mobile Responsive */
+        /* Mobile Responsive Design for phones (max-width: 430px) */
         @media (max-width: 430px) {
+            /* Faculty Header */
             .faculty-header {
                 flex-direction: column;
                 align-items: flex-start;
@@ -482,6 +506,21 @@
                 position: relative;
             }
 
+            .faculty-title-group {
+                width: 100%;
+            }
+
+            .faculty-title {
+                font-size: 1.4rem;
+                margin-bottom: 4px;
+            }
+
+            .faculty-subtitle {
+                font-size: 0.75rem;
+                margin-bottom: 0;
+            }
+
+            /* Faculty Actions Row */
             .faculty-actions-row {
                 position: relative;
                 top: 0;
@@ -490,32 +529,640 @@
                 flex-direction: row;
                 align-items: center;
                 gap: 8px;
+                z-index: 1;
             }
 
             .search-input {
                 flex: 0 0 calc(75% - 4px);
                 width: calc(75% - 4px);
+                padding: 10px 12px;
+                font-size: 0.9rem;
+                border-radius: 6px;
+                box-sizing: border-box;
+                margin: 0;
             }
 
             .add-btn {
                 flex: 0 0 calc(25% - 4px);
                 width: calc(25% - 4px);
+                padding: 12px;
+                font-size: 0.9rem;
+                border-radius: 6px;
+                font-weight: bold;
+                text-align: center;
+                margin: 0;
             }
 
-            .modal-box {
+            /* Table Container - Card Layout on Mobile */
+            .teaching-load-table-container {
+                border-radius: 8px;
+                overflow: visible;
+                background: transparent;
+                box-shadow: none;
+            }
+
+            .teaching-load-table-scroll {
+                max-height: none;
+                overflow: visible;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Hide table header on mobile */
+            .teaching-load-table thead {
+                display: none;
+            }
+
+            /* Transform table rows into cards */
+            .teaching-load-table {
+                width: 100%;
+                min-width: 0;
+                border-collapse: separate;
+                border-spacing: 0 12px;
+                display: block;
+            }
+
+            .teaching-load-table tbody {
+                display: block;
+            }
+
+            .teaching-load-table tr {
+                display: block;
+                background: #fff;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+                margin-bottom: 12px;
+                padding: 16px;
+                box-sizing: border-box;
+                border: 1px solid #e0e0e0;
+                transition: box-shadow 0.2s ease, transform 0.2s ease;
+            }
+
+            .teaching-load-table tr:hover {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+                transform: translateY(-1px);
+                background: #fff2e6;
+            }
+
+            .teaching-load-table tr:last-child {
+                margin-bottom: 0;
+            }
+
+            .teaching-load-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 0;
+                font-size: 0.8rem;
+                white-space: normal;
+                border: none;
+                text-align: left;
+                color: #222;
+            }
+
+            .teaching-load-table td:before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #555;
+                margin-right: 12px;
+                flex-shrink: 0;
+                min-width: 110px;
+                font-size: 0.75rem;
+            }
+
+            .teaching-load-table td:not(:last-child) {
+                border-bottom: 1px solid #f5f5f5;
+            }
+
+            .teaching-load-table td[data-label="Actions"] {
+                justify-content: flex-end;
+                padding-top: 12px;
+                border-top: 1px solid #f0f0f0;
+                margin-top: 8px;
+            }
+
+            .teaching-load-table td[data-label="Actions"]:before {
+                display: none;
+            }
+
+            .action-btns {
+                gap: 8px;
+                justify-content: flex-end;
+            }
+
+            .edit-btn,
+            .delete-btn {
+                width: 40px;
+                height: 36px;
+                font-size: 1.1rem;
+                border-radius: 6px;
+            }
+
+            .view-slip-btn {
+                padding: 6px 12px !important;
+                font-size: 0.75rem !important;
+            }
+
+            /* Empty state message */
+            .teaching-load-table td[colspan] {
+                display: block;
+                text-align: center;
+                font-size: 0.85rem;
+                padding: 40px 20px;
+                color: #666;
+                font-style: italic;
+            }
+
+            .teaching-load-table td[colspan]:before {
+                display: none;
+            }
+
+            /* Add Modal - Mobile positioning and animation */
+            #addModal.modal-overlay {
+                padding: 0 !important;
+                align-items: flex-start !important;
+                justify-content: center !important;
+            }
+
+            #addModal .modal-box {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                max-height: 100vh !important;
+                height: 100vh !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+                animation: slideDown 0.3s ease-out !important;
+            }
+
+            #addModal .modal-box form {
+                width: 100% !important;
+                height: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+            }
+
+            #addModal .modal-header {
+                font-size: 1rem !important;
+                padding: 10px 16px !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+                flex-shrink: 0 !important;
+            }
+
+            #addModal .modal-content {
+                padding: 12px 16px 70px 16px !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                flex: 1 !important;
+                min-height: 0 !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            #addModal .toggle-switch {
+                margin-bottom: 8px !important;
+            }
+
+            #addModal .toggle-switch label {
+                font-size: 0.8rem !important;
+            }
+
+            #addModal .modal-form-group {
+                flex-direction: row;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 6px;
+                padding-bottom: 10px;
+                width: 100%;
+                box-sizing: border-box;
+                position: relative;
+            }
+
+            #addModal .modal-form-group label {
+                min-width: 90px;
+                max-width: 90px;
+                flex-shrink: 0;
+                margin-bottom: 0;
+                font-size: 0.8rem;
+                color: #222;
+            }
+
+            #addModal .modal-form-group input,
+            #addModal .modal-form-group select,
+            #addModal .modal-form-group textarea {
+                flex: 1;
+                min-width: 0;
+                width: 100%;
+                padding: 8px 10px;
+                font-size: 0.85rem;
+                box-sizing: border-box;
+                min-height: 40px;
+                line-height: 1.4;
+            }
+
+            #addModal .modal-form-group input[type="date"],
+            #addModal .modal-form-group input[type="file"] {
+                min-height: 40px;
+                padding: 8px 10px;
+            }
+
+            #addModal .modal-form-group select {
+                appearance: none;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+                background-repeat: no-repeat;
+                background-position: right 10px center;
+                padding-right: 28px;
+            }
+
+            #addModal .validation-message {
+                position: absolute;
+                left: 90px;
+                right: 8px;
+                bottom: -6px;
+                padding-left: 8px;
+                font-size: 0.7rem;
+            }
+
+            #addModal .logic-error,
+            #addModal .server-error {
+                margin: 4px 0 !important;
+                font-size: 0.75rem !important;
+            }
+
+            #addModal .modal-buttons {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                gap: 0.75rem;
+                margin-top: 0;
+                padding: 10px 16px;
+                background: #fff;
+                border-top: 1px solid #e0e0e0;
+                flex-shrink: 0;
+                position: sticky;
+                bottom: 0;
+                z-index: 10;
+            }
+
+            #addModal .modal-btn {
+                flex: 1;
+                max-width: 200px;
+                padding: 10px 0 !important;
+                font-size: 0.85rem !important;
+                min-height: 40px;
+                border-radius: 4.8px;
+            }
+
+            /* Add button: green background */
+            #addModal .modal-btn.add {
+                background: #2ecc71 !important;
+                border: none !important;
+                color: #fff !important;
+                transition: background-color 0.15s ease, color 0.15s ease;
+            }
+
+            #addModal .modal-btn.add:hover {
+                background: #27ae60 !important;
+                color: #fff !important;
+            }
+
+            /* Cancel button: outlined red */
+            #addModal .modal-btn.cancel {
+                background: #fff !important;
+                border: 2px solid #800000 !important;
+                color: #800000 !important;
+                transition: all 0.3s ease;
+            }
+
+            #addModal .modal-btn.cancel:hover {
+                background: #800000 !important;
+                color: #fff !important;
+            }
+
+            #addModal .modal-box.slide-up {
+                animation: slideUp 0.3s ease-out !important;
+            }
+
+            /* Edit Modal - Mobile positioning and animation */
+            #editModal.modal-overlay {
+                padding: 0 !important;
+                align-items: flex-start !important;
+                justify-content: center !important;
+            }
+
+            #editModal .modal-box {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                max-height: 100vh !important;
+                height: 100vh !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+                animation: slideDown 0.3s ease-out !important;
+            }
+
+            #editModal .modal-box form {
+                width: 100% !important;
+                height: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+            }
+
+            #editModal .modal-header {
+                font-size: 1rem !important;
+                padding: 10px 16px !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+                flex-shrink: 0 !important;
+            }
+
+            #editModal .modal-content {
+                padding: 12px 16px 70px 16px !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                flex: 1 !important;
+                min-height: 0 !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            #editModal .toggle-switch {
+                margin-bottom: 8px !important;
+            }
+
+            #editModal .toggle-switch label {
+                font-size: 0.8rem !important;
+            }
+
+            #editModal .modal-form-group {
+                flex-direction: row;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 6px;
+                padding-bottom: 10px;
+                width: 100%;
+                box-sizing: border-box;
+                position: relative;
+            }
+
+            #editModal .modal-form-group label {
+                min-width: 90px;
+                max-width: 90px;
+                flex-shrink: 0;
+                margin-bottom: 0;
+                font-size: 0.8rem;
+                color: #222;
+            }
+
+            #editModal .modal-form-group input,
+            #editModal .modal-form-group select,
+            #editModal .modal-form-group textarea {
+                flex: 1;
+                min-width: 0;
+                width: 100%;
+                padding: 8px 10px;
+                font-size: 0.85rem;
+                box-sizing: border-box;
+                min-height: 40px;
+                line-height: 1.4;
+            }
+
+            #editModal .modal-form-group input[type="date"],
+            #editModal .modal-form-group input[type="file"] {
+                min-height: 40px;
+                padding: 8px 10px;
+            }
+
+            #editModal .modal-form-group select {
+                appearance: none;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+                background-repeat: no-repeat;
+                background-position: right 10px center;
+                padding-right: 28px;
+            }
+
+            #editModal .validation-message {
+                position: absolute;
+                left: 90px;
+                right: 8px;
+                bottom: -6px;
+                padding-left: 8px;
+                font-size: 0.7rem;
+            }
+
+            #editModal .logic-error,
+            #editModal .server-error {
+                margin: 4px 0 !important;
+                font-size: 0.75rem !important;
+            }
+
+            #editModal .modal-buttons {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                gap: 0.75rem;
+                margin-top: 0;
+                padding: 10px 16px;
+                background: #fff;
+                border-top: 1px solid #e0e0e0;
+                flex-shrink: 0;
+                position: sticky;
+                bottom: 0;
+                z-index: 10;
+            }
+
+            #editModal .modal-btn {
+                flex: 1;
+                max-width: 200px;
+                padding: 10px 0 !important;
+                font-size: 0.85rem !important;
+                min-height: 40px;
+                border-radius: 4.8px;
+            }
+
+            /* Update button: blue background */
+            #editModal .modal-btn.add {
+                background: #7cc6fa !important;
+                border: none !important;
+                color: #fff !important;
+                transition: background-color 0.15s ease, color 0.15s ease;
+            }
+
+            #editModal .modal-btn.add:hover {
+                background: #5bb3f5 !important;
+                color: #fff !important;
+            }
+
+            /* Cancel button: outlined red */
+            #editModal .modal-btn.cancel {
+                background: #fff !important;
+                border: 2px solid #800000 !important;
+                color: #800000 !important;
+                transition: all 0.3s ease;
+            }
+
+            #editModal .modal-btn.cancel:hover {
+                background: #800000 !important;
+                color: #fff !important;
+            }
+
+            #editModal .modal-box.slide-up {
+                animation: slideUp 0.3s ease-out !important;
+            }
+
+            /* Delete Modal - Mobile positioning and animation */
+            #deleteModal.modal-overlay {
+                padding: 0 !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+
+            #deleteModal .modal-box {
+                width: 85vw !important;
+                max-width: 85vw !important;
+                padding: 20px 16px !important;
+                animation: slideDown 0.3s ease-out !important;
+            }
+
+            #deleteModal .modal-header {
+                font-size: 1rem !important;
+                margin-bottom: 12px !important;
+            }
+
+            #deleteModal .modal-box > div[style*="text-align: center"] {
+                margin: 0 !important;
+            }
+
+            #deleteModal .modal-box > div[style*="text-align: center"] > div:first-child {
+                font-size: 2.5rem !important;
+                margin-bottom: 12px !important;
+            }
+
+            #deleteModal .modal-box > div[style*="text-align: center"] > div:nth-child(2) {
+                font-size: 0.85rem !important;
+                margin-bottom: 6px !important;
+            }
+
+            #deleteModal .modal-box > div[style*="text-align: center"] > div:nth-child(3) {
+                font-size: 0.75rem !important;
+                line-height: 1.4 !important;
+            }
+
+            #deleteModal .modal-buttons {
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: center !important;
+                align-items: center !important;
+                gap: 0.75rem !important;
+                margin-top: 16px !important;
+            }
+
+            #deleteModal .modal-btn {
+                flex: 1 !important;
+                max-width: 140px !important;
+                width: auto !important;
+                padding: 10px 16px !important;
+                font-size: 0.85rem !important;
+                min-height: 40px !important;
+                box-sizing: border-box !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                text-align: center !important;
+                white-space: nowrap !important;
+                border-radius: 4.8px !important;
+            }
+
+            #deleteModal .modal-btn.delete {
+                background: #ff3636 !important;
+                color: #fff !important;
+                border: 2px solid #ff3636 !important;
+            }
+
+            #deleteModal .modal-btn.cancel {
+                background: #fff !important;
+                color: #800000 !important;
+                border: 2px solid #800000 !important;
+            }
+
+            #deleteModal .modal-box.slide-up {
+                animation: slideUp 0.3s ease-out !important;
+            }
+
+            /* Slip Viewer Modal - Mobile positioning and animation */
+            #slipModal.modal-overlay {
+                padding: 0 !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+
+            #slipModal .modal-box {
                 width: 95vw !important;
                 max-width: 95vw !important;
+                max-height: 90vh !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border-radius: 8px !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                box-sizing: border-box !important;
+                animation: slideDown 0.3s ease-out !important;
             }
 
-            .modal-form-group {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 6px;
+            #slipModal .modal-header {
+                font-size: 1rem !important;
+                padding: 12px 16px !important;
+                flex-shrink: 0 !important;
+                border-bottom: 1px solid #e0e0e0 !important;
             }
 
-            .modal-form-group label {
-                min-width: auto;
-                width: 100%;
+            #slipModal .slip-content {
+                padding: 16px !important;
+                flex: 1 !important;
+                overflow: auto !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                min-height: 0 !important;
+            }
+
+            #slipImage {
+                max-width: 100% !important;
+                max-height: calc(90vh - 120px) !important;
+                width: auto !important;
+                height: auto !important;
+                object-fit: contain !important;
+                border-radius: 4px !important;
+            }
+
+            #slipModal .close {
+                width: 32px !important;
+                height: 32px !important;
+                font-size: 18px !important;
+                top: 10px !important;
+                right: 14px !important;
+                background: rgba(0, 0, 0, 0.7) !important;
+            }
+
+            #slipModal .modal-box.slide-up {
+                animation: slideUp 0.3s ease-out !important;
             }
         }
     </style>
@@ -555,25 +1202,25 @@
                 <tbody>
                     @forelse ($officialMatters as $matter)
                         <tr>
-                            <td>
+                            <td data-label="Faculty/Department">
                                 @if ($matter->faculty)
                                     {{ $matter->faculty->faculty_fname }} {{ $matter->faculty->faculty_lname }}
                                 @else
                                     {{ $matter->om_department }}
                                 @endif
                             </td>
-                            <td>
+                            <td data-label="Department">
                                 @if ($matter->faculty)
                                     {{ $matter->faculty->faculty_department }}
                                 @else
                                     {{ $matter->om_department }}
                                 @endif
                             </td>
-                            <td>{{ $matter->om_purpose }}</td>
-                            <td>{{ $matter->om_remarks }}</td>
-                            <td>{{ \Carbon\Carbon::parse($matter->om_start_date)->format('F j, Y') }}</td>
-                            <td>{{ \Carbon\Carbon::parse($matter->om_end_date)->format('F j, Y') }}</td>
-                            <td>
+                            <td data-label="Purpose">{{ $matter->om_purpose }}</td>
+                            <td data-label="Remarks">{{ $matter->om_remarks }}</td>
+                            <td data-label="Start Date">{{ \Carbon\Carbon::parse($matter->om_start_date)->format('F j, Y') }}</td>
+                            <td data-label="End Date">{{ \Carbon\Carbon::parse($matter->om_end_date)->format('F j, Y') }}</td>
+                            <td data-label="Attachment">
                                 @if ($matter->om_attachment)
                                     <button class="view-slip-btn"
                                         onclick="viewSlip('{{ asset('storage/' . $matter->om_attachment) }}')">View</button>
@@ -581,7 +1228,7 @@
                                     N/A
                                 @endif
                             </td>
-                            <td>
+                            <td data-label="Actions">
                                 <div class="action-btns">
                                     <button class="edit-btn" data-id="{{ $matter->om_id }}"
                                         data-faculty="{{ $matter->faculty_id }}"
@@ -1093,7 +1740,18 @@
         }
 
         function openModal(id) {
-            document.getElementById(id).style.display = 'flex';
+            const modal = document.getElementById(id);
+            if (!modal) return;
+            
+            const modalBox = modal.querySelector('.modal-box');
+            
+            // Remove slide-up class to ensure slide-down animation
+            if (modalBox && (id === 'addModal' || id === 'editModal' || id === 'deleteModal' || id === 'slipModal')) {
+                modalBox.classList.remove('slide-up');
+            }
+            
+            modal.style.display = 'flex';
+            
             // Initialize button states
             if (id === 'addModal') {
                 // Reset toggle
@@ -1110,6 +1768,21 @@
         function closeModal(id) {
             const modal = document.getElementById(id);
             if (!modal) return;
+            
+            const modalBox = modal.querySelector('.modal-box');
+            
+            // Add slide-up class for animation
+            if (modalBox && (id === 'addModal' || id === 'editModal' || id === 'deleteModal' || id === 'slipModal')) {
+                modalBox.classList.add('slide-up');
+                
+                // Hide modal after animation completes
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    modalBox.classList.remove('slide-up');
+                }, 300);
+            } else {
+                modal.style.display = 'none';
+            }
 
             // Clear form and validation for add modal
             if (id === 'addModal') {
@@ -1162,8 +1835,6 @@
                     }
                 }
             }
-
-            modal.style.display = 'none';
         }
 
         function viewSlip(url) {
@@ -1306,12 +1977,14 @@
                     let searchTerm = this.value.toLowerCase();
                     let rows = document.querySelectorAll('.teaching-load-table tbody tr');
                     let anyVisible = false;
+                    let isMobile = window.innerWidth <= 430;
 
                     rows.forEach(row => {
                         if (row.classList.contains('no-results')) return;
                         let text = row.textContent.toLowerCase();
                         if (text.includes(searchTerm)) {
-                            row.style.display = '';
+                            // Use block for mobile (cards), table-row for desktop
+                            row.style.display = isMobile ? 'block' : '';
                             anyVisible = true;
                         } else {
                             row.style.display = 'none';
@@ -1329,6 +2002,8 @@
                                 `<td colspan="8" style="text-align:center; padding:20px; color:#999; font-style:italic;">No results found</td>`;
                             tbody.appendChild(noResultsRow);
                         }
+                        // Ensure no-results row is visible
+                        noResultsRow.style.display = isMobile ? 'block' : '';
                     } else {
                         if (noResultsRow) noResultsRow.remove();
                     }

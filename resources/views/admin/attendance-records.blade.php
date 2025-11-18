@@ -508,110 +508,94 @@
             font-size: 0.8rem;
         }
 
-        /* Table Container */
+        /* Table Container - Card Layout on Mobile */
         .teaching-load-table-container {
             border-radius: 8px;
-            overflow-x: auto;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            max-height: 50vh;
+            overflow: visible;
+            background: transparent;
+            box-shadow: none;
+            max-height: none;
         }
 
+        /* Hide table header on mobile */
+        .teaching-load-table thead {
+            display: none;
+        }
+
+        /* Transform table rows into cards */
         .teaching-load-table {
-            min-width: 1200px;
-            font-size: 0.7rem;
+            width: 100%;
+            min-width: 0;
+            border-collapse: separate;
+            border-spacing: 0 12px;
+            display: block;
         }
 
-        .teaching-load-table th {
-            padding: 10px 6px;
-            font-size: 0.65rem;
+        .teaching-load-table tbody {
+            display: block;
+        }
+
+        .teaching-load-table tr {
+            display: block;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+            margin-bottom: 12px;
+            padding: 16px;
+            box-sizing: border-box;
+            border: 1px solid #e0e0e0;
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
+            cursor: pointer;
+        }
+
+        .teaching-load-table tr:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+            background: #fff2e6;
+        }
+
+        .teaching-load-table tr:last-child {
+            margin-bottom: 0;
         }
 
         .teaching-load-table td {
-            padding: 10px 6px;
-            font-size: 0.65rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            font-size: 0.8rem;
+            white-space: normal;
+            border: none;
+            text-align: left;
+            color: #222;
+        }
+
+        .teaching-load-table td:before {
+            content: attr(data-label);
+            font-weight: 600;
+            color: #555;
+            margin-right: 12px;
+            flex-shrink: 0;
+            min-width: 110px;
+            font-size: 0.75rem;
+        }
+
+        .teaching-load-table td:not(:last-child) {
+            border-bottom: 1px solid #f5f5f5;
         }
 
         /* Empty state message */
         .teaching-load-table td[colspan] {
-            font-size: 0.75rem;
-            padding: 20px 12px;
+            display: block;
+            text-align: center;
+            font-size: 0.85rem;
+            padding: 40px 20px;
+            color: #666;
+            font-style: italic;
         }
 
-        /* Adjust column widths for mobile - make them slightly wider for readability */
-        .teaching-load-table th:nth-child(1),
-        .teaching-load-table td:nth-child(1) {
-            width: 7%;
-        }
-
-        .teaching-load-table th:nth-child(2),
-        .teaching-load-table td:nth-child(2) {
-            width: 9%;
-        }
-
-        .teaching-load-table th:nth-child(3),
-        .teaching-load-table td:nth-child(3) {
-            width: 9%;
-        }
-
-        .teaching-load-table th:nth-child(4),
-        .teaching-load-table td:nth-child(4) {
-            width: 6%;
-        }
-
-        .teaching-load-table th:nth-child(5),
-        .teaching-load-table td:nth-child(5) {
-            width: 9%;
-        }
-
-        .teaching-load-table th:nth-child(6),
-        .teaching-load-table td:nth-child(6) {
-            width: 6%;
-        }
-
-        .teaching-load-table th:nth-child(7),
-        .teaching-load-table td:nth-child(7) {
-            width: 5%;
-        }
-
-        .teaching-load-table th:nth-child(8),
-        .teaching-load-table td:nth-child(8) {
-            width: 11%;
-        }
-
-        .teaching-load-table th:nth-child(9),
-        .teaching-load-table td:nth-child(9) {
-            width: 5%;
-        }
-
-        .teaching-load-table th:nth-child(10),
-        .teaching-load-table td:nth-child(10) {
-            width: 5%;
-        }
-
-        .teaching-load-table th:nth-child(11),
-        .teaching-load-table td:nth-child(11) {
-            width: 7%;
-        }
-
-        .teaching-load-table th:nth-child(12),
-        .teaching-load-table td:nth-child(12) {
-            width: 6%;
-        }
-
-        .teaching-load-table th:nth-child(13),
-        .teaching-load-table td:nth-child(13) {
-            width: 5%;
-        }
-
-        .teaching-load-table th:nth-child(14),
-        .teaching-load-table td:nth-child(14) {
-            width: 5%;
-        }
-
-        .teaching-load-table th:nth-child(15),
-        .teaching-load-table td:nth-child(15) {
-            width: 7%;
+        .teaching-load-table td[colspan]:before {
+            display: none;
         }
     }
 
@@ -654,12 +638,14 @@
         border-radius: 12px;
         width: 900px;
         height: 600px;
-        overflow-y: auto;
+        overflow: hidden;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         position: relative;
         display: flex;
         flex-direction: column;
         pointer-events: auto;
+        padding: 0;
+        margin: 0;
     }
     
     .modal-header-custom {
@@ -671,9 +657,17 @@
         font-size: 1.4rem;
         border-top-left-radius: 12px;
         border-top-right-radius: 12px;
-        position: sticky;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        position: relative;
         top: 0;
+        left: 0;
+        right: 0;
         z-index: 10;
+        width: 100%;
+        box-sizing: border-box;
+        margin: 0;
+        flex-shrink: 0;
     }
     
     .modal-close {
@@ -705,6 +699,10 @@
         padding: 24px;
         flex: 1;
         overflow-y: auto;
+        box-sizing: border-box;
+        width: 100%;
+        margin: 0;
+        margin-top: 0;
     }
     
     .modal-section {
@@ -900,6 +898,79 @@
         justify-content: center;
     }
     
+    /* Desktop view only - Modal alignment fixes */
+    @media (min-width: 769px) {
+        #recordDetailsModal .modal-box {
+            overflow: hidden;
+            padding: 0;
+            margin: 0;
+        }
+        
+        #recordDetailsModal .modal-header-custom {
+            width: 100%;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 20px;
+            flex-shrink: 0;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+            position: relative;
+            top: 0;
+            left: 0;
+            right: 0;
+        }
+        
+        #recordDetailsModal .modal-content {
+            box-sizing: border-box;
+            width: 100%;
+            margin: 0;
+            padding: 24px 24px 48px 24px;
+            margin-top: 0;
+        }
+        
+        /* Fixed-size image containers with centered alignment */
+        #recordDetailsModal .snapshot-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 300px;
+        }
+        
+        #recordDetailsModal .snapshot-image {
+            width: 100%;
+            max-width: 500px;
+            height: 300px;
+            min-height: 300px;
+            object-fit: contain;
+            object-position: center;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin: 0 auto;
+            display: block;
+            background-color: #f8f9fa;
+        }
+        
+        #recordDetailsModal .attachment-image {
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            min-height: 300px;
+            object-fit: contain;
+            object-position: center;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin: 0 auto;
+            display: block;
+            background-color: #f8f9fa;
+        }
+    }
+    
     @media (max-width: 768px) {
         .modal-info-grid {
             grid-template-columns: 1fr;
@@ -1085,29 +1156,29 @@
         <tbody>
             @forelse ($records as $record)
                 <tr onclick="viewRecordDetails({{ $record->record_id }})" class="record-row" data-record-id="{{ $record->record_id }}">
-                    <td>{{ \Carbon\Carbon::parse($record->record_date)->format('F j, Y') }}</td>
-                    <td>{{ $record->faculty->faculty_fname }} {{ $record->faculty->faculty_lname }}</td>
-                    <td>{{ $record->faculty->faculty_department }}</td>
-                    <td>{{ $record->teachingLoad->teaching_load_course_code }}</td>
-                    <td>{{ $record->teachingLoad->teaching_load_subject }}</td>
-                    <td>{{ $record->teachingLoad->teaching_load_class_section }}</td>
-                    <td>{{ $record->teachingLoad->teaching_load_day_of_week }}</td>
-                    <td>{{ \Carbon\Carbon::parse($record->teachingLoad->teaching_load_time_in)->format('h:i A') }} to {{ \Carbon\Carbon::parse($record->teachingLoad->teaching_load_time_out)->format('h:i A') }}</td>
-                    <td>
+                    <td data-label="Date">{{ \Carbon\Carbon::parse($record->record_date)->format('F j, Y') }}</td>
+                    <td data-label="Faculty Name">{{ $record->faculty->faculty_fname }} {{ $record->faculty->faculty_lname }}</td>
+                    <td data-label="Department">{{ $record->faculty->faculty_department }}</td>
+                    <td data-label="Course Code">{{ $record->teachingLoad->teaching_load_course_code }}</td>
+                    <td data-label="Subject">{{ $record->teachingLoad->teaching_load_subject }}</td>
+                    <td data-label="Class Section">{{ $record->teachingLoad->teaching_load_class_section }}</td>
+                    <td data-label="Day">{{ $record->teachingLoad->teaching_load_day_of_week }}</td>
+                    <td data-label="Time Schedule">{{ \Carbon\Carbon::parse($record->teachingLoad->teaching_load_time_in)->format('h:i A') }} to {{ \Carbon\Carbon::parse($record->teachingLoad->teaching_load_time_out)->format('h:i A') }}</td>
+                    <td data-label="Time In">
                         @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP' || !$record->record_time_in)
                             <span style="color: #999;">N/A</span>
                         @else
                             {{ \Carbon\Carbon::parse($record->record_time_in)->format('h:i A') }}
                         @endif
                     </td>
-                    <td>
+                    <td data-label="Time Out">
                         @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP' || !$record->record_time_out)
                             <span style="color: #999;">N/A</span>
                         @else
                             {{ \Carbon\Carbon::parse($record->record_time_out)->format('h:i A') }}
                         @endif
                     </td>
-                    <td>
+                    <td data-label="Time Duration">
                         @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE' || strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP')
                             <span style="color: #999;">0</span>
                         @elseif($record->time_duration_seconds == 0)
@@ -1116,10 +1187,10 @@
                             {{ intval($record->time_duration_seconds / 60) }}m {{ $record->time_duration_seconds % 60 }}s
                         @endif
                     </td>
-                    <td>{{ $record->camera->room->room_name }}</td>
-                    <td>{{ $record->camera->room->room_building_no }}</td>
-                    <td>{{ $record->record_status }}</td>
-                    <td>
+                    <td data-label="Room Name">{{ $record->camera->room->room_name }}</td>
+                    <td data-label="Building No.">{{ $record->camera->room->room_building_no }}</td>
+                    <td data-label="Status">{{ $record->record_status }}</td>
+                    <td data-label="Remarks">
                         @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE')
                             <span class="remarks-on-leave">{{ $record->record_remarks }}</span>
                         @elseif(strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP')
@@ -1143,7 +1214,6 @@
     <div class="modal-box">
         <div class="modal-header-custom">
             ATTENDANCE RECORD DETAILS
-            <button class="modal-close" onclick="closeRecordModal()">&times;</button>
         </div>
         <div class="modal-content" id="recordDetailsContent">
             <div style="text-align: center; padding: 40px;">
@@ -1722,23 +1792,17 @@ document.querySelector('.search-input').addEventListener('keydown', function(e) 
     
     // Initialize modal event listeners once on page load
     document.addEventListener('DOMContentLoaded', function() {
-        // Note: Click-outside-to-close is disabled as per user request
-        // Only the X button can close the modal
+        // Enable click-outside-to-close functionality
         const recordModal = document.getElementById('recordDetailsModal');
         if (recordModal) {
-            // Prevent closing when clicking outside
             recordModal.addEventListener('click', function(e) {
-                // Stop event propagation to prevent any default closing behavior
-                e.stopPropagation();
-                // Only allow closing if clicking directly on the overlay background (not on modal-box)
+                // Close modal when clicking directly on the overlay background (not on modal-box)
                 if (e.target === recordModal) {
-                    // Do nothing - prevent closing
-                    e.preventDefault();
-                    return false;
+                    closeRecordModal();
                 }
             });
             
-            // Also prevent clicks inside modal-box from closing
+            // Prevent clicks inside modal-box from closing the modal
             const modalBox = recordModal.querySelector('.modal-box');
             if (modalBox) {
                 modalBox.addEventListener('click', function(e) {

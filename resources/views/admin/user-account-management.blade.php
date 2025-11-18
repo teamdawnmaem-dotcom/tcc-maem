@@ -167,7 +167,38 @@
             align-items: center;
             justify-content: center;
             z-index: 1000;
-            paddin
+        }
+
+        /* Slide-down animation for Add User Modal (mobile only) */
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Slide-up animation for Add User Modal (mobile only) */
+        @keyframes slideUp {
+            from {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+        }
+
+        #addUserModal .modal-box.slide-up {
+            animation: slideUp 0.3s ease-out !important;
+        }
+
+        #updateUserModal .modal-box.slide-up {
+            animation: slideUp 0.3s ease-out !important;
         }
 
         .modal-box {
@@ -371,10 +402,22 @@
             padding: 11.2px 0;
             font-size: 0.88rem;
             border-radius: 4.8px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        #deleteUserModal .modal-btn.delete {
+            padding: 11.2px 0;
+            border-radius: 4.8px;
         }
 
         #deleteUserModal .modal-btn.cancel {
-            padding: 8px 16px;
+            padding: 11.2px 0;
+            border-radius: 4.8px;
         }
 
         #deleteUserModal .modal-buttons {
@@ -395,14 +438,26 @@
         #addUserModal .modal-box {
             display: flex;
             flex-direction: column;
-            overflow: visible;
+            overflow: hidden;
             padding: 0 !important;
+            box-sizing: border-box;
+        }
+
+        #addUserModal .modal-box form {
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
         }
 
         #addUserModal .modal-header {
             flex-shrink: 0;
             position: relative;
             z-index: 10;
+            box-sizing: border-box;
+            width: 100%;
         }
 
         #addUserModal .modal-form {
@@ -419,12 +474,89 @@
             margin-left: 0;
             margin-right: 0;
             width: 100%;
+            box-sizing: border-box;
         }
 
         /* Ensure buttons stay visible */
         #addUserModal .modal-buttons {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
             margin-top: 20px;
             padding-bottom: 10px;
+        }
+
+        #addUserModal .modal-buttons .modal-btn {
+            flex: 1;
+            max-width: 200px;
+            height: auto;
+            min-height: 44px;
+        }
+
+        /* Update User Modal - Same structure as Add User Modal */
+        #updateUserModal .modal-box {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 0 !important;
+            box-sizing: border-box;
+        }
+
+        #updateUserModal .modal-box form {
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #updateUserModal .modal-header {
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        #updateUserModal .modal-form {
+            flex: 1;
+            overflow: visible;
+            padding: 20px 24px;
+            width: 100%;
+            box-sizing: border-box;
+            margin: 0;
+        }
+
+        #updateUserModal .modal-form-group {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            margin-left: 0;
+            margin-right: 0;
+            width: 100%;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        /* Ensure buttons stay visible */
+        #updateUserModal .modal-buttons {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 20px;
+            padding-bottom: 10px;
+        }
+
+        #updateUserModal .modal-buttons .modal-btn {
+            flex: 1;
+            max-width: 200px;
+            height: auto;
+            min-height: 44px;
         }
 
         /* Mobile Responsive Design for phones (max-width: 430px) */
@@ -485,53 +617,129 @@
                 margin: 0;
             }
 
-            /* Table Container - Ensure alignment with actions row */
+            /* Table Container - Card Layout on Mobile */
             .user-table-container {
                 border-radius: 8px;
-                overflow: hidden;
+                overflow: visible;
                 width: 100%;
                 margin: 0;
+                background: transparent;
+                box-shadow: none;
             }
 
             .user-table-scroll {
-                max-height: 50vh;
-                overflow-x: auto;
-                overflow-y: auto;
+                max-height: none;
+                overflow: visible;
                 -webkit-overflow-scrolling: touch;
             }
 
-            .user-table {
-                min-width: 650px; /* Minimum width to maintain readability */
+            /* Hide table header on mobile */
+            .user-table thead {
+                display: none;
             }
 
-            .user-table th {
-                padding: 10px 8px;
-                font-size: 0.75rem;
-                white-space: nowrap;
+            /* Transform table rows into cards */
+            .user-table {
+                width: 100%;
+                min-width: 0;
+                border-collapse: separate;
+                border-spacing: 0 12px;
+                display: block;
+            }
+
+            .user-table tbody {
+                display: block;
+            }
+
+            .user-table tr {
+                display: block;
+                background: #fff;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+                margin-bottom: 12px;
+                padding: 16px;
+                box-sizing: border-box;
+                border: 1px solid #e0e0e0;
+                transition: box-shadow 0.2s ease, transform 0.2s ease;
+            }
+
+            .user-table tr:hover {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+                transform: translateY(-1px);
+            }
+
+            .user-table tr:last-child {
+                margin-bottom: 0;
             }
 
             .user-table td {
-                padding: 8px 6px;
-                font-size: 0.75rem;
-                white-space: nowrap;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 0;
+                font-size: 0.85rem;
+                white-space: normal;
+                border: none;
+                text-align: left;
+                color: #222;
+            }
+
+            .user-table td:before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #555;
+                margin-right: 12px;
+                flex-shrink: 0;
+                min-width: 100px;
+                font-size: 0.8rem;
+            }
+
+            .user-table td:not([data-label="Action"]) {
+                border-bottom: 1px solid #f5f5f5;
+            }
+
+            .user-table td:last-child:not([data-label="Action"]) {
+                border-bottom: none;
+            }
+
+            /* Action column styling */
+            .user-table td[data-label="Action"] {
+                justify-content: flex-end;
+                padding-top: 12px;
+                border-top: 1px solid #f0f0f0;
+                margin-top: 8px;
+            }
+
+            .user-table td[data-label="Action"]:before {
+                display: none;
             }
 
             /* Empty state message */
             .user-table td[colspan] {
-                font-size: 0.75rem;
-                padding: 20px 12px;
+                display: block;
+                text-align: center;
+                font-size: 0.85rem;
+                padding: 40px 20px;
+                color: #666;
+                font-style: italic;
+            }
+
+            .user-table td[colspan]:before {
+                display: none;
             }
 
             /* Action Buttons */
             .action-btns {
-                gap: 6px;
+                gap: 8px;
+                justify-content: flex-end;
             }
 
             .edit-btn,
             .delete-btn {
-                width: 36px;
-                height: 30px;
-                font-size: 1rem;
+                width: 40px;
+                height: 36px;
+                font-size: 1.1rem;
+                border-radius: 6px;
             }
 
             /* Modals - Mobile Optimized */
@@ -547,56 +755,73 @@
             }
 
             /* Add User Modal - Mobile */
+            #addUserModal.modal-overlay {
+                padding: 0 !important;
+                align-items: flex-start !important;
+                justify-content: center !important;
+            }
+
             #addUserModal .modal-box {
-                width: 95vw !important;
-                max-width: 75vw !important;
-                height: 50vh !important;
-                max-height: 50vh !important;
+                width: 100vw !important;
+                max-width: 100vw !important;
                 display: flex !important;
                 flex-direction: column !important;
                 overflow: hidden !important;
                 padding: 0 !important;
+                margin: 0 !important;
+                max-height: 100vh !important;
+                box-sizing: border-box !important;
+                border-radius: 0 !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+                animation: slideDown 0.3s ease-out !important;
+            }
+
+            #addUserModal .modal-box form {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
             }
 
             #addUserModal .modal-header {
-                font-size: 1.1rem !important;
-                padding: 12px 16px !important;
+                font-size: 1rem !important;
+                padding: 10px 14px !important;
                 flex-shrink: 0 !important;
-                position: sticky !important;
-                top: 0 !important;
-                z-index: 10 !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
             }
 
             #addUserModal .modal-form {
-                flex: 1 !important;
-                overflow-y: auto !important;
-                overflow-x: hidden !important;
-                -webkit-overflow-scrolling: touch !important;
-                padding: 16px 16px !important;
+                overflow: visible !important;
+                padding: 12px 14px !important;
                 width: 100% !important;
                 box-sizing: border-box !important;
+                margin: 0 !important;
             }
 
             #addUserModal .modal-form-group {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 6px;
-                margin-bottom: 16px;
-                padding-bottom: 20px;
+                gap: 4px;
+                margin-bottom: 10px;
+                padding-bottom: 16px;
             }
 
             #addUserModal .modal-form-group label {
                 min-width: auto;
                 width: 100%;
-                margin-bottom: 4px;
-                font-size: 0.75rem;
+                margin-bottom: 2px;
+                font-size: 0.7rem;
             }
 
             #addUserModal .modal-form-group input,
             #addUserModal .modal-form-group select {
                 width: 100%;
-                padding: 10px 12px;
-                font-size: 0.9rem;
+                padding: 8px 10px;
+                font-size: 0.85rem;
             }
 
             #addUserModal .validation-message {
@@ -605,58 +830,111 @@
                 right: 0;
                 bottom: 0;
                 padding-left: 0;
-                margin-top: 4px;
+                margin-top: 2px;
+                font-size: 0.65rem;
             }
 
             #addUserModal .modal-buttons {
-                flex-direction: column;
-                gap: 10px;
-                margin-top: 16px;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                gap: 0.75rem;
+                margin-top: 12px;
             }
 
             #addUserModal .modal-btn {
-                width: 100% !important;
-                padding: 12px !important;
-                font-size: 0.9rem !important;
+                flex: 1;
+                max-width: none;
+                padding: 10px !important;
+                font-size: 0.85rem !important;
+                min-height: 44px;
             }
 
-            /* Update User Modal */
-            #updateUserModal .modal-box {
-                width: 95vw !important;
-                max-width: 95vw !important;
-                transform: scale(1) !important;
+            /* Update User Modal - Mobile */
+            #updateUserModal.modal-overlay {
                 padding: 0 !important;
+                align-items: flex-start !important;
+                justify-content: center !important;
+            }
+
+            #updateUserModal .modal-box {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                max-height: 100vh !important;
+                box-sizing: border-box !important;
+                border-radius: 0 !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+                animation: slideDown 0.3s ease-out !important;
+            }
+
+            #updateUserModal .modal-box form {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
             }
 
             #updateUserModal .modal-header {
-                font-size: 1.1rem !important;
-                padding: 12px 16px !important;
+                font-size: 1rem !important;
+                padding: 10px 14px !important;
+                flex-shrink: 0 !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
             }
 
             #updateUserModal .modal-form {
-                padding: 16px !important;
+                overflow: visible !important;
+                padding: 12px 14px !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                margin: 0 !important;
             }
 
             #updateUserModal .modal-form-group {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 6px;
-                margin-bottom: 16px;
-                padding-bottom: 20px;
+                gap: 4px;
+                margin-bottom: 10px;
+                padding-bottom: 16px;
+                width: 100%;
+                box-sizing: border-box;
             }
 
             #updateUserModal .modal-form-group label {
                 min-width: auto;
                 width: 100%;
-                margin-bottom: 4px;
-                font-size: 0.75rem;
+                margin-bottom: 2px;
+                font-size: 0.7rem;
+                flex-shrink: 0;
             }
 
             #updateUserModal .modal-form-group input,
-            #updateUserModal .modal-form-group select {
+            #updateUserModal .modal-form-group select,
+            #updateUserModal .modal-form-group textarea {
                 width: 100%;
-                padding: 10px 12px;
-                font-size: 0.9rem;
+                padding: 8px 10px;
+                font-size: 0.85rem;
+                box-sizing: border-box;
+                border: 1px solid #bbb;
+                border-radius: 4px;
+                height: auto;
+                line-height: 1.5;
+            }
+
+            #updateUserModal .modal-form-group select {
+                appearance: none;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+                background-repeat: no-repeat;
+                background-position: right 10px center;
+                padding-right: 32px;
             }
 
             #updateUserModal .validation-message {
@@ -665,44 +943,81 @@
                 right: 0;
                 bottom: 0;
                 padding-left: 0;
-                margin-top: 4px;
+                margin-top: 2px;
+                font-size: 0.65rem;
             }
 
             #updateUserModal .modal-buttons {
-                flex-direction: column;
-                gap: 10px;
-                margin-top: 16px;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                gap: 0.75rem;
+                margin-top: 12px;
             }
 
             #updateUserModal .modal-btn {
-                width: 100% !important;
-                padding: 12px !important;
-                font-size: 0.9rem !important;
+                flex: 1;
+                max-width: none;
+                padding: 10px !important;
+                font-size: 0.85rem !important;
+                min-height: 44px;
             }
 
-            /* Delete User Modal */
+            /* Delete User Modal - Mobile Compact */
             #deleteUserModal .modal-box {
-                width: 90vw !important;
-                max-width: 90vw !important;
-                padding: 24px 20px !important;
+                width: 85vw !important;
+                max-width: 85vw !important;
+                padding: 20px 16px !important;
                 transform: scale(1) !important;
             }
 
             #deleteUserModal .modal-header {
-                font-size: 1.1rem !important;
-                margin-bottom: 16px !important;
+                font-size: 1rem !important;
+                margin-bottom: 12px !important;
+            }
+
+            /* Warning Icon and Message - More Compact */
+            #deleteUserModal .modal-box > div[style*="text-align: center"] {
+                margin: 0 !important;
+            }
+
+            #deleteUserModal .modal-box > div[style*="text-align: center"] > div:first-of-type {
+                font-size: 2.5rem !important;
+                margin-bottom: 12px !important;
+            }
+
+            #deleteUserModal .modal-box > div[style*="text-align: center"] > div:nth-of-type(2) {
+                font-size: 0.85rem !important;
+                margin-bottom: 6px !important;
+            }
+
+            #deleteUserModal .modal-box > div[style*="text-align: center"] > div:nth-of-type(3) {
+                font-size: 0.75rem !important;
+                line-height: 1.4 !important;
             }
 
             #deleteUserModal .modal-buttons {
-                flex-direction: column;
-                gap: 10px;
-                margin-top: 20px !important;
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: center !important;
+                align-items: center !important;
+                gap: 0.75rem !important;
+                margin-top: 16px !important;
             }
 
             #deleteUserModal .modal-btn {
-                width: 100% !important;
-                padding: 12px !important;
-                font-size: 0.9rem !important;
+                flex: 1 !important;
+                max-width: 140px !important;
+                width: auto !important;
+                padding: 10px 16px !important;
+                font-size: 0.85rem !important;
+                min-height: 40px !important;
+                box-sizing: border-box !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                text-align: center !important;
+                white-space: nowrap !important;
             }
 
             /* General Modal Styles */
@@ -723,6 +1038,29 @@
             .modal-form-group select,
             .modal-form-group textarea {
                 width: 100%;
+            }
+        }
+
+        /* Very small screens - stack buttons vertically */
+        @media (max-width: 360px) {
+            #addUserModal .modal-buttons {
+                flex-direction: column !important;
+                gap: 0.5rem !important;
+            }
+
+            #addUserModal .modal-buttons .modal-btn {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+
+            #updateUserModal .modal-buttons {
+                flex-direction: column !important;
+                gap: 0.5rem !important;
+            }
+
+            #updateUserModal .modal-buttons .modal-btn {
+                width: 100% !important;
+                max-width: 100% !important;
             }
         }
     </style>
@@ -759,12 +1097,12 @@
             <tbody>
                 @forelse ($users->whereIn('user_role', ['Checker', 'Department Head']) as $user)
                     <tr>
-                        <td>{{ $user->user_id }}</td>
-                        <td>{{ $user->user_fname }} {{ $user->user_lname }}</td>
-                        <td>{{ $user->username }}</td>
-                        <td>{{ $user->user_department }}</td>
-                        <td>{{ $user->user_role }}</td>
-                        <td>
+                        <td data-label="User ID">{{ $user->user_id }}</td>
+                        <td data-label="Full Name">{{ $user->user_fname }} {{ $user->user_lname }}</td>
+                        <td data-label="Username">{{ $user->username }}</td>
+                        <td data-label="Department">{{ $user->user_department }}</td>
+                        <td data-label="Role">{{ $user->user_role }}</td>
+                        <td data-label="Action">
                             <div class="action-btns">
                                 <button class="edit-btn" data-id="{{ $user->user_id }}" data-fname="{{ $user->user_fname }}"
                                     data-lname="{{ $user->user_lname }}" data-department="{{ $user->user_department }}"
@@ -795,7 +1133,7 @@
 
     <div id="addUserModal" class="modal-overlay" style="display:none;">
         <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px; width: 450px; max-width: 95vw;">
-            <form action="{{ route('admin.users.store') }}" method="POST" style="padding: 0;">
+            <form action="{{ route('admin.users.store') }}" method="POST" style="padding: 0; margin: 0; width: 100%;">
                 @csrf
                 <!-- Full-width Maroon Header -->
                 <div class="modal-header"
@@ -803,7 +1141,6 @@
     background-color: #8B0000; 
     color: white; 
     padding: 14.4px 24px;
-   
     font-size: 19.2px; 
     font-weight: bold; 
     width: 100%;
@@ -813,8 +1150,9 @@
     justify-content: center;
     text-align: center;
     letter-spacing: 0.4px;
-    border-top-left-radius: 6.4px;
-    border-top-right-radius: 6.4px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    box-sizing: border-box;
 ">
                     ADD USER
                 </div>
@@ -851,23 +1189,49 @@
                         }
 
                         #addUserModal .modal-buttons {
+                            display: flex;
+                            flex-direction: row;
+                            justify-content: center;
+                            align-items: center;
+                            gap: 1rem;
                             margin-top: 9.6px;
                         }
 
-                        /* Add button: green border by default, green background on hover */
+                        /* Add button: green background */
                         #addUserModal .modal-btn.add {
-                            background: transparent;
-                            border: 1.6px solid #2e7d32;
-                            /* green border */
-                            color: #2e7d32;
+                            background: #2ecc71;
+                            border: none;
+                            color: #fff;
                             transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
                         }
 
                         #addUserModal .modal-btn.add:hover {
-                            background: #2e7d32;
-                            /* green bg on hover */
+                            background: #27ae60;
                             color: #fff;
-                            border-color: #2e7d32;
+                        }
+
+                        /* Cancel button: outlined red */
+                        #addUserModal .modal-btn.cancel {
+                            background: #fff;
+                            border: 2px solid #800000;
+                            color: #800000;
+                            transition: all 0.3s ease;
+                        }
+
+                        #addUserModal .modal-btn.cancel:hover {
+                            background: #800000;
+                            color: #fff;
+                        }
+
+                        /* Buttons scale (padding/font) - equal sizing */
+                        #addUserModal .modal-buttons .modal-btn {
+                            flex: 1;
+                            max-width: 200px;
+                            padding: 11.2px 0;
+                            font-size: 0.88rem;
+                            border-radius: 4.8px;
+                            min-height: 44px;
+                            width: 100%;
                         }
 
                         /* Update button: match Add button green styling */
@@ -890,12 +1254,6 @@
                             color: #cccccc;
                             cursor: not-allowed;
                             opacity: 0.7;
-                        }
-                        /* Buttons scale (padding/font) */
-                        #addUserModal .modal-buttons .modal-btn {
-                            padding: 11.2px 0;
-                            font-size: 0.88rem;
-                            border-radius: 4.8px;
                         }
                     </style>
                     <div class="modal-form-group">
@@ -953,8 +1311,8 @@
                         </button>
                     </div>
                 </div>
+            </form>
         </div>
-        </form>
     </div>
 
 
@@ -962,88 +1320,134 @@
     <!-- Update User Modal -->
 
     <div id="updateUserModal" class="modal-overlay" style="display:none;">
-        <form id="updateUserForm" method="POST" style="padding: 0;">
-            @csrf
-            @method('PUT')
-            <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px; transform: scale(0.8); transform-origin: center;">
-
-                <!-- Maroon Header -->
+        <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px; width: 450px; max-width: 95vw;">
+            <form id="updateUserForm" method="POST" style="padding: 0; margin: 0; width: 100%;">
+                @csrf
+                @method('PUT')
+                <!-- Full-width Maroon Header -->
                 <div class="modal-header"
                     style="
-        background-color: #8B0000;
-        color: white;
-            padding: 14.4px 19.2px;
-        font-size: 19.2px;
-        font-weight: bold;
-        width: 100%;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            letter-spacing: 0.4px;
-            border-top-left-radius: 6.4px;
-            border-top-right-radius: 6.4px;
-        ">
-                    UPDATE USER</div>
+    background-color: #8B0000; 
+    color: white; 
+    padding: 14.4px 24px;
+    font-size: 19.2px; 
+    font-weight: bold; 
+    width: 100%;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    letter-spacing: 0.4px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    box-sizing: border-box;
+">
+                    UPDATE USER
+                </div>
 
-                <div class="modal-form" style="padding: 19.2px 19.2px 19.2px;">
+                <div class="modal-form" style="padding: 20px 24px; margin: 0; width: 100%; box-sizing: border-box;">
                     <style>
                         /* Scope spacing and sizing to Update User modal */
                         #updateUserModal .modal-form-group {
                             display: flex;
                             flex-direction: row;
                             align-items: center;
-                            gap: 4.8px;
-                            margin-bottom: 3.2px;
-                            padding-bottom: 4.8px;
+                            gap: 9.6px;
+                            margin-bottom: 9.6px;
+                            padding-bottom: 14.4px;
                             position: relative;
+                            width: 100%;
+                            box-sizing: border-box;
                         }
 
                         #updateUserModal .modal-form-group label {
                             min-width: 104px;
+                            max-width: 104px;
                             text-align: left;
                             margin-bottom: 0;
                             font-size: 0.8rem;
+                            flex-shrink: 0;
+                            color: #222;
                         }
 
                         #updateUserModal .modal-form-group input,
                         #updateUserModal .modal-form-group select,
                         #updateUserModal .modal-form-group textarea {
                             flex: 1;
-                            width: 100%;
+                            min-width: 0;
                             padding: 8px 9.6px;
                             font-size: 0.8rem;
                             border: 1px solid #bbb;
                             border-radius: 4px;
+                            box-sizing: border-box;
+                            height: auto;
+                            line-height: 1.5;
+                        }
+
+                        #updateUserModal .modal-form-group select {
+                            height: auto;
+                            appearance: none;
+                            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+                            background-repeat: no-repeat;
+                            background-position: right 9.6px center;
+                            padding-right: 32px;
                         }
 
                         #updateUserModal .validation-message {
                             font-size: 0.64rem;
                             left: 104px;
-                            right: 8px;
+                            right: 9.6px;
                             bottom: -8px;
-                            padding-left: 8px;
+                            padding-left: 9.6px;
                             line-height: 1.1;
+                            position: absolute;
                         }
 
                         #updateUserModal .modal-buttons {
                             display: flex;
-                            gap: 9.6px;
+                            flex-direction: row;
                             justify-content: center;
+                            align-items: center;
+                            gap: 1rem;
                             margin-top: 9.6px;
                         }
 
-                        /* Update Modal - Scaled button styles (80%) */
-                        #updateUserModal .modal-btn {
-                            width: 160px;
+                        /* Update button: blue background */
+                        #updateUserModal .modal-btn.update {
+                            background: #7cc6fa;
+                            border: none;
+                            color: #fff;
+                            transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+                        }
+
+                        #updateUserModal .modal-btn.update:hover {
+                            background: #5bb3f5;
+                            color: #fff;
+                        }
+
+                        /* Cancel button: outlined red */
+                        #updateUserModal .modal-btn.cancel {
+                            background: #fff;
+                            border: 2px solid #800000;
+                            color: #800000;
+                            transition: all 0.3s ease;
+                        }
+
+                        #updateUserModal .modal-btn.cancel:hover {
+                            background: #800000;
+                            color: #fff;
+                        }
+
+                        /* Buttons scale (padding/font) - equal sizing */
+                        #updateUserModal .modal-buttons .modal-btn {
+                            flex: 1;
+                            max-width: 200px;
                             padding: 11.2px 0;
                             font-size: 0.88rem;
                             border-radius: 4.8px;
-                        }
-
-                        #updateUserModal .modal-btn.cancel {
-                            padding: 8px 16px;
+                            min-height: 44px;
+                            width: 100%;
                         }
                     </style>
                     <!-- Role -->
@@ -1100,8 +1504,8 @@
                         </button>
                     </div>
                 </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 
 
@@ -1116,14 +1520,13 @@
             <div style="text-align: center; margin:0 px 0;">
                 <div style="font-size: 3.2rem; color: #ff3636; margin-bottom: 16px;">⚠️</div>
                 <div style="font-size: 0.96rem; color: #333; margin-bottom: 8px; font-weight: bold;">Are you sure?</div>
-                <div style="font-size: 0.8rem; color: #666; line-height: 1.5;">This action cannot be undone. The user will be
+                <div style="font-size: 0.8rem; color: #666; line-height: 1.5;">This action cannot be undone.<br> The user will be
                     permanently deleted.</div>
             </div>
 
             <!-- Action Buttons -->
             <div class="modal-buttons">
-                <button type="submit" class="modal-btn delete">Delete
-                    User</button>
+                <button type="submit" class="modal-btn delete">Delete</button>
                 <button type="button" class="modal-btn cancel" onclick="closeModal('deleteUserModal')">
                     Cancel
                 </button>
@@ -1285,10 +1688,44 @@
             }
         }
 
-        function closeModal(id) {
-            // Hide first
+        function openModal(id) {
             const modal = document.getElementById(id);
-            if (modal) modal.style.display = 'none';
+            if (!modal) return;
+
+            // For Add User Modal and Update User Modal, ensure slide-up class is removed for slide-down animation
+            if (id === 'addUserModal' || id === 'updateUserModal') {
+                const modalBox = modal.querySelector('.modal-box');
+                if (modalBox) {
+                    modalBox.classList.remove('slide-up');
+                }
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            if (!modal) return;
+
+            // For Add User Modal and Update User Modal, add slide-up animation on mobile
+            if (id === 'addUserModal' || id === 'updateUserModal') {
+                const modalBox = modal.querySelector('.modal-box');
+                if (modalBox) {
+                    // Add slide-up animation class
+                    modalBox.classList.add('slide-up');
+                    
+                    // Wait for animation to complete, then hide modal
+                    setTimeout(() => {
+                        modal.style.display = 'none';
+                        modalBox.classList.remove('slide-up');
+                        resetModalForm(id);
+                    }, 300); // Match animation duration
+                    return;
+                }
+            }
+
+            // For other modals or if animation element not found, hide immediately
+            modal.style.display = 'none';
 
             // Reset forms only for add/update modals
             if (id === 'addUserModal' || id === 'updateUserModal') {
@@ -1298,12 +1735,9 @@
 
         document.addEventListener('click', function(e) {
             if (e.target.classList.contains('modal-overlay')) {
-                // Close and reset if it's one of the user modals
+                // Use closeModal function to handle animation and reset
                 const overlayId = e.target.id;
-                e.target.style.display = 'none';
-                if (overlayId === 'addUserModal' || overlayId === 'updateUserModal') {
-                    resetModalForm(overlayId);
-                }
+                closeModal(overlayId);
             }
         });
 
@@ -1314,6 +1748,7 @@
             let searchTerm = this.value.toLowerCase();
             let rows = document.querySelectorAll('.user-table tbody tr');
             let anyVisible = false;
+            let isMobile = window.innerWidth <= 430;
 
             rows.forEach(row => {
                 // Skip the "no results" row if it exists
@@ -1321,7 +1756,8 @@
 
                 let text = row.textContent.toLowerCase();
                 if (text.includes(searchTerm)) {
-                    row.style.display = '';
+                    // Use block for mobile (cards), table-row for desktop
+                    row.style.display = isMobile ? 'block' : '';
                     anyVisible = true;
                 } else {
                     row.style.display = 'none';
@@ -1340,6 +1776,8 @@
                         `<td colspan="6" style="text-align:center; padding:20px; color:#999; font-style:italic;">No results found</td>`;
                     tbody.appendChild(noResultsRow);
                 }
+                // Ensure no-results row is visible
+                noResultsRow.style.display = isMobile ? 'block' : '';
             } else {
                 if (noResultsRow) noResultsRow.remove();
             }
