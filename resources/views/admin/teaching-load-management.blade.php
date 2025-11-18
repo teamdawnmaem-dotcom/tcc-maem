@@ -1676,6 +1676,9 @@
 
             const fields = form.querySelectorAll('input, select, textarea');
             fields.forEach(function(el) {
+                if (el.type === 'hidden') {
+                    return;
+                }
                 if (el.tagName === 'SELECT') {
                     el.value = '';
                 } else if (el.type === 'checkbox' || el.type === 'radio') {
@@ -2573,14 +2576,12 @@
                         <label for="school_year">School Year:</label>
                         <select id="school_year" name="school_year" required>
                             <option value="">Select School Year</option>
-                            <option value="2023-2024">2023-2024</option>
-                            <option value="2024-2025">2024-2025</option>
                             <option value="2025-2026">2025-2026</option>
                             <option value="2026-2027">2026-2027</option>
-                            <option value="2023-2024">2027-2028</option>
-                            <option value="2024-2025">2028-2029</option>
-                            <option value="2025-2026">2029-2030</option>
-                            <option value="2026-2027">2030-2031</option>
+                            <option value="2027-2028">2027-2028</option>
+                            <option value="2028-2029">2028-2029</option>
+                            <option value="2029-2030">2029-2030</option>
+                            <option value="2030-2031">2030-2031</option>
                         </select>
                     </div>
 

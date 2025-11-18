@@ -1605,11 +1605,17 @@
 
 
 
-        // Close modals when clicking outside
+        // Close modals when clicking outside (unless explicitly disabled)
         document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('modal-overlay')) {
-                e.target.style.display = 'none';
+            if (!e.target.classList.contains('modal-overlay')) {
+                return;
             }
+
+            if (e.target.dataset.preventOverlayClose === 'true') {
+                return;
+            }
+
+            e.target.style.display = 'none';
         });
 
 

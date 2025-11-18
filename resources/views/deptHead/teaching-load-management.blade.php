@@ -1798,8 +1798,11 @@
             const form = modal.querySelector('form');
             if (!form) return;
 
-            const fields = form.querySelectorAll('input, select, textarea');
-            fields.forEach(function(el) {
+        const fields = form.querySelectorAll('input, select, textarea');
+        fields.forEach(function(el) {
+            if (el.type === 'hidden') {
+                return;
+            }
                 if (el.tagName === 'SELECT') {
                     el.value = '';
                 } else if (el.type === 'checkbox' || el.type === 'radio') {
