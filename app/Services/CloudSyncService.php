@@ -1720,6 +1720,9 @@ class CloudSyncService
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('teaching-load-archives');
             
+            // CRITICAL: If a record was deleted on cloud, delete it locally too
+            $this->deleteLocalRecordsDeletedOnCloud('teaching-load-archives', 'tbl_teaching_load_archive', 'archive_id');
+            
             // Get existing cloud records with their data for comparison (like syncUsers)
             $existingCloudRecords = $this->getExistingCloudRecords('teaching-load-archives', 'archive_id');
             
