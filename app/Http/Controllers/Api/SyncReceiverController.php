@@ -692,7 +692,7 @@ class SyncReceiverController extends Controller
             'teaching-load-archives' => [
                 'table' => 'tbl_teaching_load_archive',
                 'unique' => ['archive_id'],
-                'columns' => ['archive_id','original_teaching_load_id','faculty_id','teaching_load_course_code','teaching_load_subject','teaching_load_class_section','teaching_load_day_of_week','teaching_load_time_in','teaching_load_time_out','room_no','school_year','semester','archived_at','archived_by','archive_notes','created_at','updated_at'],
+                'columns' => ['archive_id','original_teaching_load_id','faculty_id','teaching_load_course_code','teaching_load_subject','teaching_load_class_section','teaching_load_day_of_week','teaching_load_time_in','teaching_load_time_out','room_no','school_year','semester','archived_at','archived_by','archive_notes'],
             ],
             'attendance-record-archives' => [
                 'table' => 'tbl_attendance_record_archive',
@@ -1050,8 +1050,6 @@ class SyncReceiverController extends Controller
                 'archived_at' => 'required',
                 'archived_by' => 'required|integer',
                 'archive_notes' => 'nullable|string',
-                'created_at' => 'nullable|date',
-                'updated_at' => 'nullable|date',
             ]);
             
             DB::table('tbl_teaching_load_archive')->updateOrInsert(

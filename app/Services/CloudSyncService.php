@@ -1720,25 +1720,17 @@ class CloudSyncService
             // Get deleted IDs from cloud (to prevent syncing records that were deleted in cloud)
             $cloudDeletedIds = $this->getDeletedIdsFromCloud('teaching-load-archives');
             
-            // CRITICAL: If a record was deleted on cloud, delete it locally too
-            $this->deleteLocalRecordsDeletedOnCloud('teaching-load-archives', 'tbl_teaching_load_archive', 'archive_id');
-            
-            // Get existing cloud records with their data for comparison (like syncUsers)
-            $existingCloudRecords = $this->getExistingCloudRecords('teaching-load-archives', 'archive_id');
+            // Get existing teaching load archive IDs from cloud
+            $existingCloudIds = $this->getExistingCloudIds('teaching-load-archives', 'archive_id');
             
             // Get all local teaching load archives
             $allLocalArchives = TeachingLoadArchive::all();
             $totalLocal = $allLocalArchives->count();
-            $existingCount = is_array($existingCloudRecords) ? count($existingCloudRecords) : 0;
-            Log::info("Teaching Load Archives sync: Found {$totalLocal} local records, {$existingCount} existing in cloud");
+            Log::info("Teaching Load Archives sync: Found {$totalLocal} local records, " . (is_array($existingCloudIds) ? count($existingCloudIds) : 0) . " existing in cloud");
             
-            if ($allLocalArchives->isEmpty()) {
-                Log::info('No teaching load archives to sync to cloud');
-                return $synced;
-            }
-            
-            // Filter: STRICT RULE - only sync if local has newer/latest updated_at or is new
-            $archivesToSync = $allLocalArchives->filter(function ($archive) use ($existingCloudRecords, $cloudDeletedIds) {
+            // Get all local teaching load archives and filter out existing ones (append-only, no updates needed)
+            // Also skip records that were deleted in cloud
+            $localArchives = $allLocalArchives->filter(function ($archive) use ($existingCloudIds, $cloudDeletedIds) {
                 $archiveId = $archive->archive_id;
                 
                 // Skip if this record was deleted in cloud (prevent restoring deleted records)
@@ -1747,48 +1739,19 @@ class CloudSyncService
                     return false;
                 }
                 
-                // If not in cloud, needs to be synced (new record)
-                if (!isset($existingCloudRecords[$archiveId])) {
-                    return true;
-                }
-                
-                // STRICT RULE: Compare updated_at timestamps - only sync if local is newer or equal
-                if (!$this->shouldSyncLocalToCloud($archive, $existingCloudRecords[$archiveId], 'teaching_load_archive', $archiveId)) {
-                    return false;
-                }
-                
-                // If timestamps are equal, check if data is different
-                $localData = [
-                    'archive_id' => $archive->archive_id,
-                    'original_teaching_load_id' => $archive->original_teaching_load_id,
-                    'faculty_id' => $archive->faculty_id,
-                    'teaching_load_course_code' => $archive->teaching_load_course_code,
-                    'teaching_load_subject' => $archive->teaching_load_subject,
-                    'teaching_load_class_section' => $archive->teaching_load_class_section,
-                    'teaching_load_day_of_week' => $archive->teaching_load_day_of_week,
-                    'teaching_load_time_in' => $archive->teaching_load_time_in,
-                    'teaching_load_time_out' => $archive->teaching_load_time_out,
-                    'room_no' => $archive->room_no,
-                    'school_year' => $archive->school_year,
-                    'semester' => $archive->semester,
-                    'archived_at' => $this->formatDateTime($archive->archived_at),
-                    'archived_by' => $archive->archived_by,
-                    'archive_notes' => $archive->archive_notes ?? null,
-                ];
-                
-                return $this->recordsAreDifferent($localData, $existingCloudRecords[$archiveId]);
+                return !in_array($archiveId, $existingCloudIds);
             });
             
-            $toSyncCount = $archivesToSync->count();
+            $toSyncCount = $localArchives->count();
             $skippedCount = $totalLocal - $toSyncCount;
             Log::info("Teaching Load Archives sync: {$toSyncCount} records to sync, {$skippedCount} already exist in cloud");
             
-            if ($archivesToSync->isEmpty()) {
-                Log::info('No new or changed teaching load archives to sync to cloud');
+            if ($localArchives->isEmpty()) {
+                Log::info('No new teaching load archives to sync to cloud (table processed successfully)');
                 return $synced;
             }
             
-            $payload = $archivesToSync->map(function ($a) {
+            $payload = $localArchives->map(function ($a) {
                 return [
                     'archive_id' => $a->archive_id,
                     'original_teaching_load_id' => $a->original_teaching_load_id,
@@ -1805,8 +1768,6 @@ class CloudSyncService
                     'archived_at' => $this->formatDateTime($a->archived_at),
                     'archived_by' => $a->archived_by,
                     'archive_notes' => $a->archive_notes ?? null,
-                    'created_at' => $this->formatDateTime($a->created_at),
-                    'updated_at' => $this->formatDateTime($a->updated_at),
                 ];
             })->values()->all();
             $resp = $this->pushBulkToCloud('teaching-load-archives', $payload);
@@ -1818,16 +1779,14 @@ class CloudSyncService
             Log::info('Bulk teaching-load-archives result', [
                 'upserted' => $upserted, 
                 'success' => $success, 
-                'local_count' => count($archivesToSync),
+                'local_count' => count($localArchives),
                 'errors' => $errors,
                 'message' => $message
             ]);
             
             if ($success && $upserted > 0) {
-                $synced = $archivesToSync->pluck('archive_id')->all();
-                $newCount = count($archivesToSync->filter(function($a) use ($existingCloudRecords) { return !isset($existingCloudRecords[$a->archive_id]); }));
-                $updatedCount = count($archivesToSync) - $newCount;
-                Log::info('Synced ' . count($synced) . ' teaching load archives to cloud (' . $newCount . ' new, ' . $updatedCount . ' updated)');
+                $synced = $localArchives->pluck('archive_id')->all();
+                Log::info('Synced ' . count($synced) . ' new teaching load archives to cloud');
             } elseif ($success && $upserted == 0) {
                 Log::warning("Teaching load archives sync returned success but 0 records were upserted. Check cloud API logs for validation errors.");
                 if (!empty($errors)) {
@@ -4585,10 +4544,8 @@ class CloudSyncService
                             'archived_at' => $this->formatDateTime($cloudArchive['archived_at'] ?? null),
                             'archived_by' => $cloudArchive['archived_by'] ?? null,
                             'archive_notes' => $cloudArchive['archive_notes'] ?? null,
-                            'created_at' => $this->convertCloudTimestampToLocalTimezone($cloudArchive['created_at'] ?? null),
-                            'updated_at' => $this->convertCloudTimestampToLocalTimezone($cloudArchive['updated_at'] ?? null),
                         ]
-                    ], ['archive_id'], ['original_teaching_load_id', 'faculty_id', 'teaching_load_course_code', 'teaching_load_subject', 'teaching_load_class_section', 'teaching_load_day_of_week', 'teaching_load_time_in', 'teaching_load_time_out', 'room_no', 'school_year', 'semester', 'archived_at', 'archived_by', 'archive_notes', 'created_at', 'updated_at']);
+                    ], ['archive_id'], ['original_teaching_load_id', 'faculty_id', 'teaching_load_course_code', 'teaching_load_subject', 'teaching_load_class_section', 'teaching_load_day_of_week', 'teaching_load_time_in', 'teaching_load_time_out', 'room_no', 'school_year', 'semester', 'archived_at', 'archived_by', 'archive_notes']);
                     
                     $synced[] = $cloudArchive['archive_id'];
                 } catch (\Exception $e) {
