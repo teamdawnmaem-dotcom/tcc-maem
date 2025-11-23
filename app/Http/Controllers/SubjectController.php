@@ -191,7 +191,6 @@ class SubjectController extends Controller
             
             // Valid departments list
             $validDepartments = [
-                'Department of Admin',
                 'College of Information Technology',
                 'College of Library and Information Science',
                 'College of Criminology',
