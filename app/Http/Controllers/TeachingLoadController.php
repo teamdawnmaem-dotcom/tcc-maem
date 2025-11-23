@@ -1043,6 +1043,8 @@ public function apiTodaySchedule()
 
             // Restore corresponding attendance records
             $archivedAttendanceRecords = AttendanceRecordArchive::where('teaching_load_id', $archivedLoad->archive_id)->get();
+            $syncService = app(CloudSyncService::class);
+            
             foreach ($archivedAttendanceRecords as $archivedRecord) {
                 AttendanceRecord::create([
                     'faculty_id' => $archivedRecord->faculty_id,
@@ -1056,6 +1058,9 @@ public function apiTodaySchedule()
                     'record_remarks' => $archivedRecord->record_remarks,
                 ]);
                 
+                // Track deletion before deleting the archived attendance record
+                $syncService->trackDeletion('tbl_attendance_record_archive', $archivedRecord->archive_id);
+                
                 // Delete the archived attendance record
                 $archivedRecord->delete();
             }
@@ -1068,7 +1073,10 @@ public function apiTodaySchedule()
                 'logs_module' => 'Teaching Load Management',
             ]);
 
-            // Delete from archive (restore operation - don't track as deletion since it's being restored)
+            // Track deletion before deleting from archive (restore operation - track as deletion for sync)
+            $syncService->trackDeletion('tbl_teaching_load_archive', $archivedLoad->archive_id);
+            
+            // Delete from archive
             $archivedLoad->delete();
 
             return response()->json([
