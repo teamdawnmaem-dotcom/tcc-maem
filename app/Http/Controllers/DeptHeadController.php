@@ -109,8 +109,11 @@ public function attendanceRecords(Request $request)
     
     // Remarks filter
     if ($request->remarks) {
-        if (strtolower(trim($request->remarks)) === 'wrong room') {
+        $remarksValue = strtolower(trim($request->remarks));
+        if ($remarksValue === 'wrong room') {
             $query->where('record_remarks', 'like', '%Wrong room%');
+        } elseif ($remarksValue === 'late (wrong room)') {
+            $query->where('record_remarks', 'like', '%Late (Wrong room)%');
         } else {
             $query->where('record_remarks', $request->remarks);
         }

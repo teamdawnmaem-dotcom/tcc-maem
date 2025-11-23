@@ -71,7 +71,7 @@ Route::prefix('admin')->middleware('role:admin')->group(function () {
     Route::put('/teaching-load/{id}', [TeachingLoadController::class, 'update'])->name('admin.teaching-load.update');
     Route::delete('/teaching-load/{id}', [TeachingLoadController::class, 'destroy'])->name('admin.teaching-load.destroy');
     Route::post('/teaching-load/csv-upload', [TeachingLoadController::class, 'csvUpload'])->name('admin.teaching-load.csv-upload');
-    Route::get('/teaching-load/csv-template', [TeachingLoadController::class, 'csvTemplate'])->name('admin.teaching-load.csv-template');
+    Route::get('/teaching-load/excel-template', [TeachingLoadController::class, 'excelTemplate'])->name('admin.teaching-load.excel-template');
     Route::post('/teaching-load/archive-all', [TeachingLoadController::class, 'archiveAllTeachingLoads'])->name('admin.teaching-load.archive-all');
     Route::get('/teaching-load/archived', [TeachingLoadController::class, 'viewArchivedTeachingLoadsAdmin'])->name('admin.teaching-load.archived');
     Route::post('/teaching-load/restore/{archiveId}', [TeachingLoadController::class, 'restoreTeachingLoad'])->name('admin.teaching-load.restore');
@@ -118,7 +118,7 @@ Route::prefix('deptHead')->middleware('role:department head')->group(function ()
     Route::put('/teaching-load/{id}', [TeachingLoadController::class, 'update'])->name('deptHead.teaching-load.update');
     Route::delete('/teaching-load/{id}', [TeachingLoadController::class, 'destroy'])->name('deptHead.teaching-load.destroy');
     Route::post('/teaching-load/csv-upload', [TeachingLoadController::class, 'csvUpload'])->name('deptHead.teaching-load.csv-upload');
-    Route::get('/teaching-load/csv-template', [TeachingLoadController::class, 'csvTemplate'])->name('deptHead.teaching-load.csv-template');
+    Route::get('/teaching-load/excel-template', [TeachingLoadController::class, 'excelTemplate'])->name('deptHead.teaching-load.excel-template');
     
     // Teaching Load Archive Routes
     Route::post('/teaching-load/archive-all', [TeachingLoadController::class, 'archiveAllTeachingLoads'])->name('deptHead.teaching-load.archive-all');
@@ -138,7 +138,7 @@ Route::prefix('deptHead')->middleware('role:department head')->group(function ()
     Route::delete('/subjects/{id}', [\App\Http\Controllers\SubjectController::class, 'destroy'])->name('deptHead.subjects.destroy');
     Route::post('/subjects/check-duplicate', [\App\Http\Controllers\SubjectController::class, 'checkDuplicate'])->name('deptHead.subjects.check-duplicate');
     Route::post('/subjects/csv-upload', [\App\Http\Controllers\SubjectController::class, 'csvUpload'])->name('deptHead.subjects.csv-upload');
-    Route::get('/subjects/csv-template', [\App\Http\Controllers\SubjectController::class, 'csvTemplate'])->name('deptHead.subjects.csv-template');
+    Route::get('/subjects/excel-template', [\App\Http\Controllers\SubjectController::class, 'excelTemplate'])->name('deptHead.subjects.excel-template');
     
     // Live Feed
     Route::get('/live-camera-feed', [LiveCameraController::class, 'index'])->name('deptHead.live.camera.feed');

@@ -134,71 +134,51 @@
 
         /* Filter Styles - Clean & Neat Design */
         .filter-section {
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            border: 1px solid #e9ecef;
-            border-radius: 12px;
-            box-shadow: 0 6.4px 20px rgba(0, 0, 0, 0.08);
+            background: #fff;
+            border-radius: 9.6px;
             padding: 24px;
-            margin-bottom: 20px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .filter-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3.2px;
-            background: linear-gradient(90deg, #8B0000, #6d0000);
+            margin-bottom: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
         }
 
         .filter-header {
-            display: flex;
-            align-items: center;
             margin-bottom: 20px;
             padding-bottom: 12px;
             border-bottom: 1.6px solid #f1f3f4;
         }
 
         .filter-title {
-            font-size: 0.96rem;
+            font-size: 1.12rem;
             font-weight: 600;
             color: #2c3e50;
             margin: 0;
-            display: flex;
-            align-items: center;
-        }
-
-        .filter-title::before {
-            content: '🔍';
-            margin-right: 8px;
-            font-size: 0.88rem;
         }
 
         .filter-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
             margin-bottom: 20px;
-            align-items: end;
         }
 
         .filter-group {
             display: flex;
             flex-direction: column;
-            position: relative;
-            min-width: 0;
+        }
+
+        .filter-group:has(button) {
+            display: flex;
+            flex-direction: row;
+            gap: 12px;
+            align-items: end;
         }
 
         .filter-label {
-            font-size: 0.72rem;
+            font-weight: 600;
             color: #495057;
             margin-bottom: 6.4px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
+            font-size: 0.72rem;
         }
 
         .filter-input,
@@ -229,11 +209,10 @@
         .filter-actions {
             display: flex;
             gap: 12px;
-            flex-wrap: nowrap;
             align-items: center;
-            justify-content: flex-end;
-            margin-top: 16px;
-            flex: 0 0 auto;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
         }
 
         .filter-btn,
@@ -241,44 +220,42 @@
         .print-btn,
         .old-report-btn,
         .archive-btn {
-            padding: 12px 19.2px;
+            padding: 12px 25.6px;
             border: none;
             border-radius: 6.4px;
-            font-size: 0.72rem;
             font-weight: 600;
+            font-size: 0.76rem;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-transform: uppercase;
             letter-spacing: 0.4px;
-            position: relative;
-            overflow: hidden;
             white-space: nowrap;
-            min-width: 120px;
+            min-width: 160px;
             width: auto;
         }
 
         .filter-btn {
-            background: linear-gradient(135deg, #8B0000, #6d0000);
+            background: linear-gradient(135deg, #8B0000, #A52A2A);
             color: #fff;
-            box-shadow: 0 3.2px 12px rgba(139, 0, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(139, 0, 0, 0.3);
         }
 
         .filter-btn:hover {
-            background: linear-gradient(135deg, #6d0000, #5a0000);
+            background: linear-gradient(135deg, #A52A2A, #8B0000);
             transform: translateY(-2px);
-            box-shadow: 0 4.8px 16px rgba(139, 0, 0, 0.4);
+            box-shadow: 0 6px 20px rgba(139, 0, 0, 0.4);
         }
 
         .clear-btn {
-            background: linear-gradient(135deg, #6c757d, #5a6268);
+            background: linear-gradient(135deg, #6c757d, #495057);
             color: #fff;
-            box-shadow: 0 3.2px 12px rgba(108, 117, 125, 0.3);
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
         }
 
         .clear-btn:hover {
-            background: linear-gradient(135deg, #5a6268, #495057);
+            background: linear-gradient(135deg, #495057, #343a40);
             transform: translateY(-2px);
-            box-shadow: 0 4.8px 16px rgba(108, 117, 125, 0.4);
+            box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
         }
 
         .print-btn {
@@ -324,16 +301,15 @@
         .search-section {
             display: flex;
             gap: 16px;
-            align-items: end;
+            align-items: center;
             margin-top: 16px;
             padding-top: 16px;
             border-top: 1.6px solid #f1f3f4;
         }
 
         .search-group {
-            flex: 0 1 auto;
+            flex: 1;
             min-width: 0;
-            max-width: 400px;
         }
 
         .search-input {
@@ -346,6 +322,7 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             color: #495057;
             font-weight: 500;
+            box-sizing: border-box;
         }
 
         .search-input:focus {
@@ -355,16 +332,21 @@
             transform: translateY(-1px);
         }
 
-        .search-input::placeholder {
-            color: #adb5bd;
-            font-weight: 400;
-        }
-
         .search-actions {
             display: flex;
             gap: 12px;
-            align-items: end;
+            align-items: center;
             flex-shrink: 0;
+        }
+
+        /* Search button alignment */
+        .search-actions .print-btn,
+        .search-actions .old-report-btn {
+            padding: 9.6px 19px;
+            height: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         @media (max-width: 768px) {
@@ -911,6 +893,10 @@
 
     <!-- Filter Section -->
     <div class="filter-section">
+        <div class="filter-header">
+            <h3 class="filter-title">Filter Attendance Records</h3>
+        </div>
+        
         <div class="filter-grid">
             <div class="filter-group">
                 <label class="filter-label">Start Date</label>
@@ -995,14 +981,13 @@
                     <option value="Absent">Absent</option>
                     <option value="Late">Late</option>
                     <option value="Wrong room">Present (Wrong room)</option>
+                    <option value="Late (Wrong room)">Late (Wrong room)</option>
                     <option value="On Leave">On Leave</option>
                     <option value="With Pass Slip">With Pass Slip</option>
                 </select>
             </div>
             <div class="filter-group">
                 <button class="filter-btn" onclick="applyFilters()">Apply Filters</button>
-            </div>
-            <div class="filter-group">
                 <button class="clear-btn" onclick="clearFilters()">Clear All</button>
             </div>
         </div>
@@ -1026,7 +1011,7 @@
                     <input type="hidden" name="status" id="printStatus">
                     <input type="hidden" name="remarks" id="printRemarks">
                     <input type="hidden" name="search" id="printSearch">
-                    <button type="submit" class="print-btn">Print Report</button>
+                    <button type="submit" class="print-btn">Print Detailed Report</button>
                 </form>
                 <form id="oldReportForm" method="GET" action="{{ route('checker.attendance.sheet.print') }}" target="_blank">
                     <input type="hidden" name="startDate" id="sheetStartDate">
@@ -1041,7 +1026,7 @@
                     <input type="hidden" name="status" id="sheetStatus">
                     <input type="hidden" name="remarks" id="sheetRemarks">
                     <input type="hidden" name="search" id="sheetSearch">
-                    <button type="submit" class="old-report-btn">OLD report Format</button>
+                    <button type="submit" class="old-report-btn">Print Report</button>
                 </form>
                 
             </div>
@@ -1271,11 +1256,17 @@
                                 opt.textContent = r;
                                 remarksSelect.appendChild(opt);
                             });
-                            // Ensure "Wrong room" option exists (special LIKE filter)
+                            // Ensure "Wrong room" and "Late (Wrong room)" options exist (special LIKE filters)
                             if (![...remarksSelect.options].some(o => o.value === 'Wrong room')) {
                                 const opt = document.createElement('option');
                                 opt.value = 'Wrong room';
-                                opt.textContent = 'Wrong room';
+                                opt.textContent = 'Present (Wrong room)';
+                                remarksSelect.appendChild(opt);
+                            }
+                            if (![...remarksSelect.options].some(o => o.value === 'Late (Wrong room)')) {
+                                const opt = document.createElement('option');
+                                opt.value = 'Late (Wrong room)';
+                                opt.textContent = 'Late (Wrong room)';
                                 remarksSelect.appendChild(opt);
                             }
                         }

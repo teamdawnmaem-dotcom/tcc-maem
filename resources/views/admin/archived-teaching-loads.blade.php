@@ -189,34 +189,70 @@
 
         /* ====== Filter Styles ====== */
         .filter-section {
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 6.4px;
-            margin-bottom: 16px;
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            flex-wrap: wrap;
+            background: #fff;
+            border-radius: 9.6px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
+        }
+
+        .filter-header {
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1.6px solid #f1f3f4;
+        }
+
+        .filter-title {
+            font-size: 1.12rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
         }
 
         .filter-group {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+        }
+
+        .filter-group:has(button) {
+            display: flex;
+            flex-direction: row;
+            gap: 12px;
+            align-items: end;
         }
 
         .filter-group label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 6.4px;
             font-size: 0.72rem;
-            font-weight: bold;
-            color: #333;
         }
 
-         .filter-group select {
-             padding: 6.4px 9.6px;
-             border: 1px solid #ccc;
-             border-radius: 3.2px;
-             font-size: 0.72rem;
-         }
+        .filter-group select {
+            padding: 9.6px 12.8px;
+            border: 1.6px solid #e9ecef;
+            border-radius: 6.4px;
+            font-size: 0.76rem;
+            background: #ffffff;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: #8B0000;
+            box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
 
          /* ====== Modal Styles ====== */
          .modal-overlay {
@@ -341,12 +377,24 @@
 
              /* Filter Section */
              .filter-section {
-                 flex-direction: column;
-                 align-items: stretch;
-                 gap: 12px;
                  padding: 16px 12px;
                  margin-bottom: 16px;
                  border-radius: 8px;
+             }
+
+             .filter-header {
+                 margin-bottom: 16px;
+                 padding-bottom: 10px;
+             }
+
+             .filter-title {
+                 font-size: 1rem;
+             }
+
+             .filter-grid {
+                 grid-template-columns: 1fr;
+                 gap: 12px;
+                 margin-bottom: 16px;
              }
 
              .filter-group {
@@ -565,32 +613,37 @@
 
     <!-- Filter Section -->
     <div class="filter-section">
-        <div class="filter-group">
-            <label for="schoolYearFilter">School Year:</label>
-            <select id="schoolYearFilter">
-                <option value="">All Years</option>
-                @foreach($archivedLoads->pluck('school_year')->unique()->sort()->reverse() as $year)
-                    <option value="{{ $year }}">{{ $year }}</option>
-                @endforeach
-            </select>
+        <div class="filter-header">
+            <h3 class="filter-title">Filter Archived Teaching Loads</h3>
         </div>
-        <div class="filter-group">
-            <label for="semesterFilter">Semester:</label>
-            <select id="semesterFilter">
-                <option value="">All Semesters</option>
-                @foreach($archivedLoads->pluck('semester')->unique()->sort() as $semester)
-                    <option value="{{ $semester }}">{{ $semester }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="filter-group">
-            <label for="facultyFilter">Faculty:</label>
-            <select id="facultyFilter">
-                <option value="">All Faculty</option>
-                @foreach($archivedLoads->filter(function($load) { return $load->faculty; })->map(function($load) { return $load->faculty->faculty_fname . ' ' . $load->faculty->faculty_lname; })->unique() as $faculty)
-                    <option value="{{ $faculty }}">{{ $faculty }}</option>
-                @endforeach
-            </select>
+        <div class="filter-grid">
+            <div class="filter-group">
+                <label for="schoolYearFilter">School Year:</label>
+                <select id="schoolYearFilter" class="filter-select">
+                    <option value="">All Years</option>
+                    @foreach($archivedLoads->pluck('school_year')->unique()->sort()->reverse() as $year)
+                        <option value="{{ $year }}">{{ $year }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="semesterFilter">Semester:</label>
+                <select id="semesterFilter" class="filter-select">
+                    <option value="">All Semesters</option>
+                    @foreach($archivedLoads->pluck('semester')->unique()->sort() as $semester)
+                        <option value="{{ $semester }}">{{ $semester }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="facultyFilter">Faculty:</label>
+                <select id="facultyFilter" class="filter-select">
+                    <option value="">All Faculty</option>
+                    @foreach($archivedLoads->filter(function($load) { return $load->faculty; })->map(function($load) { return $load->faculty->faculty_fname . ' ' . $load->faculty->faculty_lname; })->unique() as $faculty)
+                        <option value="{{ $faculty }}">{{ $faculty }}</option>
+                    @endforeach
+                </select>
+            </div>
         </div>
     </div>
 

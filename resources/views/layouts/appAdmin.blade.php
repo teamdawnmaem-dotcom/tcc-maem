@@ -1251,7 +1251,7 @@
                         <rect x="3" y="5" width="16" height="14" rx="2" stroke="#fff"
                             stroke-width="2" />
                         <path d="M7 9h8M7 13h8M7 17h8" stroke="#fff" stroke-width="2" />
-                    </svg> </span> Reports </div>
+                    </svg> </span> Attendance Records </div>
 
             <div class="nav-item @yield('teaching-load-active')"
                 onclick="window.location.href='{{ url('/admin/teaching-load-management') }}'">

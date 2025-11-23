@@ -7,6 +7,13 @@ use App\Models\Subject;
 use App\Models\ActivityLog;
 use App\Services\CloudSyncService;
 use Illuminate\Support\Facades\Auth;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\RichText\RichText;
 
 class SubjectController extends Controller
 {
@@ -131,15 +138,50 @@ class SubjectController extends Controller
     public function csvUpload(Request $request)
     {
         $request->validate([
-            'csv_file' => 'required|file|mimes:csv,txt|max:2048'
+            'csv_file' => 'required|file|mimes:csv,txt,xlsx,xls|max:10240'
         ]);
 
         try {
             $file = $request->file('csv_file');
-            $csvData = array_map('str_getcsv', file($file->getPathname()));
+            $extension = $file->getClientOriginalExtension();
             
-            // Remove header row
-            $header = array_shift($csvData);
+            // Parse file based on extension
+            if (in_array(strtolower($extension), ['xlsx', 'xls'])) {
+                // Handle Excel file
+                $spreadsheet = IOFactory::load($file->getPathname());
+                $worksheet = $spreadsheet->getActiveSheet();
+                $csvData = [];
+                
+                // Skip first 5 rows (institution header, title, empty row, column headers, example row)
+                // Start from row 6 (actual data rows)
+                $startRow = 6;
+                $highestRow = $worksheet->getHighestRow();
+                
+                // Read header row (row 4) for validation
+                $headerRow = [];
+                $highestColumn = $worksheet->getHighestColumn();
+                for ($col = 'A'; $col <= $highestColumn; $col++) {
+                    $headerRow[] = $worksheet->getCell($col . '4')->getValue();
+                }
+                $header = $headerRow;
+                
+                // Read data rows starting from row 6
+                for ($row = $startRow; $row <= $highestRow; $row++) {
+                    $rowData = [];
+                    for ($col = 'A'; $col <= $highestColumn; $col++) {
+                        $rowData[] = $worksheet->getCell($col . $row)->getValue();
+                    }
+                    if (!empty(array_filter($rowData))) { // Skip empty rows
+                        $csvData[] = $rowData;
+                    }
+                }
+            } else {
+                // Handle CSV file
+                $csvData = array_map('str_getcsv', file($file->getPathname()));
+                
+                // Remove header row
+                $header = array_shift($csvData);
+            }
             
             $successCount = 0;
             $errorCount = 0;
@@ -163,9 +205,12 @@ class SubjectController extends Controller
             
             foreach ($csvData as $index => $row) {
                 try {
+                    // Calculate actual row number (Excel: row 6+ = index+6, CSV: row 2+ = index+2)
+                    $actualRowNumber = (in_array(strtolower($extension), ['xlsx', 'xls'])) ? ($index + 6) : ($index + 2);
+                    
                     // Validate row has required columns
                     if (count($row) < 3) {
-                        $errors[] = "Row " . ($index + 2) . ": Insufficient columns. Expected 3, got " . count($row);
+                        $errors[] = "Row " . $actualRowNumber . ": Insufficient columns. Expected 3, got " . count($row);
                         $errorCount++;
                         continue;
                     }
@@ -177,28 +222,28 @@ class SubjectController extends Controller
                     
                     // Validate required fields are not empty
                     if (empty($subjectCode) || empty($subjectDescription) || empty($department)) {
-                        $errors[] = "Row " . ($index + 2) . ": All fields are required and cannot be empty";
+                        $errors[] = "Row " . $actualRowNumber . ": All fields are required and cannot be empty";
                         $errorCount++;
                         continue;
                     }
                     
                     // Validate subject code length
                     if (strlen($subjectCode) > 100) {
-                        $errors[] = "Row " . ($index + 2) . ": Subject code exceeds maximum length of 100 characters";
+                        $errors[] = "Row " . $actualRowNumber . ": Subject code exceeds maximum length of 100 characters";
                         $errorCount++;
                         continue;
                     }
                     
                     // Validate subject description length
                     if (strlen($subjectDescription) > 255) {
-                        $errors[] = "Row " . ($index + 2) . ": Subject description exceeds maximum length of 255 characters";
+                        $errors[] = "Row " . $actualRowNumber . ": Subject description exceeds maximum length of 255 characters";
                         $errorCount++;
                         continue;
                     }
                     
                     // Validate department
                     if (!in_array($department, $validDepartments)) {
-                        $errors[] = "Row " . ($index + 2) . ": Invalid department '{$department}'. Must be one of: " . implode(', ', $validDepartments);
+                        $errors[] = "Row " . $actualRowNumber . ": Invalid department '{$department}'. Must be one of: " . implode(', ', $validDepartments);
                         $errorCount++;
                         continue;
                     }
@@ -206,7 +251,7 @@ class SubjectController extends Controller
                     // Check for duplicates within the same CSV upload
                     $rowKey = strtolower($subjectCode) . '|' . strtolower($subjectDescription) . '|' . strtolower($department);
                     if (in_array($rowKey, $processedRows)) {
-                        $errors[] = "Row " . ($index + 2) . ": Duplicate entry found within the same CSV file";
+                        $errors[] = "Row " . $actualRowNumber . ": Duplicate entry found within the same file";
                         $errorCount++;
                         continue;
                     }
@@ -219,7 +264,7 @@ class SubjectController extends Controller
                         ->first();
                     
                     if ($existingSubject) {
-                        $errors[] = "Row " . ($index + 2) . ": Subject with code '{$subjectCode}', description '{$subjectDescription}', and department '{$department}' already exists";
+                        $errors[] = "Row " . $actualRowNumber . ": Subject with code '{$subjectCode}', description '{$subjectDescription}', and department '{$department}' already exists";
                         $errorCount++;
                         continue;
                     }
@@ -232,11 +277,11 @@ class SubjectController extends Controller
                     ]);
                     
                     // Add success details
-                    $successDetails[] = "Row " . ($index + 2) . ": {$subjectCode} - {$subjectDescription} ({$department})";
+                    $successDetails[] = "Row " . $actualRowNumber . ": {$subjectCode} - {$subjectDescription} ({$department})";
                     $successCount++;
                     
                 } catch (\Exception $e) {
-                    $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
+                    $errors[] = "Row " . $actualRowNumber . ": " . $e->getMessage();
                     $errorCount++;
                 }
             }
@@ -245,11 +290,11 @@ class SubjectController extends Controller
             ActivityLog::create([
                 'user_id' => Auth::id(),
                 'logs_action' => 'CREATE',
-                'logs_description' => "CSV upload completed: {$successCount} subjects added, {$errorCount} errors",
+                'logs_description' => "Excel upload completed: {$successCount} subjects added, {$errorCount} errors",
                 'logs_module' => 'Subject management',
             ]);
             
-            $message = "CSV upload completed!\n";
+            $message = "Excel upload completed!\n";
             $message .= "✅ Successfully added: {$successCount} subjects\n";
             
             // Add success details
@@ -267,28 +312,123 @@ class SubjectController extends Controller
             return redirect()->back()->with('success', $message);
             
         } catch (\Exception $e) {
-            \Log::error("CSV upload error: " . $e->getMessage());
-            return redirect()->back()->withErrors(['csv_file' => 'Error processing CSV file: ' . $e->getMessage()]);
+            \Log::error("Excel upload error: " . $e->getMessage());
+            return redirect()->back()->withErrors(['csv_file' => 'Error processing Excel file: ' . $e->getMessage()]);
         }
     }
 
     /**
-     * Download CSV template for subjects
+     * Download Excel template for subjects with professional formatting
      */
-    public function csvTemplate()
+    public function excelTemplate()
     {
-        $csvContent = "Subject Code,Subject Description,Department\n";
-        $csvContent .= "IT 101,Introduction to Computing,College of Information Technology\n";
-        $csvContent .= "IT 102,Computer Programming 1,College of Information Technology\n";
-        $csvContent .= "IT 103,Data Structures and Algorithms,College of Information Technology\n";
-        $csvContent .= "ED 101,Principles of Education,College of Education\n";
-        $csvContent .= "BA 101,Introduction to Business,College of Business Administration\n";
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
         
-        $filename = 'subject_template_' . date('Y-m-d') . '.csv';
+        // Set institution header
+        $sheet->setCellValue('A1', 'TAGOLOAN COMMUNITY COLLEGE');
+        $sheet->mergeCells('A1:C1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A1')->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FF8B0000'); // Maroon background
+        $sheet->getStyle('A1')->getFont()->getColor()->setARGB('FFFFFFFF'); // White text
+        $sheet->getRowDimension('1')->setRowHeight(30);
         
-        return response($csvContent)
-            ->header('Content-Type', 'text/csv')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        // Set template title
+        $sheet->setCellValue('A2', 'SUBJECT TEMPLATE');
+        $sheet->mergeCells('A2:C2');
+        $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getRowDimension('2')->setRowHeight(25);
+        
+        // Empty row
+        $sheet->getRowDimension('3')->setRowHeight(10);
+        
+        // Set column headers
+        $headers = ['Subject Code', 'Subject Description', 'Department'];
+        $column = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($column . '4', $header);
+            $sheet->getStyle($column . '4')->getFont()->setBold(true)->setSize(11);
+            $sheet->getStyle($column . '4')->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                ->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle($column . '4')->getFill()->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FF8B0000'); // Maroon background
+            $sheet->getStyle($column . '4')->getFont()->getColor()->setARGB('FFFFFFFF'); // White text
+            $sheet->getStyle($column . '4')->getBorders()->getAllBorders()
+                ->setBorderStyle(Border::BORDER_THIN);
+            $column++;
+        }
+        $sheet->getRowDimension('4')->setRowHeight(25);
+        
+        // Set sample data with examples in parentheses (italicized)
+        // Example texts for each column
+        $examples = [
+            'IT 101',
+            'Introduction to Computing',
+            'College of Information Technology'
+        ];
+        
+        $row = 5;
+        $column = 'A';
+        
+        // Create one example row with italicized examples
+        foreach ($examples as $exampleText) {
+            $richText = new RichText();
+            $richText->createText('ex. (');
+            $italicText = $richText->createTextRun($exampleText);
+            $italicText->getFont()->setItalic(true);
+            $richText->createText(')');
+            
+            $sheet->setCellValue($column . $row, $richText);
+            $sheet->getStyle($column . $row)->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                ->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle($column . $row)->getBorders()->getAllBorders()
+                ->setBorderStyle(Border::BORDER_THIN);
+            $column++;
+        }
+        $sheet->getRowDimension($row)->setRowHeight(20);
+        
+        // Apply "Good" style (light green background) to row 5 (example row)
+        $exampleRange = 'A5:C5';
+        $sheet->getStyle($exampleRange)->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFC6EFCE'); // Light green (Excel "Good" style color)
+        
+        // Apply borders and formatting to a large range (up to row 1000) for auto-formatting new data
+        $lastRow = 1000;
+        $dataRange = 'A5:C' . $lastRow;
+        $sheet->getStyle($dataRange)->getBorders()->getAllBorders()
+            ->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle($dataRange)->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+            ->setVertical(Alignment::VERTICAL_CENTER);
+        
+        // Set default row height for data rows
+        for ($i = 5; $i <= $lastRow; $i++) {
+            $sheet->getRowDimension($i)->setRowHeight(20);
+        }
+        
+        // Set column widths
+        $sheet->getColumnDimension('A')->setWidth(18); // Subject Code
+        $sheet->getColumnDimension('B')->setWidth(40); // Subject Description
+        $sheet->getColumnDimension('C')->setWidth(45); // Department
+        
+        // Freeze rows 1-5 (institution header, title, empty row, column headers, example row)
+        $sheet->freezePane('A6');
+        
+        // Generate file
+        $filename = 'subject_template_' . date('Y-m-d') . '.xlsx';
+        $writer = new Xlsx($spreadsheet);
+        
+        $tempFile = tempnam(sys_get_temp_dir(), 'subject_template');
+        $writer->save($tempFile);
+        
+        return response()->download($tempFile, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
     }
 }
 

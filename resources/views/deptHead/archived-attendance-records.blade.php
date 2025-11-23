@@ -175,48 +175,51 @@
 
         /* Filter Styles */
         .filter-section {
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            border: 1px solid #e9ecef;
-            border-radius: 12px;
-            box-shadow: 0 6.4px 20px rgba(0, 0, 0, 0.08);
+            background: #fff;
+            border-radius: 9.6px;
             padding: 24px;
-            margin-bottom: 20px;
-            position: relative;
-            overflow: hidden;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
         }
 
-        .filter-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #8B0000, #6d0000);
+        .filter-header {
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1.6px solid #f1f3f4;
+        }
+
+        .filter-title {
+            font-size: 1.12rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0;
         }
 
         .filter-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
             margin-bottom: 20px;
-            align-items: end;
         }
 
         .filter-group {
             display: flex;
             flex-direction: column;
-            position: relative;
-            min-width: 0;
+        }
+
+        .filter-group:has(button) {
+            display: flex;
+            flex-direction: row;
+            gap: 12px;
+            align-items: end;
         }
 
         .filter-label {
-            font-size: 0.72rem;
+            font-weight: 600;
             color: #495057;
             margin-bottom: 6.4px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
+            font-size: 0.72rem;
         }
 
         .filter-input,
@@ -241,42 +244,40 @@
 
         .filter-btn,
         .clear-btn {
-            padding: 9.6px 19px;
+            padding: 12px 25.6px;
             border: none;
             border-radius: 6.4px;
-            font-size: 0.72rem;
             font-weight: 600;
+            font-size: 0.76rem;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-transform: uppercase;
             letter-spacing: 0.4px;
-            position: relative;
-            overflow: hidden;
             white-space: nowrap;
-            min-width: 120px;
+            min-width: 160px;
             width: auto;
         }
 
         .filter-btn {
-            background: linear-gradient(135deg, #8B0000, #6d0000);
+            background: linear-gradient(135deg, #8B0000, #A52A2A);
             color: #fff;
             box-shadow: 0 4px 15px rgba(139, 0, 0, 0.3);
         }
 
         .filter-btn:hover {
-            background: linear-gradient(135deg, #6d0000, #5a0000);
+            background: linear-gradient(135deg, #A52A2A, #8B0000);
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(139, 0, 0, 0.4);
         }
 
         .clear-btn {
-            background: linear-gradient(135deg, #6c757d, #5a6268);
+            background: linear-gradient(135deg, #6c757d, #495057);
             color: #fff;
             box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
         }
 
         .clear-btn:hover {
-            background: linear-gradient(135deg, #5a6268, #495057);
+            background: linear-gradient(135deg, #495057, #343a40);
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
         }
@@ -341,6 +342,10 @@
 
     <!-- Filter Section -->
     <div class="filter-section">
+        <div class="filter-header">
+            <h3 class="filter-title">Filter Archived Attendance Records</h3>
+        </div>
+        
         <div class="filter-grid">
             <div class="filter-group">
                 <label class="filter-label">School Year</label>
@@ -373,8 +378,6 @@
             </div>
             <div class="filter-group">
                 <button class="filter-btn" onclick="applyFilters()">Apply Filters</button>
-            </div>
-            <div class="filter-group">
                 <button class="clear-btn" onclick="clearFilters()">Clear All</button>
             </div>
         </div>

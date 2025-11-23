@@ -73,7 +73,7 @@
         border-radius: 9.6px;
         padding: 24px;
         margin-bottom: 24px;
-        box-shadow: 0 3.2px 16px rgba(0,0,0,0.08);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
         border: 1px solid #e9ecef;
     }
 
@@ -92,7 +92,7 @@
 
     .filter-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
         gap: 16px;
         margin-bottom: 20px;
     }
@@ -105,7 +105,7 @@
     .filter-group:has(button) {
         display: flex;
         flex-direction: row;
-        gap: 15px;
+        gap: 12px;
         align-items: end;
     }
 
@@ -161,7 +161,7 @@
     .filter-btn {
         background: linear-gradient(135deg, #8B0000, #A52A2A);
         color: #fff;
-        box-shadow: 0 3.2px 12px rgba(139, 0, 0, 0.3);
+        box-shadow: 0 4px 15px rgba(139, 0, 0, 0.3);
     }
 
     .filter-btn:hover {
@@ -185,7 +185,7 @@
     .search-section {
         display: flex;
         gap: 16px;
-        align-items: end;
+        align-items: center;
         margin-top: 16px;
         padding-top: 16px;
         border-top: 1.6px solid #f1f3f4;
@@ -217,8 +217,8 @@
 
     .search-actions {
         display: flex;
-        gap: 15px;
-        align-items: end;
+        gap: 12px;
+        align-items: center;
         flex-shrink: 0;
     }
 

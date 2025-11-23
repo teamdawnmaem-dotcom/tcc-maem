@@ -1227,7 +1227,7 @@
                             stroke-width="2" />
                         <path d="M7 9h8M7 13h8M7 17h8" stroke="#fff" stroke-width="2" />
                     </svg>
-                </span> Reports
+                </span> Attendance Records
             </div>
         </div>
     </div>

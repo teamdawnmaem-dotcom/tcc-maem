@@ -562,6 +562,32 @@
             border-color: #27ae60;
         }
 
+        /* Archive All Modal - Desktop Styles */
+        #archiveAllModal .modal-form-group {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        #archiveAllModal .modal-form-group label {
+            min-width: 120px;
+            text-align: left;
+            font-size: 0.9rem;
+            color: #222;
+            margin-bottom: 0;
+        }
+
+        #archiveAllModal .modal-form-group select {
+            flex: 1;
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 0.9rem;
+            border: 1px solid #bbb;
+            border-radius: 5px;
+        }
+
         /* Mobile Responsive Design for phones (max-width: 430px) */
         @media (max-width: 430px) {
             /* Faculty Header */
@@ -901,7 +927,7 @@
                 min-width: auto !important;
             }
 
-            /* CSV Upload Modal */
+            /* Excel Upload Modal */
             #csvUploadModal .modal-box {
                 width: 95vw !important;
                 max-width: 95vw !important;
@@ -930,7 +956,7 @@
                 font-size: 0.9rem !important;
             }
 
-            /* Archive All Modal */
+            /* Archive All Modal - Mobile */
             #archiveAllModal .modal-box {
                 width: 95vw !important;
                 max-width: 95vw !important;
@@ -1584,31 +1610,31 @@
         </form>
     </div>
 
-    <!-- CSV Upload Modal -->
+    <!-- Excel Upload Modal -->
     <div id="csvUploadModal" class="modal-overlay" style="display:none;">
         <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px; max-width: 500px;">
             <form id="csvUploadForm" action="{{ route('admin.teaching-load.csv-upload') }}" method="POST" enctype="multipart/form-data" style="padding: 0;">
                 @csrf
                 <div class="modal-header"
                     style="background-color: #8B0000; color: white; padding: 18px 24px; font-size: 24px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.5px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-                    CSV UPLOAD
+                    TEACHING LOAD EXCEL UPLOAD
                 </div>
                 <div style="padding: 24px;">
                     <div style="margin-bottom: 20px;">
-                        <label style="display: block; font-size: 1rem; color: #222; margin-bottom: 10px; font-weight: bold;">Upload CSV File:</label>
-                        <input type="file" name="csv_file" id="csvFileInput" accept=".csv" required
+                        <label style="display: block; font-size: 1rem; color: #222; margin-bottom: 10px; font-weight: bold;">Upload Excel File:</label>
+                        <input type="file" name="csv_file" id="csvFileInput" accept=".csv,.xlsx,.xls" required
                             style="width: 100%; padding: 10px; border: 2px solid #3498db; border-radius: 5px; font-size: 1rem;">
                         <div id="csvFileName" style="margin-top: 8px; font-size: 0.9rem; color: #3498db; font-weight: 500; display: none;"></div>
                         <div style="margin-top: 8px;">
-                            <a href="{{ route('admin.teaching-load.csv-template') }}" 
+                            <a href="{{ route('admin.teaching-load.excel-template') }}" 
                                style="color: #3498db; text-decoration: none; font-size: 0.9rem; font-weight: 500;">
-                                📥 Download Sample CSV Template
+                                📥 Download Sample Excel Template
                             </a>
                         </div>
                     </div>
 
                     <div style="background-color: #f0f8ff; border-left: 4px solid #3498db; padding: 15px; margin-bottom: 20px;">
-                        <div style="font-size: 0.95rem; color: #333; margin-bottom: 10px; font-weight: bold;">CSV Format Instructions:</div>
+                        <div style="font-size: 0.95rem; color: #333; margin-bottom: 10px; font-weight: bold;">Excel Format Instructions:</div>
                         <div style="font-size: 0.85rem; color: #666; line-height: 1.6;">
                             <div>• Column 1: Instructor (Full Name - must exist in system)</div>
                             <div>• Column 2: Course Code (must exist in subjects table)</div>
@@ -1625,12 +1651,12 @@
                         <div style="font-size: 0.9rem; color: #856404;">
                             <strong>Important Notes:</strong>
                             <ul style="margin: 8px 0 0 0; padding-left: 20px;">
-                                <li>The CSV file should include headers in the first row</li>
+                                <li>The Excel file should include headers in the first row</li>
                                 <li>All 8 columns are required and cannot be empty</li>
                                 <li>Instructor, Subject, and Room Name must already exist in the system</li>
                                 <li>Class section format: Department Year Section (e.g., "BSIT 1A")</li>
                                 <li>Time conflicts with existing schedules will be rejected</li>
-                                <li>Duplicate entries within the same CSV file will be rejected</li>
+                                <li>Duplicate entries within the same Excel file will be rejected</li>
                             </ul>
                         </div>
                     </div>
@@ -1659,7 +1685,7 @@
             } else if (id === 'updateTeachingLoadModal') {
                 updateUpdateButtonState(false); // Start with disabled state
             } else if (id === 'csvUploadModal') {
-                // Initialize CSV upload modal
+                // Initialize Excel upload modal
                 const uploadBtn = document.getElementById('uploadBtn');
                 if (uploadBtn) {
                     uploadBtn.disabled = true;
@@ -1710,7 +1736,7 @@
             if (id === 'addTeachingLoadModal' || id === 'updateTeachingLoadModal') {
                 resetModalForm(id);
             } else if (id === 'csvUploadModal') {
-                // Reset CSV upload form
+                // Reset Excel upload form
                 const form = document.getElementById('csvUploadForm');
                 if (form) {
                     form.reset();
@@ -2375,7 +2401,7 @@
             filterSubjects();
         })();
 
-        // CSV Upload Form Handler
+        // Excel Upload Form Handler
         (function() {
             const csvUploadForm = document.getElementById('csvUploadForm');
             const csvFileInput = document.getElementById('csvFileInput');
@@ -2395,19 +2421,6 @@
                         });
                         return false;
                     }
-                    
-                    // Show loading SweetAlert
-                    Swal.fire({
-                        title: 'Uploading CSV...',
-                        text: 'Please wait while we process your file.',
-                        icon: 'info',
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
-                        showConfirmButton: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
                     
                     // Show loading state
                     if (submitButton) {
@@ -2465,9 +2478,9 @@
     </script>
     
     <script>
-        // Handle CSV upload success/error messages
+        // Handle Excel upload success/error messages
         @if(session('success'))
-            @if(str_contains(session('success'), 'CSV upload completed'))
+            @if(str_contains(session('success'), 'Excel upload completed'))
                 @php
                     $successMessage = session('success');
                     $lines = explode("\n", $successMessage);
@@ -2480,7 +2493,7 @@
                         if (empty($line)) continue;
                         
                         // Main title
-                        if (strpos($line, 'CSV upload completed') !== false) {
+                        if (strpos($line, 'Excel upload completed') !== false) {
                             $formattedMessage .= '<div style="font-size: 1.2rem; font-weight: bold; color: #333; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #e0e0e0;">' . htmlspecialchars($line) . '</div>';
                         }
                         // Success summary
@@ -2518,7 +2531,7 @@
                 @endphp
                 Swal.fire({
                     icon: null,
-                    title: 'CSV Upload Completed!',
+                    title: 'Excel Upload Completed!',
                     html: `
                         <div style="text-align: left; max-height: 500px; overflow-y: auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
                             {!! $formattedMessage !!}
@@ -2544,7 +2557,7 @@
         @if($errors->has('csv_file'))
             Swal.fire({
                 icon: 'error',
-                title: 'CSV Upload Failed',
+                title: 'Excel Upload Failed',
                 text: '{{ $errors->first('csv_file') }}',
                 confirmButtonColor: '#8B0000',
                 confirmButtonText: 'Try Again'
@@ -2555,7 +2568,7 @@
     <!-- Archive All Modal -->
     <div id="archiveAllModal" class="modal-overlay" style="display:none;">
         <div class="modal-box" style="width: 500px; max-width: 95vw; padding: 0; overflow: hidden; border-radius: 8px;">
-            <div class="modal-header-custom" style="background-color: #8B0000; color: white; padding: 18px 24px; font-size: 24px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.5px; border-top-left-radius: 8px; border-top-right-radius: 8px;">ARCHIVE ALL TEACHING LOADS</div>
+            <div class="modal-header-custom" style="background-color: #8B0000; color: white; padding: 18px 24px; font-size: 24px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.5px; border-top-left-radius: 8px; border-top-right-radius: 8px;">NEW SEMESTER</div>
             <form method="POST" action="{{ route('admin.teaching-load.archive-all') }}">
                 @csrf
                 <div style="padding: 20px;">
@@ -2595,13 +2608,8 @@
                         </select>
                     </div>
 
-                    <div class="modal-form-group">
-                        <label for="archive_notes">Notes <br> (Optional):</label>
-                        <textarea id="archive_notes" name="archive_notes" rows="3" placeholder="Add any notes about this archive..."></textarea>
-                    </div>
-
                     <div style="margin-top: 20px; text-align: center; display: flex; justify-content: center; gap: 10px;">
-                        <button type="submit" class="modal-btn" style="background-color: #ff6b35; color: white;">Archive All</button>
+                        <button type="submit" class="modal-btn" style="background-color: #28a745; color: white;">Confirm</button>
                         <button type="button" class="modal-btn cancel" onclick="closeModal('archiveAllModal')">Cancel</button>
                     </div>
                 </div>
