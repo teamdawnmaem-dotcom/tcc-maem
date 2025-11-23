@@ -261,6 +261,69 @@
             animation: slideUp 0.3s ease-out !important;
         }
 
+        /* Excel Upload Modal - Desktop Styles */
+        #csvUploadModal.modal-overlay {
+            padding: 0 !important;
+        }
+
+        #csvUploadModal .modal-box {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        #csvUploadModal .modal-box form {
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+        }
+
+        #csvUploadModal .modal-header {
+            width: 100% !important;
+            margin: 0 !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            box-sizing: border-box !important;
+        }
+
+        #csvUploadModal .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        #csvUploadModal .modal-btn.add {
+            background: #2ecc71;
+            color: #fff;
+            border: 2px solid #2ecc71;
+            border-radius: 6px;
+            padding: 12px 0;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        #csvUploadModal .modal-btn.add:hover {
+            background: #27ae60;
+            border-color: #27ae60;
+        }
+
+        #csvUploadModal .modal-btn.cancel {
+            background: #fff;
+            color: #800000;
+            border: 2px solid #800000;
+            border-radius: 6px;
+            padding: 12px 0;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        #csvUploadModal .modal-btn.cancel:hover {
+            background: #800000;
+            color: #fff;
+        }
+
         /* Mobile responsive design for 430px width */
         @media (max-width: 430px) {
             /* Faculty Header */
@@ -874,34 +937,32 @@
                 flex-shrink: 0 !important;
             }
 
-            /* Upload button - transparent background, light blue outline, blue font, wider */
+            /* Upload button - match teaching-load-management design */
             #csvUploadModal .modal-btn.add {
-                background: transparent !important;
-                border: 2px solid #7cc6fa !important;
-                color: #7cc6fa !important;
-                min-width: 140px !important;
-                width: auto !important;
+                background: #2ecc71 !important;
+                border: 2px solid #2ecc71 !important;
+                color: #fff !important;
+                width: 50% !important;
             }
 
             #csvUploadModal .modal-btn.add:hover {
-                background: #7cc6fa !important;
+                background: #27ae60 !important;
+                border-color: #27ae60 !important;
                 color: #fff !important;
-                border-color: #7cc6fa !important;
             }
 
-            /* Cancel button - transparent background, red outline, red font */
+            /* Cancel button - match teaching-load-management design */
             #csvUploadModal .modal-btn.cancel {
-                background: transparent !important;
-                border: 2px solid #ff3636 !important;
-                color: #ff3636 !important;
-                min-width: 120px !important;
-                width: auto !important;
+                background: #fff !important;
+                border: 2px solid #800000 !important;
+                color: #800000 !important;
+                width: 50% !important;
             }
 
             #csvUploadModal .modal-btn.cancel:hover {
-                background: #ff3636 !important;
+                background: #800000 !important;
                 color: #fff !important;
-                border-color: #ff3636 !important;
+                border-color: #800000 !important;
             }
 
             #csvUploadModal .modal-box.slide-up {
@@ -943,7 +1004,7 @@
         </div>
         <div class="faculty-actions-row">
             <input type="text" class="search-input" id="subjectSearch" placeholder="Search...">
-            <button class="csv-btn" onclick="openModal && openModal('csvUploadModal')">CSV Upload</button>
+            <button class="csv-btn" onclick="openModal && openModal('csvUploadModal')">Excel Upload</button>
             <button class="add-btn" onclick="openModal && openModal('addSubjectModal')">Add</button>
         </div>
     </div>
@@ -1261,27 +1322,34 @@
         </form>
     </div>
 
-    <!-- CSV Upload Modal -->
+    <!-- Excel Upload Modal -->
     <div id="csvUploadModal" class="modal-overlay" style="display:none;">
-        <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px; max-width: 500px; transform: scale(0.8); transform-origin: center;">
-            <form id="csvUploadForm" action="{{ route('deptHead.subjects.csv-upload') }}" method="POST" enctype="multipart/form-data" style="padding: 0;">
+        <div class="modal-box" style="padding: 0; overflow: hidden; border-radius: 8px; max-width: 800px; width: 90vw;">
+            <form id="csvUploadForm" action="{{ route('deptHead.subjects.csv-upload') }}" method="POST" enctype="multipart/form-data" style="padding: 0; margin: 0;">
                 @csrf
                 <div class="modal-header"
-                    style="background-color: #8B0000; color: white; padding: 18px 24px; font-size: 24px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.5px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-                    CSV UPLOAD
+                    style="background-color: #8B0000; color: white; padding: 18px 24px; font-size: 24px; font-weight: bold; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; letter-spacing: 0.5px; border-top-left-radius: 8px; border-top-right-radius: 8px; box-sizing: border-box; position: relative; left: 0; right: 0;">
+                    SUBJECT EXCEL UPLOAD
                 </div>
                 <div style="padding: 24px;">
                     <div style="margin-bottom: 20px;">
-                        <label style="display: block; font-size: 1rem; color: #222; margin-bottom: 10px; font-weight: bold;">Upload CSV File:</label>
-                        <input type="file" name="csv_file" id="csvFileInput" accept=".csv" required
+                        <label style="display: block; font-size: 1rem; color: #222; margin-bottom: 10px; font-weight: bold;">Upload Excel File:</label>
+                        <input type="file" name="csv_file" id="csvFileInput" accept=".csv,.xlsx,.xls" required
                             style="width: 100%; padding: 10px; border: 2px solid #3498db; border-radius: 5px; font-size: 1rem;">
                         <div id="csvFileName" style="margin-top: 8px; font-size: 0.9rem; color: #3498db; font-weight: 500; display: none;"></div>
-                        <div style="margin-top: 8px;">
-                            <a href="{{ route('deptHead.subjects.csv-template') }}" 
-                               style="color: #3498db; text-decoration: none; font-size: 0.9rem; font-weight: 500;">
-                                📥 Download Sample CSV Template
+                        <div style="margin-top: 12px; text-align: center;">
+                            <a href="{{ route('deptHead.subjects.excel-template') }}" 
+                               style="display: inline-block; background-color: #3498db; color: white; padding: 12px 24px; font-size: 1.1rem; font-weight: bold; text-decoration: none; border-radius: 6px; transition: background-color 0.3s ease; box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);">
+                                📥 Download Sample Excel Template
                             </a>
                         </div>
+                        <style>
+                            a[href*="excel-template"]:hover {
+                                background-color: #2980b9 !important;
+                                box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4) !important;
+                                transform: translateY(-2px);
+                            }
+                        </style>
                     </div>
 
                     <div style="background-color: #f0f8ff; border-left: 4px solid #3498db; padding: 15px; margin-bottom: 20px;">
@@ -1306,9 +1374,9 @@
                         </div>
                     </div>
 
-                    <div class="modal-buttons">
-                        <button type="submit" class="modal-btn add">Upload</button>
-                        <button type="button" class="modal-btn cancel"
+                    <div class="modal-buttons" style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
+                        <button type="submit" class="modal-btn add" style="width: 50%;">Upload</button>
+                        <button type="button" class="modal-btn cancel" style="width: 50%;"
                             onclick="closeModal('csvUploadModal')">Cancel</button>
                     </div>
                 </div>
@@ -1822,7 +1890,7 @@
                 });
             })();
 
-            // CSV Upload Form Handler
+            // Excel Upload Form Handler
             (function() {
                 const csvUploadForm = document.getElementById('csvUploadForm');
                 const csvFileInput = document.getElementById('csvFileInput');
@@ -1844,21 +1912,6 @@
                                 });
                             }
                             return false;
-                        }
-                        
-                        // Show loading SweetAlert
-                        if (window.Swal) {
-                            Swal.fire({
-                                title: 'Uploading CSV...',
-                                text: 'Please wait while we process your file.',
-                                icon: 'info',
-                                allowOutsideClick: false,
-                                allowEscapeKey: false,
-                                showConfirmButton: false,
-                                didOpen: () => {
-                                    Swal.showLoading();
-                                }
-                            });
                         }
                         
                         // Show loading state
@@ -1913,9 +1966,9 @@
                 });
             })();
 
-            // Handle CSV upload success/error messages
+            // Handle Excel upload success/error messages
             (function() {
-                @if(session('success') && str_contains(session('success'), 'CSV upload completed'))
+                @if(session('success') && str_contains(session('success'), 'Excel upload completed'))
                     const successMessage = @json(session('success'));
                     if (window.Swal && successMessage) {
                         // Parse and format the message for better readability
@@ -1937,7 +1990,7 @@
                             if (!trimmedLine) return;
                             
                             // Main title
-                            if (trimmedLine.includes('CSV upload completed')) {
+                            if (trimmedLine.includes('Excel upload completed')) {
                                 formattedHtml += '<div style="font-size: 1.2rem; font-weight: bold; color: #333; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #e0e0e0;">' + escapeHtml(trimmedLine) + '</div>';
                             }
                             // Success summary
@@ -1977,7 +2030,7 @@
                         
                         Swal.fire({
                             icon: null,
-                            title: 'CSV Upload Completed!',
+                            title: 'Excel Upload Completed!',
                             html: formattedHtml,
                             confirmButtonColor: '#8B0000',
                             confirmButtonText: 'OK',
@@ -1993,7 +2046,7 @@
                     if (window.Swal) {
                         Swal.fire({
                             icon: 'error',
-                            title: 'CSV Upload Failed',
+                            title: 'Excel Upload Failed',
                             text: '{{ $errors->first("csv_file") }}',
                             confirmButtonColor: '#8B0000'
                         });

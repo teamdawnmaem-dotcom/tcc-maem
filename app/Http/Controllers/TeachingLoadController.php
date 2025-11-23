@@ -15,6 +15,15 @@ use App\Models\Subject;
 use App\Models\TeachingLoadArchive;
 use App\Models\AttendanceRecordArchive;
 use App\Models\AttendanceRecord;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\RichText\RichText;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Shared\Date;
 
 class TeachingLoadController extends Controller
 {
@@ -384,19 +393,107 @@ public function apiTodaySchedule()
         return redirect()->back()->with('success', 'Teaching load deleted successfully!');
     }
 
-    // CSV Upload for teaching loads
+    // Excel/CSV Upload for teaching loads
     public function csvUpload(Request $request)
     {
         $request->validate([
-            'csv_file' => 'required|file|mimes:csv,txt|max:2048'
+            'csv_file' => 'required|file|mimes:csv,txt,xlsx,xls|max:10240'
         ]);
 
         try {
             $file = $request->file('csv_file');
-            $csvData = array_map('str_getcsv', file($file->getPathname()));
+            $extension = $file->getClientOriginalExtension();
             
-            // Remove header row
-            $header = array_shift($csvData);
+            // Parse file based on extension
+            if (in_array(strtolower($extension), ['xlsx', 'xls'])) {
+                // Handle Excel file
+                $spreadsheet = IOFactory::load($file->getPathname());
+                $worksheet = $spreadsheet->getActiveSheet();
+                $csvData = [];
+                
+                // Skip first 5 rows (institution header, title, empty row, column headers, example row)
+                // Start from row 6 (actual data rows)
+                $startRow = 6;
+                $highestRow = $worksheet->getHighestRow();
+                
+                // Read header row (row 4) for validation
+                $headerRow = [];
+                $highestColumn = $worksheet->getHighestColumn();
+                for ($col = 'A'; $col <= $highestColumn; $col++) {
+                    $headerRow[] = $worksheet->getCell($col . '4')->getValue();
+                }
+                $header = $headerRow;
+                
+                // Read data rows starting from row 6
+                for ($row = $startRow; $row <= $highestRow; $row++) {
+                    $rowData = [];
+                    $colIndex = 0;
+                    for ($col = 'A'; $col <= $highestColumn; $col++) {
+                        $cell = $worksheet->getCell($col . $row);
+                        $value = $cell->getValue();
+                        
+                        // Handle Excel time/date formats (columns F and G are Time In and Time Out)
+                        if ($colIndex == 5 || $colIndex == 6) { // Time In (F) and Time Out (G)
+                            // First try to get the formatted value (what user sees in Excel)
+                            $formattedValue = $cell->getFormattedValue();
+                            
+                            // Check if formatted value looks like a time (HH:MM or HH:MM:SS)
+                            if (preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', trim($formattedValue))) {
+                                $value = trim($formattedValue);
+                                // Ensure it has seconds
+                                if (substr_count($value, ':') == 1) {
+                                    $value .= ':00';
+                                }
+                            } elseif ($value instanceof \DateTime) {
+                                // If it's a DateTime object, format it as time
+                                $value = $value->format('H:i:s');
+                            } elseif (is_numeric($value)) {
+                                // Check if it's an Excel time value (between 0 and 1)
+                                if ($value >= 0 && $value < 1) {
+                                    // Convert Excel time decimal to time string
+                                    // Excel stores time as fraction of day (0.5 = 12:00:00)
+                                    $totalSeconds = round($value * 86400); // 86400 seconds in a day
+                                    $hours = floor($totalSeconds / 3600);
+                                    $minutes = floor(($totalSeconds % 3600) / 60);
+                                    $seconds = $totalSeconds % 60;
+                                    $value = sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+                                } else {
+                                    // Try to convert using Date helper
+                                    try {
+                                        $formattedValue = Date::excelToDateTimeObject($value);
+                                        $value = $formattedValue->format('H:i:s');
+                                    } catch (\Exception $e) {
+                                        // Fallback to string
+                                        $value = trim((string)$formattedValue);
+                                    }
+                                }
+                            } else {
+                                // String, use as is but trim
+                                $value = trim((string)$value);
+                            }
+                        } else {
+                            // Non-time columns: convert to string
+                            if ($value instanceof \DateTime) {
+                                $value = $value->format('Y-m-d H:i:s');
+                            } else {
+                                $value = trim((string)$value);
+                            }
+                        }
+                        
+                        $rowData[] = $value;
+                        $colIndex++;
+                    }
+                    if (!empty(array_filter($rowData))) { // Skip empty rows
+                        $csvData[] = $rowData;
+                    }
+                }
+            } else {
+                // Handle CSV file
+                $csvData = array_map('str_getcsv', file($file->getPathname()));
+                
+                // Remove header row
+                $header = array_shift($csvData);
+            }
             
             $successCount = 0;
             $errorCount = 0;
@@ -406,9 +503,12 @@ public function apiTodaySchedule()
             
             foreach ($csvData as $index => $row) {
                 try {
+                    // Calculate actual row number (Excel: row 6+ = index+6, CSV: row 2+ = index+2)
+                    $actualRowNumber = (in_array(strtolower($extension), ['xlsx', 'xls'])) ? ($index + 6) : ($index + 2);
+                    
                     // Validate row has required columns
                     if (count($row) < 8) {
-                        $errors[] = "Row " . ($index + 2) . ": Insufficient columns. Expected 8, got " . count($row);
+                        $errors[] = "Row " . $actualRowNumber . ": Insufficient columns. Expected 8, got " . count($row);
                         $errorCount++;
                         continue;
                     }
@@ -427,7 +527,7 @@ public function apiTodaySchedule()
                     if (empty($instructorName) || empty($courseCode) || empty($subject) || 
                         empty($classSection) || empty($day) || empty($timeIn) || 
                         empty($timeOut) || empty($roomNo)) {
-                        $errors[] = "Row " . ($index + 2) . ": All fields are required and cannot be empty";
+                        $errors[] = "Row " . $actualRowNumber . ": All fields are required and cannot be empty";
                         $errorCount++;
                         continue;
                     }
@@ -435,7 +535,7 @@ public function apiTodaySchedule()
                     // Find faculty by name (case-insensitive)
                     $faculty = Faculty::whereRaw("LOWER(CONCAT(faculty_fname, ' ', faculty_lname)) = LOWER(?)", [$instructorName])->first();
                     if (!$faculty) {
-                        $errors[] = "Row " . ($index + 2) . ": Instructor '{$instructorName}' not found in the system";
+                        $errors[] = "Row " . $actualRowNumber . ": Instructor '{$instructorName}' not found in the system";
                         $errorCount++;
                         continue;
                     }
@@ -445,7 +545,7 @@ public function apiTodaySchedule()
                         ->where('subject_description', $subject)
                         ->first();
                     if (!$subjectRecord) {
-                        $errors[] = "Row " . ($index + 2) . ": Subject '{$courseCode} - {$subject}' not found in the system";
+                        $errors[] = "Row " . $actualRowNumber . ": Subject '{$courseCode} - {$subject}' not found in the system";
                         $errorCount++;
                         continue;
                     }
@@ -453,7 +553,7 @@ public function apiTodaySchedule()
                     // Validate room exists by room_name
                     $room = Room::where('room_name', $roomNo)->first();
                     if (!$room) {
-                        $errors[] = "Row " . ($index + 2) . ": Room '{$roomNo}' not found in the system";
+                        $errors[] = "Row " . $actualRowNumber . ": Room '{$roomNo}' not found in the system";
                         $errorCount++;
                         continue;
                     }
@@ -461,7 +561,7 @@ public function apiTodaySchedule()
                     // Parse class section to get department, year, section
                     $classSectionMatch = preg_match('/^([A-Z]+)\s+(\d+)([A-Z]+)$/', $classSection, $matches);
                     if (!$classSectionMatch) {
-                        $errors[] = "Row " . ($index + 2) . ": Invalid class section format '{$classSection}'. Expected format: 'BSIT 1A'";
+                        $errors[] = "Row " . $actualRowNumber . ": Invalid class section format '{$classSection}'. Expected format: 'BSIT 1A'";
                         $errorCount++;
                         continue;
                     }
@@ -473,7 +573,7 @@ public function apiTodaySchedule()
                     // Validate day of week
                     $validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
                     if (!in_array($day, $validDays)) {
-                        $errors[] = "Row " . ($index + 2) . ": Invalid day '{$day}'. Must be one of: " . implode(', ', $validDays);
+                        $errors[] = "Row " . $actualRowNumber . ": Invalid day '{$day}'. Must be one of: " . implode(', ', $validDays);
                         $errorCount++;
                         continue;
                     }
@@ -483,14 +583,18 @@ public function apiTodaySchedule()
                         $normalizedTimeIn = $this->normalizeTimeFormat($timeIn);
                         $normalizedTimeOut = $this->normalizeTimeFormat($timeOut);
                     } catch (\Exception $e) {
-                        $errors[] = "Row " . ($index + 2) . ": Invalid time format. " . $e->getMessage();
+                        $errors[] = "Row " . $actualRowNumber . ": Invalid time format. " . $e->getMessage();
                         $errorCount++;
                         continue;
                     }
                     
                     // Validate time logic: time in must be before time out
-                    if ($normalizedTimeIn >= $normalizedTimeOut) {
-                        $errors[] = "Row " . ($index + 2) . ": Time out must be later than time in";
+                    // Compare as time strings (H:i:s format)
+                    $timeInSeconds = $this->timeToSeconds($normalizedTimeIn);
+                    $timeOutSeconds = $this->timeToSeconds($normalizedTimeOut);
+                    
+                    if ($timeInSeconds >= $timeOutSeconds) {
+                        $errors[] = "Row " . $actualRowNumber . ": Time out must be later than time in (Time In: {$normalizedTimeIn}, Time Out: {$normalizedTimeOut})";
                         $errorCount++;
                         continue;
                     }
@@ -498,7 +602,7 @@ public function apiTodaySchedule()
                     // Check for duplicates within the same CSV upload
                     $rowKey = $faculty->faculty_id . '|' . $day . '|' . $normalizedTimeIn . '|' . $normalizedTimeOut . '|' . $room->room_no;
                     if (in_array($rowKey, $processedRows)) {
-                        $errors[] = "Row " . ($index + 2) . ": Duplicate entry found within the same CSV file";
+                        $errors[] = "Row " . $actualRowNumber . ": Duplicate entry found within the same file";
                         $errorCount++;
                         continue;
                     }
@@ -507,7 +611,7 @@ public function apiTodaySchedule()
                     // Check for time overlap with existing teaching loads
                     $overlapCheck = $this->hasTimeOverlap($day, $normalizedTimeIn, $normalizedTimeOut, $room->room_no);
                     if ($overlapCheck['has_overlap']) {
-                        $errors[] = "Row " . ($index + 2) . ": " . $overlapCheck['conflict_message'];
+                        $errors[] = "Row " . $actualRowNumber . ": " . $overlapCheck['conflict_message'];
                         $errorCount++;
                         continue;
                     }
@@ -525,11 +629,11 @@ public function apiTodaySchedule()
                     ]);
                     
                     // Add success details
-                    $successDetails[] = "Row " . ($index + 2) . ": {$instructorName} - {$courseCode} ({$subject}) - {$classSection} - {$day} {$normalizedTimeIn}-{$normalizedTimeOut} - {$room->room_name}";
+                    $successDetails[] = "Row " . $actualRowNumber . ": {$instructorName} - {$courseCode} ({$subject}) - {$classSection} - {$day} {$normalizedTimeIn}-{$normalizedTimeOut} - {$room->room_name}";
                     $successCount++;
                     
                 } catch (\Exception $e) {
-                    $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
+                    $errors[] = "Row " . $actualRowNumber . ": " . $e->getMessage();
                     $errorCount++;
                 }
             }
@@ -538,11 +642,11 @@ public function apiTodaySchedule()
             ActivityLog::create([
                 'user_id' => Auth::id(),
                 'logs_action' => 'CREATE',
-                'logs_description' => "CSV upload completed: {$successCount} teaching loads added, {$errorCount} errors",
+                'logs_description' => "Excel upload completed: {$successCount} teaching loads added, {$errorCount} errors",
                 'logs_module' => 'Teaching Load Management',
             ]);
             
-            $message = "CSV upload completed!\n";
+            $message = "Excel upload completed!\n";
             $message .= "✅ Successfully added: {$successCount} teaching loads\n";
             
             // Add success details
@@ -560,26 +664,133 @@ public function apiTodaySchedule()
             return redirect()->back()->with('success', $message);
             
         } catch (\Exception $e) {
-            \Log::error("CSV upload error: " . $e->getMessage());
-            return redirect()->back()->withErrors(['csv_file' => 'Error processing CSV file: ' . $e->getMessage()]);
+            \Log::error("Excel upload error: " . $e->getMessage());
+            return redirect()->back()->withErrors(['csv_file' => 'Error processing Excel file: ' . $e->getMessage()]);
         }
     }
 
     /**
-     * Download CSV template for teaching loads
+     * Download Excel template for teaching loads with professional formatting
      */
-    public function csvTemplate()
+    public function excelTemplate()
     {
-        $csvContent = "Instructor,Course Code,Subject Description,Class Section,Day,Time In,Time Out,Room Name\n";
-        $csvContent .= "John Doe,IT 101,Introduction to Computing,BSIT 1A,Monday,08:00,10:00,ComLab 1\n";
-        $csvContent .= "Jane Smith,IT 102,Computer Programming 1,BSIT 2B,Tuesday,10:30,12:30,ComLab 1\n";
-        $csvContent .= "Mike Johnson,IT 103,Integrated Application Software,BSIT 3A,Wednesday,14:00,16:00,ComLab 1\n";
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
         
-        $filename = 'teaching_load_template_' . date('Y-m-d') . '.csv';
+        // Set institution header
+        $sheet->setCellValue('A1', 'TAGOLOAN COMMUNITY COLLEGE');
+        $sheet->mergeCells('A1:H1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A1')->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FF8B0000'); // Maroon background
+        $sheet->getStyle('A1')->getFont()->getColor()->setARGB('FFFFFFFF'); // White text
+        $sheet->getRowDimension('1')->setRowHeight(30);
         
-        return response($csvContent)
-            ->header('Content-Type', 'text/csv')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        // Set template title
+        $sheet->setCellValue('A2', 'TEACHING LOAD TEMPLATE');
+        $sheet->mergeCells('A2:H2');
+        $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getRowDimension('2')->setRowHeight(25);
+        
+        // Empty row
+        $sheet->getRowDimension('3')->setRowHeight(10);
+        
+        // Set column headers
+        $headers = ['Instructor', 'Course Code', 'Subject Description', 'Class Section', 'Day', 'Time In', 'Time Out', 'Room Name'];
+        $column = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($column . '4', $header);
+            $sheet->getStyle($column . '4')->getFont()->setBold(true)->setSize(11);
+            $sheet->getStyle($column . '4')->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                ->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle($column . '4')->getFill()->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FF8B0000'); // Maroon background
+            $sheet->getStyle($column . '4')->getFont()->getColor()->setARGB('FFFFFFFF'); // White text
+            $sheet->getStyle($column . '4')->getBorders()->getAllBorders()
+                ->setBorderStyle(Border::BORDER_THIN);
+            $column++;
+        }
+        $sheet->getRowDimension('4')->setRowHeight(25);
+        
+        // Set sample data with examples in parentheses (italicized)
+        // Example texts for each column
+        $examples = [
+            'Faculty Full Name',
+            'IT 101',
+            'Introduction to Computing',
+            'BSIT 1A',
+            'Monday',
+            '08:00',
+            '10:00',
+            'ComLab 1'
+        ];
+        
+        $row = 5;
+        $column = 'A';
+        
+        // Create one example row with italicized examples
+        foreach ($examples as $exampleText) {
+            $richText = new RichText();
+            $richText->createText('ex. (');
+            $italicText = $richText->createTextRun($exampleText);
+            $italicText->getFont()->setItalic(true);
+            $richText->createText(')');
+            
+            $sheet->setCellValue($column . $row, $richText);
+            $sheet->getStyle($column . $row)->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                ->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle($column . $row)->getBorders()->getAllBorders()
+                ->setBorderStyle(Border::BORDER_THIN);
+            $column++;
+        }
+        $sheet->getRowDimension($row)->setRowHeight(20);
+        
+        // Apply "Good" style (light green background) to row 5 (example row)
+        $exampleRange = 'A5:H5';
+        $sheet->getStyle($exampleRange)->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFC6EFCE'); // Light green (Excel "Good" style color)
+        
+        // Apply borders and formatting to a large range (up to row 1000) for auto-formatting new data
+        $lastRow = 1000;
+        $dataRange = 'A5:H' . $lastRow;
+        $sheet->getStyle($dataRange)->getBorders()->getAllBorders()
+            ->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle($dataRange)->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+            ->setVertical(Alignment::VERTICAL_CENTER);
+        
+        // Set default row height for data rows
+        for ($i = 5; $i <= $lastRow; $i++) {
+            $sheet->getRowDimension($i)->setRowHeight(20);
+        }
+        
+        // Set column widths
+        $sheet->getColumnDimension('A')->setWidth(20); // Instructor
+        $sheet->getColumnDimension('B')->setWidth(15); // Course Code
+        $sheet->getColumnDimension('C')->setWidth(35); // Subject Description
+        $sheet->getColumnDimension('D')->setWidth(15); // Class Section
+        $sheet->getColumnDimension('E')->setWidth(12); // Day
+        $sheet->getColumnDimension('F')->setWidth(12); // Time In
+        $sheet->getColumnDimension('G')->setWidth(12); // Time Out
+        $sheet->getColumnDimension('H')->setWidth(15); // Room Name
+        
+        // Freeze rows 1-5 (institution header, title, empty row, column headers, example row)
+        $sheet->freezePane('A6');
+        
+        // Generate file
+        $filename = 'teaching_load_template_' . date('Y-m-d') . '.xlsx';
+        $writer = new Xlsx($spreadsheet);
+        
+        $tempFile = tempnam(sys_get_temp_dir(), 'teaching_load_template');
+        $writer->save($tempFile);
+        
+        return response()->download($tempFile, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
     }
 
     /**
@@ -591,10 +802,13 @@ public function apiTodaySchedule()
             throw new \InvalidArgumentException('Time string is empty');
         }
 
-        $timeString = trim($timeString);
+        $timeString = trim((string)$timeString);
+        
+        // Remove any extra whitespace
+        $timeString = preg_replace('/\s+/', ' ', $timeString);
         
         // Try different time formats
-        $formats = ['H:i:s', 'H:i', 'g:i A', 'g:i:s A'];
+        $formats = ['H:i:s', 'H:i', 'g:i A', 'g:i:s A', 'g:iA', 'g:i:sA'];
         
         foreach ($formats as $format) {
             try {
@@ -612,6 +826,18 @@ public function apiTodaySchedule()
         } catch (\Exception $e) {
             throw new \InvalidArgumentException("Unable to parse time: {$timeString}. Expected formats: HH:MM, HH:MM:SS, or H:MM AM/PM");
         }
+    }
+    
+    /**
+     * Convert time string (H:i:s format) to seconds for comparison
+     */
+    private function timeToSeconds($timeString)
+    {
+        $parts = explode(':', $timeString);
+        $hours = (int)($parts[0] ?? 0);
+        $minutes = (int)($parts[1] ?? 0);
+        $seconds = (int)($parts[2] ?? 0);
+        return ($hours * 3600) + ($minutes * 60) + $seconds;
     }
 
     /**

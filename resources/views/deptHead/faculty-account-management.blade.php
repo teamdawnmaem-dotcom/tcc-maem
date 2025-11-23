@@ -168,8 +168,21 @@
         }
 
         .view-btn {
-            background: #666;
+            padding: 6.4px 12.8px;
+            font-size: 0.72rem;
+            border: none;
+            border-radius: 4px;
+            background-color: #8B0000;
             color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            width: auto;
+            height: auto;
+        }
+
+        .view-btn:hover {
+            background-color: #6d0000;
         }
 
         .edit-btn {
@@ -552,7 +565,13 @@
             }
 
             /* Action buttons - smaller on mobile */
-            .view-btn,
+            .view-btn {
+                padding: 6px 12px !important;
+                font-size: 0.75rem !important;
+                width: auto;
+                height: auto;
+            }
+
             .edit-btn,
             .delete-btn {
                 width: 32px;
@@ -838,7 +857,13 @@
             }
 
             /* Action buttons - even smaller */
-            .view-btn,
+            .view-btn {
+                padding: 6px 12px !important;
+                font-size: 0.75rem !important;
+                width: auto;
+                height: auto;
+            }
+
             .edit-btn,
             .delete-btn {
                 width: 28px;
@@ -1186,7 +1211,14 @@
             }
 
             /* Resize all action buttons to match - View, Edit, Delete */
-            .faculty-table td .view-btn,
+            .faculty-table td .view-btn {
+                padding: 6px 12px !important;
+                font-size: 0.75rem !important;
+                width: auto;
+                height: auto;
+                flex-shrink: 0;
+            }
+
             .faculty-table td .edit-btn,
             .faculty-table td .delete-btn {
                 width: 32px;
@@ -1525,7 +1557,7 @@
                             <td data-label="Department">{{ $faculty->faculty_department }}</td>
                             <td data-label="Images">
                                 <button class="view-btn"
-                                    onclick='event.stopPropagation(); openViewImageModal(@json($faculty->faculty_images))'>&#128065;</button>
+                                    onclick='event.stopPropagation(); openViewImageModal(@json($faculty->faculty_images))'>View</button>
                             </td>
                             <td data-label="Action">
                                 <div class="action-btns">

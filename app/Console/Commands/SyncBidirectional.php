@@ -210,6 +210,9 @@ class SyncBidirectional extends Command
             if (preg_match('/Total records synced: (\d+)/', $outputFromCloud, $matches)) {
                 $this->line("   Records synced: {$matches[1]}");
             }
+            
+            // Extract and display successfully synced tables
+            $this->extractAndDisplaySyncedTables($outputFromCloud, 'Cloud to Local');
         } else {
             $this->error('❌ Cloud to local failed (exit code: ' . $exitCodeFromCloud . ')');
             if (!empty($errorFromCloud)) {
@@ -226,6 +229,9 @@ class SyncBidirectional extends Command
             if (preg_match('/Total records synced: (\d+)/', $outputToCloud, $matches)) {
                 $this->line("   Records synced: {$matches[1]}");
             }
+            
+            // Extract and display successfully synced tables
+            $this->extractAndDisplaySyncedTables($outputToCloud, 'Local to Cloud');
         } else {
             $this->error('❌ Local to cloud failed (exit code: ' . $exitCodeToCloud . ')');
             if (!empty($errorToCloud)) {
@@ -239,6 +245,83 @@ class SyncBidirectional extends Command
         $this->info('✨ Bidirectional sync completed!');
         
         return Command::SUCCESS;
+    }
+    
+    /**
+     * Extract and display successfully synced tables from command output
+     */
+    private function extractAndDisplaySyncedTables($output, $direction)
+    {
+        // Look for the summary table in the output
+        // Laravel's table() method outputs tables with pipes (|) separating columns
+        // Format: "Data Type          | Records Synced"
+        //         "Users              | 5"
+        //         "Subjects           | 10"
+        
+        $syncedTables = [];
+        $lines = explode("\n", $output);
+        $inTableSection = false;
+        
+        foreach ($lines as $line) {
+            $line = trim($line);
+            
+            // Check if we're entering the summary section
+            if (stripos($line, 'Summary:') !== false || stripos($line, '📊 Summary:') !== false) {
+                $inTableSection = true;
+                continue;
+            }
+            
+            // If we're in the table section, look for table rows
+            if ($inTableSection && strpos($line, '|') !== false) {
+                // Split by pipe and clean up
+                $parts = array_map('trim', explode('|', $line));
+                
+                if (count($parts) >= 2) {
+                    $tableName = $parts[0];
+                    $recordCount = $parts[1];
+                    
+                    // Skip header row and separator lines
+                    if (strtolower($tableName) !== 'data type' && 
+                        !empty($tableName) && 
+                        !preg_match('/^[-+]+$/', $tableName)) {
+                        
+                        // Add table if it has a valid record count (including 0, as it still means sync was successful)
+                        if (is_numeric($recordCount)) {
+                            $syncedTables[] = $tableName;
+                        }
+                    }
+                }
+            }
+            
+            // Stop if we hit the "Total records synced" line or empty line after table
+            if (stripos($line, 'Total records synced:') !== false || 
+                (empty($line) && $inTableSection && !empty($syncedTables))) {
+                break;
+            }
+        }
+        
+        // Alternative parsing: Use regex to find table rows if the above didn't work
+        if (empty($syncedTables)) {
+            // Look for patterns like: "Users | 5" or "Users              | 5"
+            // This regex matches: word(s) followed by spaces and pipe, then spaces and number
+            if (preg_match_all('/^\s*([A-Za-z][A-Za-z\s]+?)\s+\|\s+(\d+)\s*$/m', $output, $matches, PREG_SET_ORDER)) {
+                foreach ($matches as $match) {
+                    $tableName = trim($match[1]);
+                    // Skip header
+                    if (strtolower($tableName) !== 'data type' && !empty($tableName)) {
+                        $syncedTables[] = $tableName;
+                    }
+                }
+            }
+        }
+        
+        // Display the successfully synced tables
+        if (!empty($syncedTables)) {
+            $this->line("   ✅ Successfully synced tables:");
+            foreach ($syncedTables as $table) {
+                $this->line("      • {$table}");
+            }
+        }
     }
     
     /**
