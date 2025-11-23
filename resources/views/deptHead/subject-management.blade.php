@@ -1147,7 +1147,6 @@
                         <label>Department :</label>
                         <select name="department">
                             <option value="">Select Department</option>
-                            <option value="Department of Admin">Department of Admin</option>
                             <option value="College of Information Technology">College of Information Technology</option>
                             <option value="College of Library and Information Science">College of Library and Information
                                 Science</option>
@@ -1271,7 +1270,6 @@
                         <label>Department :</label>
                         <select name="department">
                             <option value="">Select Department</option>
-                            <option value="Department of Admin">Department of Admin</option>
                             <option value="College of Information Technology">College of Information Technology</option>
                             <option value="College of Library and Information Science">College of Library and Information
                                 Science</option>
