@@ -104,6 +104,10 @@ class AttendanceRecordArchiveController extends Controller
                 'logs_module' => 'Attendance Records Management',
             ]);
 
+            // Track deletion before deleting from archive (restore operation - track as deletion for sync)
+            $syncService = app(CloudSyncService::class);
+            $syncService->trackDeletion('tbl_attendance_record_archive', $archivedRecord->archive_id);
+            
             // Delete from archive
             $archivedRecord->delete();
 
