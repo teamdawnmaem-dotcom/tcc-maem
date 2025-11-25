@@ -454,8 +454,13 @@
                                     }
                                 }
                             @endphp
+                            @php
+                                $isLate = $remarksUpper === 'LATE' || 
+                                         str_starts_with($remarksUpper, 'LATE(') || 
+                                         (str_contains($remarksUpper, 'LATE') && str_contains($remarksUpper, 'WRONG ROOM'));
+                            @endphp
                             <td class="time-in-col">{{ $record->record_time_in ? \Carbon\Carbon::parse($record->record_time_in)->format('h:i A') : '' }}</td>
-                            <td class="late-col">{{ $remarksUpper === 'LATE' ? '✓' : '' }}</td>
+                            <td class="late-col">{{ $isLate ? '✓' : '' }}</td>
                             <td class="absent-col">{{ (!$isOnLeave && !$isPassSlip) && ($remarksUpper === 'ABSENT') ? '✓' : '' }}</td>
                             <td class="late-col">{{ $isPassSlip ? '✓' : '' }}</td>
                             <td class="late-col">{{ $isOnLeave ? '✓' : '' }}</td>
