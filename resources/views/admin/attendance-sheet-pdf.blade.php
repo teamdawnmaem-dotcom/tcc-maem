@@ -184,8 +184,13 @@
             text-align: center;
         }
 
+        .official-matters-col {
+            width: 12%;
+            text-align: center;
+        }
+
         .signature-col {
-            width: 15%;
+            width: 13%;
             text-align: center;
         }
 
@@ -399,7 +404,7 @@
                 <thead>
                     <tr>
                         <th class="time-col" colspan="2">TIME SPAN: {{ $span }}</th>
-                        <th class="remarks-col" colspan="7">REMARKS</th>
+                        <th class="remarks-col" colspan="8">REMARKS</th>
                     </tr>
                     <tr>
                         <th class="room-col">ROOM</th>
@@ -410,6 +415,7 @@
                         <th class="absent-col">ABSENT</th>
                         <th class="late-col">PASS SLIP</th>
                         <th class="late-col">LEAVE</th>
+                        <th class="official-matters-col">OFFICIAL MATTERS</th>
                         <th class="signature-col">SIGNATURE</th>
                     </tr>
                 </thead>
@@ -423,12 +429,37 @@
                                 $remarksUpper = strtoupper(trim($record->record_remarks ?? ''));
                                 $isPassSlip = str_contains($remarksUpper, 'PASS SLIP');
                                 $isOnLeave = str_contains($remarksUpper, 'LEAVE');
+                                
+                                // Check if this record is related to an official matter
+                                $isOfficialMatters = false;
+                                $officialMatterRemark = '';
+                                if (!empty($record->record_remarks) && !empty($record->record_date) && !empty($record->faculty_id)) {
+                                    $recordDate = \Carbon\Carbon::parse($record->record_date)->toDateString();
+                                    $facultyDept = optional($record->faculty)->faculty_department ?? '';
+                                    
+                                    $officialMatter = \DB::table('tbl_official_matters')
+                                        ->where(function($query) use ($record) {
+                                            $query->where('faculty_id', $record->faculty_id)
+                                                ->orWhere('om_department', optional($record->faculty)->faculty_department ?? '')
+                                                ->orWhere('om_department', 'All Instructor');
+                                        })
+                                        ->whereDate('om_start_date', '<=', $recordDate)
+                                        ->whereDate('om_end_date', '>=', $recordDate)
+                                        ->where('om_remarks', $record->record_remarks)
+                                        ->first();
+                                    
+                                    if ($officialMatter) {
+                                        $isOfficialMatters = true;
+                                        $officialMatterRemark = $record->record_remarks;
+                                    }
+                                }
                             @endphp
                             <td class="time-in-col">{{ $record->record_time_in ? \Carbon\Carbon::parse($record->record_time_in)->format('h:i A') : '' }}</td>
                             <td class="late-col">{{ $remarksUpper === 'LATE' ? '✓' : '' }}</td>
                             <td class="absent-col">{{ (!$isOnLeave && !$isPassSlip) && ($remarksUpper === 'ABSENT') ? '✓' : '' }}</td>
                             <td class="late-col">{{ $isPassSlip ? '✓' : '' }}</td>
                             <td class="late-col">{{ $isOnLeave ? '✓' : '' }}</td>
+                            <td class="official-matters-col">{{ $officialMatterRemark }}</td>
                             <td class="signature-col"></td>
                         </tr>
                     @endforeach
@@ -494,7 +525,7 @@
             <thead>
                 <tr>
                     <th class="time-col" colspan="2">TIME SPAN</th>
-                    <th class="remarks-col" colspan="7">REMARKS</th>
+                    <th class="remarks-col" colspan="8">REMARKS</th>
                 </tr>
                 <tr>
                     <th class="room-col">ROOM</th>
@@ -505,12 +536,13 @@
                     <th class="absent-col">ABSENT</th>
                     <th class="late-col">PASS SLIP</th>
                     <th class="late-col">LEAVE</th>
+                    <th class="official-matters-col">OFFICIAL MATTERS</th>
                     <th class="signature-col">SIGNATURE</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td class="room-col" colspan="9" style="text-align:center; padding: 10px;">No records found</td>
+                    <td class="room-col" colspan="10" style="text-align:center; padding: 10px;">No records found</td>
                 </tr>
             </tbody>
         </table>
