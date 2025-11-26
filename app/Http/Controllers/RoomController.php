@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Room;
+use App\Models\TeachingLoad;
 use App\Models\ActivityLog;
 use App\Services\CloudSyncService;
 
@@ -93,5 +94,48 @@ class RoomController extends Controller
             'logs_module' => 'Room management',
         ]);
         return redirect()->route('deptHead.room.management')->with('success', 'Room deleted successfully!');
+    }
+
+    // API endpoint to get schedules for a specific room
+    public function apiRoomSchedules($roomNo)
+    {
+        $room = Room::findOrFail($roomNo);
+        
+        $schedules = TeachingLoad::with('faculty')
+            ->where('room_no', $roomNo)
+            ->get()
+            ->map(function ($load) {
+                return [
+                    'teaching_load_id' => $load->teaching_load_id,
+                    'teaching_load_course_code' => $load->teaching_load_course_code,
+                    'teaching_load_subject' => $load->teaching_load_subject,
+                    'teaching_load_class_section' => $load->teaching_load_class_section,
+                    'teaching_load_day_of_week' => $load->teaching_load_day_of_week,
+                    'teaching_load_time_in' => $load->teaching_load_time_in,
+                    'teaching_load_time_out' => $load->teaching_load_time_out,
+                    'faculty_id' => $load->faculty_id,
+                    'faculty_name' => $load->faculty ? ($load->faculty->faculty_fname . ' ' . $load->faculty->faculty_lname) : 'N/A',
+                ];
+            })
+            ->sortBy(function ($load) {
+                // Define day order: Monday = 1, Tuesday = 2, ..., Sunday = 7
+                $dayOrder = [
+                    'Monday' => 1,
+                    'Tuesday' => 2,
+                    'Wednesday' => 3,
+                    'Thursday' => 4,
+                    'Friday' => 5,
+                    'Saturday' => 6,
+                    'Sunday' => 7
+                ];
+                
+                $dayValue = $dayOrder[$load['teaching_load_day_of_week']] ?? 8; // Unknown days go last
+                $timeValue = $load['teaching_load_time_in'];
+                
+                return [$dayValue, $timeValue];
+            })
+            ->values(); // Reset array keys
+
+        return response()->json($schedules);
     }
 }

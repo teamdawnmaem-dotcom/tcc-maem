@@ -201,12 +201,15 @@
             margin-top: 14.4px;
         }
 
+        /* Adjust spacing for Delete Teaching Load header */
         #deleteTeachingLoadModal .modal-header {
             font-size: 1.152rem;
-            margin-bottom: 16px;
+            margin-top: 25px;
+            margin-bottom: 0;
         }
 
         #deleteTeachingLoadModal .modal-box {
+            width: 360px;
             padding: 25.6px;
         }
 
