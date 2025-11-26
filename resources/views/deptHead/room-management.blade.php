@@ -107,6 +107,10 @@
                 background: #fff2e6;
             }
 
+            .faculty-table tr.room-row {
+                cursor: pointer;
+            }
+
             /* Make only the table area scroll vertically */
             .faculty-table-scroll {
                 max-height: 536px;
@@ -157,43 +161,39 @@
                 box-shadow: 0 0 0 2px #2222;
             }
 
-            /* Delete Modal - Scaled button styles (80%) */
-            #deleteRoomModal .modal-btn {
-                width: 160px;
-                padding: 11.2px 0;
-                font-size: 0.88rem;
-                border-radius: 4.8px;
-                box-sizing: border-box;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                text-align: center;
-                white-space: nowrap;
-            }
+        /* Delete Modal - Scaled button styles (80%) */
+        #deleteRoomModal .modal-btn {
+            width: 160px;
+            padding: 11.2px 0;
+            font-size: 0.88rem;
+            border-radius: 4.8px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            white-space: nowrap;
+        }
 
-            #deleteRoomModal .modal-btn.delete {
-                padding: 11.2px 0;
-                border-radius: 4.8px;
-            }
+        #deleteRoomModal .modal-btn.delete {
+            padding: 11.2px 0;
+            border-radius: 4.8px;
+        }
 
-            #deleteRoomModal .modal-btn.cancel {
-                padding: 11.2px 0;
-                border-radius: 4.8px;
-            }
+        #deleteRoomModal .modal-btn.cancel {
+            padding: 11.2px 0;
+            border-radius: 4.8px;
+        }
 
-            #deleteRoomModal .modal-buttons {
-                gap: 9.6px;
-                margin-top: 14.4px;
-            }
+        #deleteRoomModal .modal-buttons {
+            gap: 9.6px;
+            margin-top: 14.4px;
+        }
 
-            #deleteRoomModal .modal-header {
-                font-size: 1.152rem;
-                margin-bottom: 16px;
-            }
-
-            #deleteRoomModal .modal-box {
-                padding: 25.6px;
-            }
+        #deleteRoomModal .modal-header {
+            font-size: 1.152rem;
+            margin-bottom: 16px;
+        }
 
             /* Slide-down animation for Add/Update Room Modals (mobile only) */
             @keyframes slideDown {
@@ -657,6 +657,89 @@
                     text-align: center !important;
                     white-space: nowrap !important;
                 }
+
+                /* View Room Schedules Modal - Mobile */
+                #viewRoomSchedulesModal.modal-overlay {
+                    padding: 10px !important;
+                    align-items: flex-start !important;
+                    padding-top: 20px !important;
+                }
+
+                #viewRoomSchedulesModal .modal-box {
+                    width: calc(100vw - 20px) !important;
+                    max-width: calc(100vw - 20px) !important;
+                    margin: 0 auto !important;
+                    padding: 0 !important;
+                    max-height: 90vh !important;
+                    overflow-y: auto !important;
+                }
+
+                #viewRoomSchedulesModal .modal-header-custom {
+                    font-size: 1rem !important;
+                    padding: 10px 12px !important;
+                }
+
+                #schedulesContainer {
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                    max-height: 50vh !important;
+                }
+
+                #schedulesTable {
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                }
+
+                #schedulesTable table {
+                    min-width: 0 !important;
+                    width: 100% !important;
+                    font-size: 0.75rem !important;
+                    table-layout: auto;
+                }
+
+                #schedulesTable th,
+                #schedulesTable td {
+                    padding: 6px 3px !important;
+                    font-size: 0.7rem !important;
+                    white-space: normal !important;
+                    word-break: break-word;
+                    line-height: 1.3;
+                }
+
+                #schedulesTable th {
+                    font-size: 0.7rem !important;
+                }
+
+                #roomInfo {
+                    padding: 10px 8px !important;
+                    margin-bottom: 12px !important;
+                }
+
+                #roomName {
+                    font-size: 0.95rem !important;
+                }
+
+                #roomBuilding {
+                    font-size: 0.85rem !important;
+                }
+
+                /* Room schedules modal padding */
+                #viewRoomSchedulesModal > .modal-box > div {
+                    padding: 10px 8px !important;
+                }
+
+                /* Close button - wider on mobile */
+                #viewRoomSchedulesModal .modal-btn.cancel {
+                    width: 50% !important;
+                    min-width: 120px !important;
+                    padding: 10px 16px !important;
+                    font-size: 0.85rem !important;
+                }
+
+                #noSchedules {
+                    padding: 16px 8px !important;
+                    font-size: 0.8rem !important;
+                }
             }
 
             .modal-overlay {
@@ -680,6 +763,20 @@
                 color: #8B0000;
                 text-align: center;
                 margin-bottom: 22.4px;
+            }
+
+            .modal-header-custom {
+                background-color: #8B0000;
+                color: #fff;
+                font-weight: bold;
+                text-align: center;
+                border-top-left-radius: 9.6px;
+                border-top-right-radius: 9.6px;
+                padding: 12px 16px;
+                font-size: 1.2rem;
+                letter-spacing: 0.8px;
+                width: 100%;
+                margin-bottom: 16px;
             }
 
             .modal-img-box {
@@ -757,11 +854,8 @@
             .modal-btn.cancel {
                 background: #fff;
                 color: #800000;
-                border: 1.6px solid #800000;
-                border-radius: 6.4px;
-                padding: 8px 16px;
-                cursor: pointer;
-                transition: all 0.3s ease;
+                border: 2px solid #800000;
+                border-radius: 8px;
             }
 
             .modal-btn.cancel:hover {
@@ -774,6 +868,7 @@
                 background: transparent;
                 color: #ff3636;
                 border: 2px solid #ff3636;
+                transition: background-color 0.15s ease, color 0.15s ease;
             }
             .modal-btn.delete:hover {
                 background: #ff3636;
@@ -811,13 +906,27 @@
             }
 
             .modal-box {
-                align-items: center;
-                width: 320px;
-                max-width: 95vw;
                 background: #fff;
+                border-radius: 8px;
+                width: 360px;
+                max-width: 95vw;
                 padding: 0;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 1.5px 8px rgba(0, 0, 0, 0.12);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
                 overflow: hidden;
             }
+
+        /* Adjust spacing for Delete Room header */
+        #deleteRoomModal .modal-header {
+            margin-top: 25px;
+            margin-bottom: 0;
+        }
+
+        #deleteRoomModal .modal-box {
+            padding: 25.6px !important;
+        }
 
             .modal-form {
                 width: 100%;
@@ -833,7 +942,11 @@
                 gap: 12px;
                 margin-bottom: 12px;
             }
-            #deleteRoomModal .modal-header { margin-top: 25px; margin-bottom: 0; }
+        /* Adjust spacing for Delete Room header */
+        #deleteRoomModal .modal-header {
+            margin-top: 25px;
+            margin-bottom: 0;
+        }
 
 
             .modal-form-group label {
@@ -919,16 +1032,16 @@
                 </thead>
                 <tbody id="roomTable">
                     @forelse($rooms as $room)
-                    <tr>
+                    <tr class="room-row" data-room-no="{{ $room->room_no }}" data-room-name="{{ $room->room_name }}" data-building-no="{{ $room->room_building_no }}">
                         <td data-label="Room No.">{{ $room->room_no }}</td>
                         <td data-label="Room Name">{{ $room->room_name }}</td>
                         <td data-label="Building No.">{{ $room->room_building_no }}</td>
                         <td data-label="Action">
                             <div class="action-btns">
                                 <button class="edit-btn" 
-                                    onclick="openUpdateModal({{ $room->room_no }}, '{{ $room->room_name }}', '{{ $room->room_building_no }}')">&#9998;</button>
+                                    onclick="event.stopPropagation(); openUpdateModal({{ $room->room_no }}, '{{ $room->room_name }}', '{{ $room->room_building_no }}')">&#9998;</button>
                                 <button class="delete-btn" 
-                                    onclick="openDeleteModal({{ $room->room_no }})">&#128465;</button>
+                                    onclick="event.stopPropagation(); openDeleteModal({{ $room->room_no }})">&#128465;</button>
                             </div>
                         </td>
                     </tr>
@@ -1041,6 +1154,44 @@
                     </button>
                 </div>
             </form>
+        </div>
+
+        <!-- View Room Schedules Modal -->
+        <div id="viewRoomSchedulesModal" class="modal-overlay" style="display:none;">
+            <div class="modal-box" style="width: 730px; max-width: 95vw; padding: 0; overflow: hidden; border-radius: 8px;">
+                <div class="modal-header-custom" style="margin-bottom: 0;">ROOM SCHEDULES</div>
+                <div style="padding: 12px 6px;">
+                    <div id="roomInfo" style="margin-bottom: 15px; padding: 10px 6px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #8B0000;">
+                        <h3 id="roomName" style="margin: 0 0 5px 0; color: #8B0000; font-size: 1.2rem;"></h3>
+                        <p id="roomBuilding" style="margin: 0; color: #666; font-size: 1rem;"></p>
+                    </div>
+                    <div id="schedulesContainer" style="max-height: 400px; overflow-y: auto;">
+                        <div id="schedulesTable" style="display: none; overflow: hidden; border-radius: 8px;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; border-radius: 8px; overflow: hidden;">
+                                <thead>
+                                    <tr style="background: #8B0000; color: white;">
+                                        <th style="padding: 6px 2px; text-align: center; border: none; border-top-left-radius: 8px;">Course Code</th>
+                                        <th style="padding: 6px 2px; text-align: center; border: none;">Subject</th>
+                                        <th style="padding: 6px 2px; text-align: center; border: none;">Class Section</th>
+                                        <th style="padding: 6px 2px; text-align: center; border: none;">Day</th>
+                                        <th style="padding: 6px 2px; text-align: center; border: none;">Time In</th>
+                                        <th style="padding: 6px 2px; text-align: center; border: none;">Time Out</th>
+                                        <th style="padding: 6px 2px; text-align: center; border: none; border-top-right-radius: 8px;">Faculty</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="schedulesTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="noSchedules" style="text-align: center; padding: 20px 6px; color: #666; font-style: italic; display: none;">
+                            No schedules assigned to this room.
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; text-align: center; width: 100%;">
+                        <button type="button" class="modal-btn cancel" onclick="closeModal('viewRoomSchedulesModal')" style="width: 20%; min-width: 100px;">Close</button>
+                    </div>
+                </div>
+            </div>
         </div>
     @endsection
 
@@ -1232,6 +1383,93 @@ document.querySelector('.search-input').addEventListener('input', function() {
             // Use closeModal function to handle animations properly
             closeModal(overlayId);
         }
+    });
+
+    // =========================
+    // Room Schedules Modal
+    // =========================
+    function openRoomSchedulesModal(roomNo, roomName, buildingNo) {
+        // Set room info
+        document.getElementById('roomName').textContent = roomName;
+        document.getElementById('roomBuilding').textContent = 'Building: ' + buildingNo;
+        
+        // Show loading state
+        document.getElementById('schedulesTable').style.display = 'none';
+        document.getElementById('noSchedules').style.display = 'none';
+        
+        // Fetch schedules
+        fetch(`/api/rooms/${roomNo}/schedules`)
+            .then(response => response.json())
+            .then(data => {
+                const tableBody = document.getElementById('schedulesTableBody');
+                tableBody.innerHTML = '';
+                
+                if (data.length > 0) {
+                    data.forEach((schedule, index) => {
+                        const isLastRow = index === data.length - 1;
+                        // Add schedule row
+                        const row = document.createElement('tr');
+                        if (!isLastRow) {
+                            row.style.borderBottom = '1px solid #eee';
+                        }
+                        row.style.background = index % 2 === 0 ? '#fff' : '#f9f9f9';
+                        row.innerHTML = `
+                            <td style="padding: 6px 2px; text-align: center; ${isLastRow ? 'border-bottom-left-radius: 8px;' : ''}">${schedule.teaching_load_course_code}</td>
+                            <td style="padding: 6px 2px; text-align: center;">${schedule.teaching_load_subject}</td>
+                            <td style="padding: 6px 2px; text-align: center;">${schedule.teaching_load_class_section}</td>
+                            <td style="padding: 6px 2px; text-align: center; font-weight: bold; color: #8B0000;">${schedule.teaching_load_day_of_week}</td>
+                            <td style="padding: 6px 2px; text-align: center;">${formatTime(schedule.teaching_load_time_in)}</td>
+                            <td style="padding: 6px 2px; text-align: center;">${formatTime(schedule.teaching_load_time_out)}</td>
+                            <td style="padding: 6px 2px; text-align: center; ${isLastRow ? 'border-bottom-right-radius: 8px;' : ''}">${schedule.faculty_name}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                    document.getElementById('schedulesTable').style.display = 'block';
+                } else {
+                    document.getElementById('noSchedules').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching schedules:', error);
+                document.getElementById('noSchedules').style.display = 'block';
+                document.getElementById('noSchedules').textContent = 'Error loading schedules.';
+            });
+        
+        openModal('viewRoomSchedulesModal');
+    }
+
+    // Helper function to format time
+    function formatTime(timeString) {
+        if (!timeString) return '';
+        try {
+            const time = new Date('2000-01-01 ' + timeString);
+            return time.toLocaleTimeString('en-US', { 
+                hour: 'numeric', 
+                minute: '2-digit', 
+                hour12: true 
+            });
+        } catch (e) {
+            return timeString;
+        }
+    }
+
+    // Add event listeners for room row clicks
+    document.addEventListener('DOMContentLoaded', function() {
+        const roomRows = document.querySelectorAll('.room-row');
+        roomRows.forEach(row => {
+            row.addEventListener('click', function(e) {
+                // Don't trigger if clicking on buttons
+                if (e.target.closest('.action-btns')) {
+                    return;
+                }
+                
+                const roomNo = this.dataset.roomNo;
+                const roomName = this.dataset.roomName;
+                const buildingNo = this.dataset.buildingNo;
+                
+                openRoomSchedulesModal(roomNo, roomName, buildingNo);
+            });
+        });
     });
     </script>
     @endsection
