@@ -1198,6 +1198,7 @@
             </div>
 
             <div class="nav-item has-dropdown @yield('monitoring-active') @if (trim($__env->yieldContent('monitoring-active')) == 'active' ||
+            trim($__env->yieldContent('checker-account-active')) == 'active' ||
                     trim($__env->yieldContent('live-camera-active')) == 'active' ||
                     trim($__env->yieldContent('recognition-logs-active')) == 'active') open @endif"
                 onclick="toggleDropdown(this, 'monitoring')">
@@ -1210,6 +1211,7 @@
                 </span> Monitoring
             </div>
             <div class="sub-nav" id="monitoring-subnav" @if (trim($__env->yieldContent('monitoring-active')) == 'active' ||
+                trim($__env->yieldContent('checker-account-active')) == 'active' ||
                     trim($__env->yieldContent('live-camera-active')) == 'active' ||
                     trim($__env->yieldContent('recognition-logs-active')) == 'active') style="display:flex;" @endif>
                 <!-- Cameras and Rooms removed due to missing checker blade files -->

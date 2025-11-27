@@ -2050,6 +2050,28 @@
                                 row.style.borderBottom = '1px solid #eee';
                             }
                             row.style.background = index % 2 === 0 ? '#fff' : '#f9f9f9';
+                            
+                            // Determine status display
+                            let statusDisplay = '';
+                            let statusStyle = 'padding: 6px 2px; text-align: center; font-weight: 500;';
+                            
+                            if (load.status) {
+                                if (load.status === 'On Going(Faculty Detected)') {
+                                    statusDisplay = 'On Going(Faculty Detected)';
+                                    statusStyle += ' color: #28a745; font-weight: bold;';
+                                } else if (load.status === 'On Going(No Faculty Detected)') {
+                                    statusDisplay = 'On Going(No Faculty Detected)';
+                                    statusStyle += ' color: #ff9800; font-weight: bold;';
+                                } else {
+                                    // Show remarks from attendance record (status contains the remarks)
+                                    statusDisplay = load.status || load.remarks || '';
+                                    statusStyle += ' color: #333; font-size: 0.85rem;';
+                                }
+                            } else {
+                                statusDisplay = '-';
+                                statusStyle += ' color: #999;';
+                            }
+                            
                             row.innerHTML = `
                                 <td style="padding: 6px 2px; text-align: center; ${isLastRow ? 'border-bottom-left-radius: 8px;' : ''}">${load.teaching_load_course_code}</td>
                                 <td style="padding: 6px 2px; text-align: center;">${load.teaching_load_subject}</td>
@@ -2057,7 +2079,8 @@
                                 <td style="padding: 6px 2px; text-align: center; font-weight: bold; color: #8B0000;">${load.teaching_load_day_of_week}</td>
                                 <td style="padding: 6px 2px; text-align: center;">${formatTime(load.teaching_load_time_in)}</td>
                                 <td style="padding: 6px 2px; text-align: center;">${formatTime(load.teaching_load_time_out)}</td>
-                                <td style="padding: 6px 2px; text-align: center; ${isLastRow ? 'border-bottom-right-radius: 8px;' : ''}">${load.room_name || load.room_no}</td>
+                                <td style="padding: 6px 2px; text-align: center;">${load.room_name || load.room_no}</td>
+                                <td style="${statusStyle} ${isLastRow ? 'border-bottom-right-radius: 8px;' : ''}">${statusDisplay}</td>
                             `;
                             tableBody.appendChild(row);
                         });
