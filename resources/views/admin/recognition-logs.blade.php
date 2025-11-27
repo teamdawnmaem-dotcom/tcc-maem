@@ -410,7 +410,7 @@
         <tbody id="logsTableBody">
             @forelse ($logs as $log)
                 <tr>
-                    <td>{{ \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $log->recognition_time)->format('F j, Y - g:i:sa') }}</td>
+                    <td>{{ $log->recognition_time ? $log->recognition_time->format('F j, Y - g:i:sa') : 'N/A' }}</td>
                     <td>{{ $log->camera_name ?? 'N/A' }}</td>
                     <td>{{ $log->room_name ?? 'N/A' }}</td>
                     <td>{{ $log->building_no ?? 'N/A' }}</td>
@@ -586,23 +586,35 @@ function statusClass(statusText) {
     return 'status-recognized';
 }
 // Format datetime to readable format (e.g., "September 30, 2025 - 4:11:17pm")
+// Handles timezone conversion from UTC to Asia/Manila (UTC+8)
 function formatDateTime(dateTimeString) {
     if (!dateTimeString) return 'N/A';
     
     try {
+        let date;
         let year, month, day, hours, minutes, seconds;
         
         // Handle different datetime formats
         if (dateTimeString.includes('T')) {
-            // ISO format: "2025-09-30T16:11:17.000000Z"
-            const isoParts = dateTimeString.split('T');
-            const datePart = isoParts[0]; // "2025-09-30"
-            const timePart = isoParts[1].split('.')[0]; // "16:11:17"
+            // ISO format: "2025-09-30T16:11:17.000000Z" or "2025-09-30T08:11:17.000000Z"
+            // If it ends with Z, it's UTC. We need to convert to Asia/Manila (UTC+8)
+            date = new Date(dateTimeString);
             
-            [year, month, day] = datePart.split('-').map(Number);
-            [hours, minutes, seconds] = timePart.split(':').map(Number);
+            // Convert UTC to Asia/Manila (UTC+8) by adding 8 hours
+            // The stored UTC time is actually the original Asia/Manila time, so we use it directly
+            // But if Laravel converted it, we need to add 8 hours back
+            const manilaOffset = 8 * 60; // 8 hours in minutes
+            const utcTime = date.getTime();
+            const manilaTime = new Date(utcTime + (manilaOffset * 60 * 1000));
+            
+            year = manilaTime.getUTCFullYear();
+            month = manilaTime.getUTCMonth() + 1; // getUTCMonth() returns 0-11
+            day = manilaTime.getUTCDate();
+            hours = manilaTime.getUTCHours();
+            minutes = manilaTime.getUTCMinutes();
+            seconds = manilaTime.getUTCSeconds();
         } else {
-            // Standard format: "2025-09-30 16:11:17"
+            // Standard format: "2025-09-30 16:11:17" - assume this is already in Asia/Manila
             const parts = dateTimeString.split(' ');
             const datePart = parts[0]; // "2025-09-30"
             const timePart = parts[1]; // "16:11:17"
