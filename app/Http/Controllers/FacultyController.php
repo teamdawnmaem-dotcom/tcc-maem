@@ -8,6 +8,7 @@ use App\Models\Faculty;
 use App\Models\TeachingLoad;
 use App\Models\ActivityLog;
 use App\Models\AttendanceRecord;
+use App\Models\RecognitionLog;
 use App\Services\CloudSyncService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
@@ -64,39 +65,49 @@ class FacultyController extends Controller
                 $isToday = strtolower($load->teaching_load_day_of_week) === strtolower($todayDayOfWeek);
                 
                 if ($isToday) {
-                    // Check if current time is within the teaching load time range
-                    $timeIn = Carbon::parse($load->teaching_load_time_in)->format('H:i:s');
-                    $timeOut = Carbon::parse($load->teaching_load_time_out)->format('H:i:s');
-                    $isWithinTimeRange = $currentTime >= $timeIn && $currentTime <= $timeOut;
+                    // Check if there's an attendance record for today
+                    $attendanceRecord = AttendanceRecord::where('faculty_id', $facultyId)
+                        ->where('teaching_load_id', $load->teaching_load_id)
+                        ->whereDate('record_date', $todayDate)
+                        ->first();
                     
-                    if ($isWithinTimeRange) {
-                        // Check if there's an attendance record for today
-                        $attendanceRecord = AttendanceRecord::where('faculty_id', $facultyId)
-                            ->where('teaching_load_id', $load->teaching_load_id)
-                            ->whereDate('record_date', $todayDate)
-                            ->first();
+                    if ($attendanceRecord) {
+                        // Priority 1: If attendance record exists, show the remarks as status
+                        $status = $attendanceRecord->record_remarks ?? '';
+                        $remarks = $attendanceRecord->record_remarks ?? '';
+                    } else {
+                        // Check if current time is within the teaching load time range
+                        $timeIn = Carbon::parse($load->teaching_load_time_in)->format('H:i:s');
+                        $timeOut = Carbon::parse($load->teaching_load_time_out)->format('H:i:s');
                         
-                        if ($attendanceRecord) {
-                            // If there are remarks, show them (takes priority)
-                            if ($attendanceRecord->record_remarks) {
-                                $status = $attendanceRecord->record_remarks;
-                                $remarks = $attendanceRecord->record_remarks;
+                        if ($currentTime >= $timeIn && $currentTime <= $timeOut) {
+                            // Check recognition logs for today within the time range
+                            $recognitionLog = RecognitionLog::where('faculty_id', $facultyId)
+                                ->where('teaching_load_id', $load->teaching_load_id)
+                                ->whereDate('recognition_time', $todayDate)
+                                ->where(function($query) use ($timeIn, $timeOut) {
+                                    // Check if recognition time is within the teaching load time range
+                                    $query->whereTime('recognition_time', '>=', $timeIn)
+                                          ->whereTime('recognition_time', '<=', $timeOut);
+                                })
+                                ->where(function($query) {
+                                    // Check if status indicates recognition (recognized or recognized but wrong room)
+                                    $query->where(function($q) {
+                                        $q->where('status', 'like', '%recognized%')
+                                          ->where('status', 'not like', '%unknown%');
+                                    });
+                                })
+                                ->first();
+                            
+                            if ($recognitionLog) {
+                                // Faculty detected via recognition log
+                                $status = 'On Going(Faculty Detected)';
+                                $remarks = '';
                             } else {
-                                // Check if faculty was detected (has time_in)
-                                if ($attendanceRecord->record_time_in) {
-                                    // Faculty detected
-                                    $status = 'On Going(Faculty Detected)';
-                                    $remarks = '';
-                                } else {
-                                    // No time_in - faculty not detected
-                                    $status = 'On Going(No Faculty Detected)';
-                                    $remarks = '';
-                                }
+                                // No faculty detected
+                                $status = 'On Going(No Faculty Detected)';
+                                $remarks = '';
                             }
-                        } else {
-                            // No attendance record - faculty not detected
-                            $status = 'On Going(No Faculty Detected)';
-                            $remarks = '';
                         }
                     }
                 }

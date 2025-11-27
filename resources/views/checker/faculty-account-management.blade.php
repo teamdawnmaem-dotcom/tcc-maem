@@ -2057,17 +2057,21 @@
                             
                             if (load.status) {
                                 if (load.status === 'On Going(Faculty Detected)') {
+                                    // Faculty detected via recognition log
                                     statusDisplay = 'On Going(Faculty Detected)';
                                     statusStyle += ' color: #28a745; font-weight: bold;';
                                 } else if (load.status === 'On Going(No Faculty Detected)') {
+                                    // No faculty detected
                                     statusDisplay = 'On Going(No Faculty Detected)';
                                     statusStyle += ' color: #ff9800; font-weight: bold;';
                                 } else {
                                     // Show remarks from attendance record (status contains the remarks)
+                                    // This handles cases like "ON LEAVE", "WITH PASS SLIP", etc.
                                     statusDisplay = load.status || load.remarks || '';
-                                    statusStyle += ' color: #333; font-size: 0.85rem;';
+                                    statusStyle += ' color: #333; font-size: 0.85rem; font-weight: 500;';
                                 }
                             } else {
+                                // No status - outside time range or not today
                                 statusDisplay = '-';
                                 statusStyle += ' color: #999;';
                             }
