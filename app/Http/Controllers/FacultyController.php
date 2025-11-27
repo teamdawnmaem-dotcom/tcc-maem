@@ -19,6 +19,11 @@ class FacultyController extends Controller
         $faculties = Faculty::all();
         return view('deptHead.faculty-account-management', compact('faculties'));
     }
+    public function index1()
+    {
+        $faculties = Faculty::all();
+        return view('checker.faculty-account-management', compact('faculties'));
+    }
 
     // API endpoint for faculty list
     public function apiFaculty()
@@ -259,6 +264,43 @@ class FacultyController extends Controller
 
         return redirect()->back()->with('success', 'Faculty added successfully.');
     }
+    public function store1(Request $request)
+    {
+        $request->validate([
+            'faculty_fname' => 'required|string|max:255',
+            'faculty_lname' => 'required|string|max:255',
+            'faculty_department' => 'required|string|max:255',
+            'faculty_images.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048'
+        ]);
+
+        $images = [];
+        if($request->hasFile('faculty_images')){
+            foreach($request->file('faculty_images') as $image){
+                $path = $image->store('faculty_images', 'public');
+                $images[] = $path;
+            }
+        }
+
+        $faculty = Faculty::create([
+            'faculty_fname' => $request->faculty_fname,
+            'faculty_lname' => $request->faculty_lname,
+            'faculty_department' => $request->faculty_department,
+            'faculty_images' => $images
+        ]);
+
+        // Log the action
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'logs_action' => 'CREATE',
+            'logs_description' => 'Added new Faculty: ' . $request->faculty_fname . ' ' . $request->faculty_lname,
+            'logs_module' => 'Faculty Information',
+        ]);
+
+        // Trigger Python embedding generation
+        $this->triggerEmbeddingUpdate($faculty->faculty_id);
+
+        return redirect()->back()->with('success', 'Faculty added successfully.');
+    }
 
     // Update existing faculty
     public function update(Request $request, $id)
@@ -301,9 +343,81 @@ class FacultyController extends Controller
 
         return redirect()->back()->with('success', 'Faculty updated successfully.');
     }
+    public function update1(Request $request, $id)
+    {
+        $faculty = Faculty::findOrFail($id);
+
+        $request->validate([
+            'faculty_fname' => 'required|string|max:255',
+            'faculty_lname' => 'required|string|max:255',
+            'faculty_department' => 'required|string|max:255',
+            'faculty_images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
+        ]);
+
+        $images = $this->normalizeFacultyImages($faculty->faculty_images);
+
+        if($request->hasFile('faculty_images')){
+            foreach($request->file('faculty_images') as $image){
+                $path = $image->store('faculty_images', 'public');
+                $images[] = $path;
+            }
+        }
+
+        $faculty->update([
+            'faculty_fname' => $request->faculty_fname,
+            'faculty_lname' => $request->faculty_lname,
+            'faculty_department' => $request->faculty_department,
+            'faculty_images' => $images
+        ]);
+
+        // Log the action
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'logs_action' => 'UPDATE',
+            'logs_description' => 'Updated Faculty Information: ' . $request->faculty_fname . ' ' . $request->faculty_lname,
+            'logs_module' => 'Faculty Information',
+        ]);
+
+        // Trigger Python embedding generation
+        $this->triggerEmbeddingUpdate($faculty->faculty_id);
+
+        return redirect()->back()->with('success', 'Faculty updated successfully.');
+    }
 
     // Delete faculty
     public function destroy($id)
+    {
+        $faculty = Faculty::findOrFail($id);
+
+        $images = $this->normalizeFacultyImages($faculty->faculty_images);
+        foreach($images as $img){
+            Storage::disk('public')->delete($img);
+        }
+        $facultyId = $faculty->faculty_id;
+        $faculty->delete();
+
+        // Track deletion for sync
+        $syncService = app(CloudSyncService::class);
+        $syncService->trackDeletion('tbl_faculty', $facultyId);
+        
+        // NEW APPROACH: Immediately trigger deletion on cloud
+        try {
+            $syncService->triggerDeleteOnCloudByTable('tbl_faculty', $facultyId);
+        } catch (\Exception $e) {
+            \Log::error("Failed to trigger faculty deletion on cloud: " . $e->getMessage());
+        }
+
+        // Log the action
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'logs_action' => 'DELETE',
+            'logs_description' => 'Deleted Faculty Information: ' . $faculty->faculty_fname . ' ' . $faculty->faculty_lname,
+            'logs_module' => 'Faculty Information',
+        ]);
+
+        return redirect()->back()->with('success', 'Faculty deleted successfully.');
+    }
+    public function destroy1($id)
     {
         $faculty = Faculty::findOrFail($id);
 

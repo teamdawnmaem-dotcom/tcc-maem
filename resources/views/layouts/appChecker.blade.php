@@ -1213,6 +1213,10 @@
                     trim($__env->yieldContent('live-camera-active')) == 'active' ||
                     trim($__env->yieldContent('recognition-logs-active')) == 'active') style="display:flex;" @endif>
                 <!-- Cameras and Rooms removed due to missing checker blade files -->
+
+                <div class="sub-nav-item @yield('checker-account-active')"
+                    onclick="window.location.href='{{ route('checker.faculty.account.management') }}'">Faculty
+                    Management</div>
                 <div class="sub-nav-item @yield('live-camera-active')"
                     onclick="window.location.href='{{ route('checker.live.camera.feed') }}'">Camera Feed</div>
                 <div class="sub-nav-item @yield('recognition-logs-active')"
