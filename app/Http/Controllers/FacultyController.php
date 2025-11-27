@@ -7,9 +7,11 @@ use Illuminate\Http\Request;
 use App\Models\Faculty;
 use App\Models\TeachingLoad;
 use App\Models\ActivityLog;
+use App\Models\AttendanceRecord;
 use App\Services\CloudSyncService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
+use Carbon\Carbon;
 
 class FacultyController extends Controller
 {
@@ -45,10 +47,60 @@ class FacultyController extends Controller
     {
         $faculty = Faculty::findOrFail($facultyId);
         
+        // Get today's date and day of week
+        $today = Carbon::now();
+        $todayDayOfWeek = $today->format('l'); // Full day name (Monday, Tuesday, etc.)
+        $todayDate = $today->toDateString(); // YYYY-MM-DD format
+        $currentTime = $today->format('H:i:s'); // Current time in HH:MM:SS format
+        
         $teachingLoads = TeachingLoad::with('room')
             ->where('faculty_id', $facultyId)
             ->get()
-            ->map(function ($load) {
+            ->map(function ($load) use ($facultyId, $todayDayOfWeek, $todayDate, $currentTime) {
+                $status = '';
+                $remarks = '';
+                
+                // Check if today matches the teaching load day
+                $isToday = strtolower($load->teaching_load_day_of_week) === strtolower($todayDayOfWeek);
+                
+                if ($isToday) {
+                    // Check if current time is within the teaching load time range
+                    $timeIn = Carbon::parse($load->teaching_load_time_in)->format('H:i:s');
+                    $timeOut = Carbon::parse($load->teaching_load_time_out)->format('H:i:s');
+                    $isWithinTimeRange = $currentTime >= $timeIn && $currentTime <= $timeOut;
+                    
+                    if ($isWithinTimeRange) {
+                        // Check if there's an attendance record for today
+                        $attendanceRecord = AttendanceRecord::where('faculty_id', $facultyId)
+                            ->where('teaching_load_id', $load->teaching_load_id)
+                            ->whereDate('record_date', $todayDate)
+                            ->first();
+                        
+                        if ($attendanceRecord) {
+                            // If there are remarks, show them (takes priority)
+                            if ($attendanceRecord->record_remarks) {
+                                $status = $attendanceRecord->record_remarks;
+                                $remarks = $attendanceRecord->record_remarks;
+                            } else {
+                                // Check if faculty was detected (has time_in)
+                                if ($attendanceRecord->record_time_in) {
+                                    // Faculty detected
+                                    $status = 'On Going(Faculty Detected)';
+                                    $remarks = '';
+                                } else {
+                                    // No time_in - faculty not detected
+                                    $status = 'On Going(No Faculty Detected)';
+                                    $remarks = '';
+                                }
+                            }
+                        } else {
+                            // No attendance record - faculty not detected
+                            $status = 'On Going(No Faculty Detected)';
+                            $remarks = '';
+                        }
+                    }
+                }
+                
                 return [
                     'teaching_load_id' => $load->teaching_load_id,
                     'teaching_load_course_code' => $load->teaching_load_course_code,
@@ -59,6 +111,8 @@ class FacultyController extends Controller
                     'teaching_load_time_out' => $load->teaching_load_time_out,
                     'room_no' => $load->room_no,
                     'room_name' => $load->room->room_name ?? $load->room_no,
+                    'status' => $status,
+                    'remarks' => $remarks,
                 ];
             })
             ->sortBy(function ($load) {
