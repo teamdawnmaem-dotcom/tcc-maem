@@ -1197,7 +1197,10 @@
                     onclick="window.location.href='{{ route('checker.official.matters.management') }}'">Official Matters</div>
             </div>
 
-            <div class="nav-item has-dropdown @yield('monitoring-active') @if (trim($__env->yieldContent('monitoring-active')) == 'active' ||
+            <div class="nav-item has-dropdown @if (trim($__env->yieldContent('monitoring-active')) == 'active' ||
+            trim($__env->yieldContent('checker-account-active')) == 'active' ||
+                    trim($__env->yieldContent('live-camera-active')) == 'active' ||
+                    trim($__env->yieldContent('recognition-logs-active')) == 'active') active @endif @if (trim($__env->yieldContent('monitoring-active')) == 'active' ||
             trim($__env->yieldContent('checker-account-active')) == 'active' ||
                     trim($__env->yieldContent('live-camera-active')) == 'active' ||
                     trim($__env->yieldContent('recognition-logs-active')) == 'active') open @endif"
@@ -1217,8 +1220,7 @@
                 <!-- Cameras and Rooms removed due to missing checker blade files -->
 
                 <div class="sub-nav-item @yield('checker-account-active')"
-                    onclick="window.location.href='{{ route('checker.faculty.account.management') }}'">Faculty
-                    Management</div>
+                    onclick="window.location.href='{{ route('checker.faculty.account.management') }}'">Faculty Management</div>
                 <div class="sub-nav-item @yield('live-camera-active')"
                     onclick="window.location.href='{{ route('checker.live.camera.feed') }}'">Camera Feed</div>
                 <div class="sub-nav-item @yield('recognition-logs-active')"

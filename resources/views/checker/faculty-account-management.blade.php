@@ -1,8 +1,7 @@
 @extends('layouts.appChecker')
 
 @section('title', 'Faculty Account Management - Tagoloan Community College')
-@section('files-active', 'active')
-@section('faculty-account-active', 'active')
+@section('checker-account-active', 'active')
 
 @section('styles')
     <style>
