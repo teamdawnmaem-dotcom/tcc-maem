@@ -163,6 +163,16 @@ Route::prefix('deptHead')->middleware('role:department head')->group(function ()
     Route::put('/account/update', [CheckerController::class, 'updateAccount'])
     ->name('checker.account.update');
     
+
+     // Faculty
+    Route::get('/faculty', [FacultyController::class, 'index1'])->name('checker.faculty.account.management');
+    Route::post('/faculty', [FacultyController::class, 'store1'])->name('checker.faculty.store');
+    Route::put('/faculty/{id}', [FacultyController::class, 'update1'])->name('checker.faculty.update');
+    Route::delete('/faculty/{id}', [FacultyController::class, 'destroy1'])->name('checker.faculty.destroy');
+    
+
+
+
     // Leave Routes
     Route::get('/leaves', [LeaveController::class, 'index'])->name('checker.leave.management');
     Route::post('/leaves', [LeaveController::class, 'store'])->name('checker.leaves.store');
