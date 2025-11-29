@@ -197,12 +197,19 @@
             gap: 12px;
             align-items: center;
             flex-wrap: wrap;
+            overflow: hidden;
+            box-sizing: border-box;
+            width: 100%;
+            max-width: 100%;
         }
 
         .filter-group {
             display: flex;
             flex-direction: column;
             gap: 4px;
+            min-width: 0;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .filter-group label {

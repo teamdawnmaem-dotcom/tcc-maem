@@ -181,6 +181,10 @@
             margin-bottom: 24px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             border: 1px solid #e9ecef;
+            overflow: hidden;
+            box-sizing: border-box;
+            width: 100%;
+            max-width: 100%;
         }
 
         .filter-header {
@@ -201,11 +205,17 @@
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 16px;
             margin-bottom: 20px;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .filter-group {
             display: flex;
             flex-direction: column;
+            min-width: 0;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .filter-group:has(button) {
@@ -213,6 +223,9 @@
             flex-direction: row;
             gap: 12px;
             align-items: end;
+            flex-wrap: wrap;
+            width: 100%;
+            max-width: 100%;
         }
 
         .filter-label {
@@ -254,8 +267,17 @@
             text-transform: uppercase;
             letter-spacing: 0.4px;
             white-space: nowrap;
-            min-width: 160px;
-            width: auto;
+            min-width: 0;
+            flex: 1 1 auto;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .filter-group:has(button) .filter-btn,
+        .filter-group:has(button) .clear-btn {
+            min-width: 120px;
+            flex: 1 1 calc(50% - 6px);
+            max-width: calc(50% - 6px);
         }
 
         .filter-btn {
