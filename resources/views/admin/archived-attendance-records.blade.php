@@ -279,9 +279,10 @@
         
         .filter-group:has(button) .filter-btn,
         .filter-group:has(button) .clear-btn {
-            min-width: 120px;
-            flex: 1 1 calc(50% - 6px);
-            max-width: calc(50% - 6px);
+            width: 140px;
+            min-width: 140px;
+            max-width: 140px;
+            flex: 0 0 140px;
         }
 
         .filter-btn {
@@ -338,6 +339,25 @@
         .remarks-on-pass-slip {
             color: #ff8c00 !important;
             font-weight: bold !important;
+        }
+
+        /* Mobile Responsive Design for tablets and phones */
+        @media (max-width: 768px) {
+            .filter-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-group:has(button) {
+                flex-direction: column;
+            }
+            
+            .filter-group:has(button) .filter-btn,
+            .filter-group:has(button) .clear-btn {
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+                flex: 1 1 100%;
+            }
         }
 
         /* Mobile Responsive Design for phones (max-width: 430px) */
