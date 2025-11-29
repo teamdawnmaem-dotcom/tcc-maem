@@ -113,8 +113,7 @@
     .teaching-load-table th:nth-child(11), .teaching-load-table td:nth-child(11) { width: 7%; } /* Time Duration */
     .teaching-load-table th:nth-child(12), .teaching-load-table td:nth-child(12) { width: 6%; } /* Room Name */
     .teaching-load-table th:nth-child(13), .teaching-load-table td:nth-child(13) { width: 5%; } /* Building No */
-    .teaching-load-table th:nth-child(14), .teaching-load-table td:nth-child(14) { width: 5%; } /* Status */
-    .teaching-load-table th:nth-child(15), .teaching-load-table td:nth-child(15) { width: 7%; } /* Remarks */
+    .teaching-load-table th:nth-child(14), .teaching-load-table td:nth-child(14) { width: 12%; } /* Remarks (combined with Status) */
 
     /* Filter Styles - Clean & Neat Design */
     .filter-section {
@@ -625,14 +624,24 @@
         }
     }
 
-    /* Remarks color coding */
-    .teaching-load-table .remarks-on-leave {
+    /* Combined Status/Remarks color coding */
+    .teaching-load-table .status-present {
+        color: #28a745 !important;
+        font-weight: bold !important;
+    }
+
+    .teaching-load-table .status-late {
+        color: #ff8c00 !important;
+        font-weight: bold !important;
+    }
+
+    .teaching-load-table .status-absent {
         color: #dc3545 !important;
         font-weight: bold !important;
     }
 
-    .teaching-load-table .remarks-on-pass-slip {
-        color: #ff8c00 !important;
+    .teaching-load-table .status-official-matter {
+        color: #6f42c1 !important;
         font-weight: bold !important;
     }
     
@@ -1178,7 +1187,6 @@
                 <th>Time duration</th>
                 <th>Room name</th>
                 <th>Building no.</th>
-                <th>Status</th>
                 <th>Remarks</th>
             </tr>
         </thead>
@@ -1218,20 +1226,84 @@
                     </td>
                     <td data-label="Room Name">{{ $record->camera->room->room_name }}</td>
                     <td data-label="Building No.">{{ $record->camera->room->room_building_no }}</td>
-                    <td data-label="Status">{{ $record->record_status }}</td>
                     <td data-label="Remarks">
-                        @if(strtoupper(trim($record->record_remarks)) === 'ON LEAVE')
-                            <span class="remarks-on-leave">{{ $record->record_remarks }}</span>
-                        @elseif(strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP')
-                            <span class="remarks-on-pass-slip">{{ $record->record_remarks }}</span>
-                        @else
-                            {{ $record->record_remarks }}
-                        @endif
-                    </td>
+                        @php
+                            $status = strtoupper(trim($record->record_status ?? ''));
+                            $remarks = strtoupper(trim($record->record_remarks ?? ''));
+                            $rawRemarks = trim($record->record_remarks ?? '');
+                            
+                            // Check if remarks came from official matter
+                            $isOfficialMatter = false;
+                            if (!empty($rawRemarks) && !empty($record->record_date) && !empty($record->faculty_id)) {
+                                $recordDate = \Carbon\Carbon::parse($record->record_date)->toDateString();
+                                $officialMatter = \DB::table('tbl_official_matters')
+                                    ->where(function($query) use ($record) {
+                                        $query->where('faculty_id', $record->faculty_id)
+                                            ->orWhere('om_department', optional($record->faculty)->faculty_department ?? '')
+                                            ->orWhere('om_department', 'All Instructor');
+                                    })
+                                    ->whereDate('om_start_date', '<=', $recordDate)
+                                    ->whereDate('om_end_date', '>=', $recordDate)
+                                    ->where('om_remarks', $rawRemarks)
+                                    ->first();
+                                $isOfficialMatter = !empty($officialMatter);
+                            }
+                            
+                            // Determine display text and color class
+                            $displayText = '';
+                            $colorClass = '';
+                            
+                            if ($status === 'PRESENT') {
+                                // Present status - show "Present" regardless of remarks (handles "Present (Wrong Room)" cases)
+                                $displayText = 'Present';
+                                $colorClass = 'status-present';
+                            } elseif ($status === 'LATE') {
+                                // Late status - show "Late" regardless of remarks (handles "Late (Wrong Room)" cases)
+                                $displayText = 'Late';
+                                $colorClass = 'status-late';
+                            } elseif ($status === 'ABSENT') {
+                                if ($remarks === 'ABSENT') {
+                                    $displayText = 'Absent';
+                                    $colorClass = 'status-absent';
+                                } elseif ($remarks === 'ON LEAVE') {
+                                    $displayText = '<span class="status-absent">Absent but</span> <span class="status-late">On Leave</span>';
+                                    $colorClass = ''; // No single color class, using inline spans
+                                } elseif ($remarks === 'WITH PASS SLIP') {
+                                    $displayText = '<span class="status-absent">Absent but</span> <span class="status-late">With Pass Slip</span>';
+                                    $colorClass = ''; // No single color class, using inline spans
+                                } elseif ($isOfficialMatter) {
+                                    // Official Matter cases
+                                    if ($remarks === 'PRESENT' || strpos($remarks, 'PRESENT') !== false) {
+                                        $displayText = 'Present';
+                                        $colorClass = 'status-present';
+                                    } elseif ($remarks === 'ABSENT' || strpos($remarks, 'ABSENT') !== false) {
+                                        $displayText = 'Absent';
+                                        $colorClass = 'status-absent';
+                                    } else {
+                                        // Holiday or other official matter remarks
+                                        $displayText = $rawRemarks;
+                                        $colorClass = 'status-official-matter';
+                                    }
+                                } else {
+                                    $displayText = 'Absent';
+                                    $colorClass = 'status-absent';
+                                }
+                            } else {
+                                // Fallback for any other status
+                                $displayText = $rawRemarks ?: $status;
+                                $colorClass = 'status-absent';
+                            }
+                            @endphp
+                            @if($colorClass)
+                                <span class="{{ $colorClass }}">{{ $displayText }}</span>
+                            @else
+                                {!! $displayText !!}
+                            @endif
+                        </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="15" style="text-align:center; padding:20px;">No attendance records found</td>
+                    <td colspan="14" style="text-align:center; padding:20px;">No attendance records found</td>
                 </tr>
             @endforelse
         </tbody>
