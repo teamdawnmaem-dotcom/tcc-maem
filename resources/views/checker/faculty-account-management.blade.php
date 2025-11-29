@@ -2055,6 +2055,10 @@
                             let statusStyle = 'padding: 6px 2px; text-align: center; font-weight: 500;';
                             
                             if (load.status) {
+                                const statusUpper = (load.status || '').toUpperCase();
+                                const remarksUpper = (load.remarks || '').toUpperCase();
+                                const combinedStatus = (statusUpper + ' ' + remarksUpper).trim();
+                                
                                 if (load.status === 'On Going(Faculty Detected)') {
                                     // Faculty detected via recognition log
                                     statusDisplay = 'On Going(Faculty Detected)';
@@ -2063,9 +2067,27 @@
                                     // No faculty detected
                                     statusDisplay = 'On Going(No Faculty Detected)';
                                     statusStyle += ' color: #ff9800; font-weight: bold;';
+                                } else if (statusUpper === 'PRESENT' || statusUpper.includes('PRESENT')) {
+                                    // Present status - Green
+                                    statusDisplay = load.status || load.remarks || '';
+                                    statusStyle += ' color: #28a745; font-weight: bold;';
+                                } else if (statusUpper === 'ABSENT' || statusUpper.includes('ABSENT')) {
+                                    // Check if it's "On Leave" or "With Pass Slip" - Orange
+                                    if (remarksUpper.includes('ON LEAVE') || remarksUpper.includes('WITH PASS SLIP') || 
+                                        combinedStatus.includes('ON LEAVE') || combinedStatus.includes('WITH PASS SLIP')) {
+                                        statusDisplay = load.status || load.remarks || '';
+                                        statusStyle += ' color: #ff8c00; font-weight: bold;';
+                                    } else {
+                                        // Regular Absent - Red
+                                        statusDisplay = load.status || load.remarks || '';
+                                        statusStyle += ' color: #dc3545; font-weight: bold;';
+                                    }
+                                } else if (remarksUpper.includes('ON LEAVE') || remarksUpper.includes('WITH PASS SLIP')) {
+                                    // On Leave or With Pass Slip - Orange
+                                    statusDisplay = load.status || load.remarks || '';
+                                    statusStyle += ' color: #ff8c00; font-weight: bold;';
                                 } else {
-                                    // Show remarks from attendance record (status contains the remarks)
-                                    // This handles cases like "ON LEAVE", "WITH PASS SLIP", etc.
+                                    // Other statuses - default gray
                                     statusDisplay = load.status || load.remarks || '';
                                     statusStyle += ' color: #333; font-size: 0.85rem; font-weight: 500;';
                                 }
