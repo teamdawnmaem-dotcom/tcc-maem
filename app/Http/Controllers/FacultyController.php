@@ -44,69 +44,89 @@ class FacultyController extends Controller
     }
 
     // API endpoint to get teaching loads for a specific faculty
-    public function apiFacultyTeachingLoads($facultyId)
+    public function apiFacultyTeachingLoads($facultyId, Request $request)
     {
         $faculty = Faculty::findOrFail($facultyId);
         
-        // Get today's date and day of week
-        $today = Carbon::now();
-        $todayDayOfWeek = $today->format('l'); // Full day name (Monday, Tuesday, etc.)
-        $todayDate = $today->toDateString(); // YYYY-MM-DD format
-        $currentTime = $today->format('H:i:s'); // Current time in HH:MM:SS format
+        // Get date from request or use today's date
+        $selectedDate = $request->input('date');
+        if ($selectedDate) {
+            $targetDate = Carbon::parse($selectedDate);
+        } else {
+            $targetDate = Carbon::now();
+        }
+        
+        $targetDayOfWeek = $targetDate->format('l'); // Full day name (Monday, Tuesday, etc.)
+        $targetDateString = $targetDate->toDateString(); // YYYY-MM-DD format
+        $currentTime = $targetDate->format('H:i:s'); // Time in HH:MM:SS format
+        
+        // If selected date is today, use current time, otherwise use end of day
+        if ($targetDate->isToday()) {
+            $currentTime = Carbon::now()->format('H:i:s');
+        } else {
+            $currentTime = '23:59:59'; // For past dates, check all day
+        }
         
         $teachingLoads = TeachingLoad::with('room')
             ->where('faculty_id', $facultyId)
             ->get()
-            ->map(function ($load) use ($facultyId, $todayDayOfWeek, $todayDate, $currentTime) {
+            ->map(function ($load) use ($facultyId, $targetDayOfWeek, $targetDateString, $currentTime, $targetDate) {
                 $status = '';
                 $remarks = '';
+                $recordStatus = '';
+                $recordRemarks = '';
+                $attendanceRecord = null;
                 
-                // Check if today matches the teaching load day
-                $isToday = strtolower($load->teaching_load_day_of_week) === strtolower($todayDayOfWeek);
+                // Check if selected date matches the teaching load day
+                $isMatchingDay = strtolower($load->teaching_load_day_of_week) === strtolower($targetDayOfWeek);
                 
-                if ($isToday) {
-                    // Check if there's an attendance record for today
+                if ($isMatchingDay) {
+                    // Check if there's an attendance record for the selected date
                     $attendanceRecord = AttendanceRecord::where('faculty_id', $facultyId)
                         ->where('teaching_load_id', $load->teaching_load_id)
-                        ->whereDate('record_date', $todayDate)
+                        ->whereDate('record_date', $targetDateString)
                         ->first();
                     
                     if ($attendanceRecord) {
-                        // Priority 1: If attendance record exists, show the remarks as status
-                        $status = $attendanceRecord->record_remarks ?? '';
+                        // Priority 1: If attendance record exists, show the status and remarks
+                        $status = $attendanceRecord->record_status ?? '';
                         $remarks = $attendanceRecord->record_remarks ?? '';
+                        $recordStatus = $attendanceRecord->record_status ?? '';
+                        $recordRemarks = $attendanceRecord->record_remarks ?? '';
                     } else {
-                        // Check if current time is within the teaching load time range
-                        $timeIn = Carbon::parse($load->teaching_load_time_in)->format('H:i:s');
-                        $timeOut = Carbon::parse($load->teaching_load_time_out)->format('H:i:s');
-                        
-                        if ($currentTime >= $timeIn && $currentTime <= $timeOut) {
-                            // Check recognition logs for today within the time range
-                            $recognitionLog = RecognitionLog::where('faculty_id', $facultyId)
-                                ->where('teaching_load_id', $load->teaching_load_id)
-                                ->whereDate('recognition_time', $todayDate)
-                                ->where(function($query) use ($timeIn, $timeOut) {
-                                    // Check if recognition time is within the teaching load time range
-                                    $query->whereTime('recognition_time', '>=', $timeIn)
-                                          ->whereTime('recognition_time', '<=', $timeOut);
-                                })
-                                ->where(function($query) {
-                                    // Check if status indicates recognition (recognized or recognized but wrong room)
-                                    $query->where(function($q) {
-                                        $q->where('status', 'like', '%recognized%')
-                                          ->where('status', 'not like', '%unknown%');
-                                    });
-                                })
-                                ->first();
+                        // Check if current time is within the teaching load time range (only for today)
+                        if ($targetDate->isToday()) {
+                            $timeIn = Carbon::parse($load->teaching_load_time_in)->format('H:i:s');
+                            $timeOut = Carbon::parse($load->teaching_load_time_out)->format('H:i:s');
                             
-                            if ($recognitionLog) {
-                                // Faculty detected via recognition log
-                                $status = 'On Going(Faculty Detected)';
-                                $remarks = '';
-                            } else {
-                                // No faculty detected
-                                $status = 'On Going(No Faculty Detected)';
-                                $remarks = '';
+                            if ($currentTime >= $timeIn && $currentTime <= $timeOut) {
+                                // Check recognition logs for today within the time range
+                                $recognitionLog = RecognitionLog::where('faculty_id', $facultyId)
+                                    ->where('teaching_load_id', $load->teaching_load_id)
+                                    ->whereDate('recognition_time', $targetDateString)
+                                    ->where(function($query) use ($timeIn, $timeOut) {
+                                        // Check if recognition time is within the teaching load time range
+                                        $query->whereTime('recognition_time', '>=', $timeIn)
+                                              ->whereTime('recognition_time', '<=', $timeOut);
+                                    })
+                                    ->where(function($query) {
+                                        // Check if status indicates recognition (recognized or recognized but wrong room)
+                                        $query->where(function($q) {
+                                            $q->where('status', 'like', '%recognized%')
+                                              ->where('status', 'not like', '%unknown%');
+                                        });
+                                    })
+                                    ->first();
+                                
+                                if ($recognitionLog) {
+                                    // Faculty detected via recognition log
+                                    $status = 'On Going(Faculty Detected)';
+                                    $remarks = '';
+                                } else {
+                                    // No faculty detected
+                                    $status = 'On Going(No Faculty Detected)';
+                                    $remarks = '';
+                                }
                             }
                         }
                     }
@@ -124,6 +144,8 @@ class FacultyController extends Controller
                     'room_name' => $load->room->room_name ?? $load->room_no,
                     'status' => $status,
                     'remarks' => $remarks,
+                    'record_status' => $recordStatus,
+                    'record_remarks' => $recordRemarks,
                 ];
             })
             ->sortBy(function ($load) {
