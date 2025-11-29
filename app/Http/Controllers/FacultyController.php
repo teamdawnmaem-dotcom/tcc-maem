@@ -70,12 +70,13 @@ class FacultyController extends Controller
         $teachingLoads = TeachingLoad::with('room')
             ->where('faculty_id', $facultyId)
             ->get()
-            ->map(function ($load) use ($facultyId, $targetDayOfWeek, $targetDateString, $currentTime, $targetDate) {
+            ->map(function ($load) use ($facultyId, $targetDayOfWeek, $targetDateString, $currentTime, $targetDate, $faculty) {
                 $status = '';
                 $remarks = '';
                 $recordStatus = '';
                 $recordRemarks = '';
                 $attendanceRecord = null;
+                $isOfficialMatter = false;
                 
                 // Check if selected date matches the teaching load day
                 $isMatchingDay = strtolower($load->teaching_load_day_of_week) === strtolower($targetDayOfWeek);
@@ -93,6 +94,21 @@ class FacultyController extends Controller
                         $remarks = $attendanceRecord->record_remarks ?? '';
                         $recordStatus = $attendanceRecord->record_status ?? '';
                         $recordRemarks = $attendanceRecord->record_remarks ?? '';
+                        
+                        // Check if remarks came from official matter
+                        if (!empty($recordRemarks) && !empty($targetDateString) && !empty($facultyId)) {
+                            $officialMatter = \DB::table('tbl_official_matters')
+                                ->where(function($query) use ($facultyId, $faculty) {
+                                    $query->where('faculty_id', $facultyId)
+                                        ->orWhere('om_department', $faculty->faculty_department ?? '')
+                                        ->orWhere('om_department', 'All Instructor');
+                                })
+                                ->whereDate('om_start_date', '<=', $targetDateString)
+                                ->whereDate('om_end_date', '>=', $targetDateString)
+                                ->where('om_remarks', $recordRemarks)
+                                ->first();
+                            $isOfficialMatter = !empty($officialMatter);
+                        }
                     } else {
                         // Check if current time is within the teaching load time range (only for today)
                         if ($targetDate->isToday()) {
@@ -146,6 +162,7 @@ class FacultyController extends Controller
                     'remarks' => $remarks,
                     'record_status' => $recordStatus,
                     'record_remarks' => $recordRemarks,
+                    'is_official_matter' => $isOfficialMatter ?? false,
                 ];
             })
             ->sortBy(function ($load) {
