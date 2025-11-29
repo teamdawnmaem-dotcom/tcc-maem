@@ -279,24 +279,29 @@
             text-align: center;
         }
 
-        .status-col {
-            width: 7%;
-            text-align: center;
-        }
-
         .remarks-col {
-            width: 8%;
+            width: 12%;
             text-align: left;
             padding-left: 4px;
         }
 
-        .remarks-on-leave {
+        .status-present {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .status-late {
+            color: #ff8c00;
+            font-weight: bold;
+        }
+
+        .status-absent {
             color: #dc3545;
             font-weight: bold;
         }
 
-        .remarks-on-pass-slip {
-            color: #ff8c00;
+        .status-official-matter {
+            color: #6f42c1;
             font-weight: bold;
         }
 
@@ -315,20 +320,6 @@
             font-size: 6px;
         }
 
-        .status-present {
-            color: #28a745;
-            font-weight: bold;
-        }
-
-        .status-absent {
-            color: #dc3545;
-            font-weight: bold;
-        }
-
-        .status-late {
-            color: #ffc107;
-            font-weight: bold;
-        }
 
         /* Page counter styles */
         .page-counter::before {
@@ -479,7 +470,6 @@
                 <th class="duration-col">Time duration</th>
                 <th class="room-col">Room name</th>
                 <th class="building-col">Building no.</th>
-                <th class="status-col">Status</th>
                 <th class="remarks-col">Remarks</th>
             </tr>
         </thead>
@@ -538,30 +528,84 @@
                     </td>
                     <td class="room-col">{{ $record->camera->room->room_name }}</td>
                     <td class="building-col">{{ $record->camera->room->room_building_no }}</td>
-                    <td class="status-col">
-                        @if(strtoupper($record->record_status) === 'PRESENT')
-                            <span class="status-present">{{ $record->record_status }}</span>
-                        @elseif(strtoupper($record->record_status) === 'ABSENT')
-                            <span class="status-absent">{{ $record->record_status }}</span>
-                        @elseif(strtoupper($record->record_status) === 'LATE')
-                            <span class="status-late">{{ $record->record_status }}</span>
-                        @else
-                            {{ $record->record_status }}
-                        @endif
-                    </td>
                     <td class="remarks-col">
-                        @if (strtoupper(trim($record->record_remarks)) === 'ON LEAVE')
-                            <span class="remarks-on-leave">{{ $record->record_remarks }}</span>
-                        @elseif(strtoupper(trim($record->record_remarks)) === 'WITH PASS SLIP')
-                            <span class="remarks-on-pass-slip">{{ $record->record_remarks }}</span>
+                        @php
+                            $status = strtoupper(trim($record->record_status ?? ''));
+                            $remarks = strtoupper(trim($record->record_remarks ?? ''));
+                            $rawRemarks = trim($record->record_remarks ?? '');
+                            
+                            // Check if remarks came from official matter
+                            $isOfficialMatter = false;
+                            if (!empty($rawRemarks) && !empty($record->record_date) && !empty($record->faculty_id)) {
+                                $recordDate = \Carbon\Carbon::parse($record->record_date)->toDateString();
+                                $officialMatter = \DB::table('tbl_official_matters')
+                                    ->where(function($query) use ($record) {
+                                        $query->where('faculty_id', $record->faculty_id)
+                                            ->orWhere('om_department', optional($record->faculty)->faculty_department ?? '')
+                                            ->orWhere('om_department', 'All Instructor');
+                                    })
+                                    ->whereDate('om_start_date', '<=', $recordDate)
+                                    ->whereDate('om_end_date', '>=', $recordDate)
+                                    ->where('om_remarks', $rawRemarks)
+                                    ->first();
+                                $isOfficialMatter = !empty($officialMatter);
+                            }
+                            
+                            // Determine display text and color class
+                            $displayText = '';
+                            $colorClass = '';
+                            
+                            if ($status === 'PRESENT') {
+                                // Present status - show "Present" regardless of remarks (handles "Present (Wrong Room)" cases)
+                                $displayText = 'Present';
+                                $colorClass = 'status-present';
+                            } elseif ($status === 'LATE') {
+                                // Late status - show "Late" regardless of remarks (handles "Late (Wrong Room)" cases)
+                                $displayText = 'Late';
+                                $colorClass = 'status-late';
+                            } elseif ($status === 'ABSENT') {
+                                if ($remarks === 'ABSENT') {
+                                    $displayText = 'Absent';
+                                    $colorClass = 'status-absent';
+                                } elseif ($remarks === 'ON LEAVE') {
+                                    $displayText = '<span class="status-absent">Absent but</span> <span class="status-late">On Leave</span>';
+                                    $colorClass = ''; // No single color class, using inline spans
+                                } elseif ($remarks === 'WITH PASS SLIP') {
+                                    $displayText = '<span class="status-absent">Absent but</span> <span class="status-late">With Pass Slip</span>';
+                                    $colorClass = ''; // No single color class, using inline spans
+                                } elseif ($isOfficialMatter) {
+                                    // Official Matter cases
+                                    if ($remarks === 'PRESENT' || strpos($remarks, 'PRESENT') !== false) {
+                                        $displayText = 'Present';
+                                        $colorClass = 'status-present';
+                                    } elseif ($remarks === 'ABSENT' || strpos($remarks, 'ABSENT') !== false) {
+                                        $displayText = 'Absent';
+                                        $colorClass = 'status-absent';
+                                    } else {
+                                        // Holiday or other official matter remarks
+                                        $displayText = $rawRemarks;
+                                        $colorClass = 'status-official-matter';
+                                    }
+                                } else {
+                                    $displayText = 'Absent';
+                                    $colorClass = 'status-absent';
+                                }
+                            } else {
+                                // Fallback for any other status
+                                $displayText = $rawRemarks ?: $status;
+                                $colorClass = 'status-absent';
+                            }
+                        @endphp
+                        @if($colorClass)
+                            <span class="{{ $colorClass }}">{{ $displayText }}</span>
                         @else
-                            {{ $record->record_remarks }}
+                            {!! $displayText !!}
                         @endif
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="15" style="text-align:center; padding:12px;">No records found</td>
+                    <td colspan="14" style="text-align:center; padding:12px;">No records found</td>
                 </tr>
             @endforelse
         </tbody>
@@ -571,13 +615,71 @@
         <div class="summary-title">
             Summary: {{ $records->count() }} records
             @php
-                // Get all unique remarks and their counts dynamically
-                $remarksCounts = $records->groupBy('record_remarks')->map->count();
-                $summaryParts = [];
-                foreach ($remarksCounts as $remark => $count) {
-                    if (!empty($remark)) {
-                        $summaryParts[] = $remark . ': ' . $count;
+                // Normalize status/remarks for counting (Present/Late with Wrong Room count as Present/Late)
+                $normalizedCounts = [];
+                foreach ($records as $record) {
+                    $status = strtoupper(trim($record->record_status ?? ''));
+                    $remarks = strtoupper(trim($record->record_remarks ?? ''));
+                    $rawRemarks = trim($record->record_remarks ?? '');
+                    
+                    // Check if remarks came from official matter
+                    $isOfficialMatter = false;
+                    if (!empty($rawRemarks) && !empty($record->record_date) && !empty($record->faculty_id)) {
+                        $recordDate = \Carbon\Carbon::parse($record->record_date)->toDateString();
+                        $officialMatter = \DB::table('tbl_official_matters')
+                            ->where(function($query) use ($record) {
+                                $query->where('faculty_id', $record->faculty_id)
+                                    ->orWhere('om_department', optional($record->faculty)->faculty_department ?? '')
+                                    ->orWhere('om_department', 'All Instructor');
+                            })
+                            ->whereDate('om_start_date', '<=', $recordDate)
+                            ->whereDate('om_end_date', '>=', $recordDate)
+                            ->where('om_remarks', $rawRemarks)
+                            ->first();
+                        $isOfficialMatter = !empty($officialMatter);
                     }
+                    
+                    // Normalize for counting
+                    $normalizedLabel = '';
+                    if ($status === 'PRESENT') {
+                        // Present status - count as "Present" regardless of Wrong Room
+                        $normalizedLabel = 'Present';
+                    } elseif ($status === 'LATE') {
+                        // Late status - count as "Late" regardless of Wrong Room
+                        $normalizedLabel = 'Late';
+                    } elseif ($status === 'ABSENT') {
+                        if ($remarks === 'ABSENT') {
+                            $normalizedLabel = 'Absent';
+                        } elseif ($remarks === 'ON LEAVE') {
+                            $normalizedLabel = 'Absent but On Leave';
+                        } elseif ($remarks === 'WITH PASS SLIP') {
+                            $normalizedLabel = 'Absent but With Pass Slip';
+                        } elseif ($isOfficialMatter) {
+                            if ($remarks === 'PRESENT' || strpos($remarks, 'PRESENT') !== false) {
+                                $normalizedLabel = 'Present';
+                            } elseif ($remarks === 'ABSENT' || strpos($remarks, 'ABSENT') !== false) {
+                                $normalizedLabel = 'Absent';
+                            } else {
+                                $normalizedLabel = $rawRemarks;
+                            }
+                        } else {
+                            $normalizedLabel = 'Absent';
+                        }
+                    } else {
+                        $normalizedLabel = $rawRemarks ?: $status;
+                    }
+                    
+                    if (!empty($normalizedLabel)) {
+                        if (!isset($normalizedCounts[$normalizedLabel])) {
+                            $normalizedCounts[$normalizedLabel] = 0;
+                        }
+                        $normalizedCounts[$normalizedLabel]++;
+                    }
+                }
+                
+                $summaryParts = [];
+                foreach ($normalizedCounts as $label => $count) {
+                    $summaryParts[] = $label . ': ' . $count;
                 }
             @endphp
             @if(!empty($summaryParts))
