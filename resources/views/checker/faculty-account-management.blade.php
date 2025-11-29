@@ -802,6 +802,19 @@
             #facultyInfo {
                 padding: 10px 8px !important;
                 margin-bottom: 12px !important;
+                flex-direction: column !important;
+                align-items: flex-start !important;
+            }
+
+            #facultyInfo > div:first-child {
+                width: 100% !important;
+                margin-bottom: 10px !important;
+            }
+
+            #facultyInfo > div:last-child {
+                width: 100% !important;
+                margin-left: 0 !important;
+                justify-content: flex-start !important;
             }
 
             #facultyName {
@@ -992,6 +1005,19 @@
             #facultyInfo {
                 padding: 8px 6px !important;
                 margin-bottom: 10px !important;
+                flex-direction: column !important;
+                align-items: flex-start !important;
+            }
+
+            #facultyInfo > div:first-child {
+                width: 100% !important;
+                margin-bottom: 8px !important;
+            }
+
+            #facultyInfo > div:last-child {
+                width: 100% !important;
+                margin-left: 0 !important;
+                justify-content: flex-start !important;
             }
 
             #facultyName {
@@ -1872,9 +1898,15 @@
         <div class="modal-box" style="width: 730px; max-width: 95vw; padding: 0; overflow: hidden; border-radius: 8px;">
             <div class="modal-header-custom" style="margin-bottom: 0;">FACULTY TEACHING LOADS</div>
             <div style="padding: 12px 6px;">
-                <div id="facultyInfo" style="margin-bottom: 15px; padding: 10px 6px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #8B0000;">
-                    <h3 id="facultyName" style="margin: 0 0 5px 0; color: #8B0000; font-size: 1.2rem;"></h3>
-                    <p id="facultyDepartment" style="margin: 0; color: #666; font-size: 1rem;"></p>
+                <div id="facultyInfo" style="margin-bottom: 15px; padding: 10px 6px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #8B0000; display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div style="flex: 1;">
+                        <h3 id="facultyName" style="margin: 0 0 5px 0; color: #8B0000; font-size: 1.2rem;"></h3>
+                        <p id="facultyDepartment" style="margin: 0; color: #666; font-size: 1rem;"></p>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-left: 16px;">
+                        <label for="teachingLoadsDatePicker" style="margin: 0; color: #333; font-size: 0.9rem; font-weight: 500; white-space: nowrap;">Date:</label>
+                        <input type="date" id="teachingLoadsDatePicker" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; color: #333; background: #fff; cursor: pointer; min-width: 140px;" value="{{ date('Y-m-d') }}">
+                    </div>
                 </div>
                 <div id="teachingLoadsContainer" style="max-height: 400px; overflow-y: auto;">
                     <div id="teachingLoadsTable" style="display: none; overflow: hidden; border-radius: 8px;">
@@ -1979,6 +2011,14 @@
             if (id === 'addFacultyModal' || id === 'updateFacultyModal') {
                 resetModalForm(id);
             }
+            
+            // Reset date picker to current date when teaching loads modal is closed
+            if (id === 'viewTeachingLoadsModal') {
+                const datePicker = document.getElementById('teachingLoadsDatePicker');
+                if (datePicker) {
+                    datePicker.value = new Date().toISOString().split('T')[0];
+                }
+            }
         }
 
         function openUpdateModal(id) {
@@ -2029,12 +2069,20 @@
             document.getElementById('facultyName').textContent = facultyName;
             document.getElementById('facultyDepartment').textContent = facultyDepartment;
             
+            // Set default date to today
+            const datePicker = document.getElementById('teachingLoadsDatePicker');
+            if (datePicker && !datePicker.value) {
+                datePicker.value = new Date().toISOString().split('T')[0];
+            }
+            
             // Show loading state
             document.getElementById('teachingLoadsTable').style.display = 'none';
             document.getElementById('noTeachingLoads').style.display = 'none';
             
-            // Fetch teaching loads
-            fetch(`/api/faculty/${facultyId}/teaching-loads`)
+            // Function to fetch teaching loads with date
+            const fetchTeachingLoads = (selectedDate) => {
+                const dateParam = selectedDate ? `?date=${selectedDate}` : '';
+                return fetch(`/api/faculty/${facultyId}/teaching-loads${dateParam}`)
                 .then(response => response.json())
                 .then(data => {
                     const tableBody = document.getElementById('teachingLoadsTableBody');
@@ -2050,49 +2098,51 @@
                             }
                             row.style.background = index % 2 === 0 ? '#fff' : '#f9f9f9';
                             
-                            // Determine status display
+                            // Determine status display using combined status/remarks logic
                             let statusDisplay = '';
                             let statusStyle = 'padding: 6px 2px; text-align: center; font-weight: 500;';
                             
-                            if (load.status) {
-                                const statusUpper = (load.status || '').toUpperCase();
-                                const remarksUpper = (load.remarks || '').toUpperCase();
-                                const combinedStatus = (statusUpper + ' ' + remarksUpper).trim();
-                                
-                                if (load.status === 'On Going(Faculty Detected)') {
-                                    // Faculty detected via recognition log
-                                    statusDisplay = 'On Going(Faculty Detected)';
-                                    statusStyle += ' color: #28a745; font-weight: bold;';
-                                } else if (load.status === 'On Going(No Faculty Detected)') {
-                                    // No faculty detected
-                                    statusDisplay = 'On Going(No Faculty Detected)';
-                                    statusStyle += ' color: #ff9800; font-weight: bold;';
-                                } else if (statusUpper === 'PRESENT' || statusUpper.includes('PRESENT')) {
-                                    // Present status - Green
-                                    statusDisplay = load.status || load.remarks || '';
-                                    statusStyle += ' color: #28a745; font-weight: bold;';
-                                } else if (statusUpper === 'ABSENT' || statusUpper.includes('ABSENT')) {
-                                    // Check if it's "On Leave" or "With Pass Slip" - Orange
-                                    if (remarksUpper.includes('ON LEAVE') || remarksUpper.includes('WITH PASS SLIP') || 
-                                        combinedStatus.includes('ON LEAVE') || combinedStatus.includes('WITH PASS SLIP')) {
-                                        statusDisplay = load.status || load.remarks || '';
-                                        statusStyle += ' color: #ff8c00; font-weight: bold;';
-                                    } else {
-                                        // Regular Absent - Red
-                                        statusDisplay = load.status || load.remarks || '';
-                                        statusStyle += ' color: #dc3545; font-weight: bold;';
-                                    }
-                                } else if (remarksUpper.includes('ON LEAVE') || remarksUpper.includes('WITH PASS SLIP')) {
-                                    // On Leave or With Pass Slip - Orange
-                                    statusDisplay = load.status || load.remarks || '';
-                                    statusStyle += ' color: #ff8c00; font-weight: bold;';
+                            // Use record_status and record_remarks if available, otherwise fall back to status and remarks
+                            const recordStatus = (load.record_status || load.status || '').toUpperCase().trim();
+                            const recordRemarks = (load.record_remarks || load.remarks || '').toUpperCase().trim();
+                            const rawRemarks = (load.record_remarks || load.remarks || '').trim();
+                            
+                            if (load.status === 'On Going(Faculty Detected)') {
+                                // Faculty detected via recognition log
+                                statusDisplay = 'On Going(Faculty Detected)';
+                                statusStyle += ' color: #28a745; font-weight: bold;';
+                            } else if (load.status === 'On Going(No Faculty Detected)') {
+                                // No faculty detected
+                                statusDisplay = 'On Going(No Faculty Detected)';
+                                statusStyle += ' color: #ff9800; font-weight: bold;';
+                            } else if (recordStatus === 'PRESENT') {
+                                // Present status - show "Present" regardless of remarks (handles "Present (Wrong Room)" cases)
+                                statusDisplay = 'Present';
+                                statusStyle += ' color: #28a745; font-weight: bold;';
+                            } else if (recordStatus === 'LATE') {
+                                // Late status - show "Late" regardless of remarks (handles "Late (Wrong Room)" cases)
+                                statusDisplay = 'Late';
+                                statusStyle += ' color: #ff8c00; font-weight: bold;';
+                            } else if (recordStatus === 'ABSENT') {
+                                if (recordRemarks === 'ABSENT') {
+                                    statusDisplay = 'Absent';
+                                    statusStyle += ' color: #dc3545; font-weight: bold;';
+                                } else if (recordRemarks === 'ON LEAVE') {
+                                    statusDisplay = '<span style="color: #dc3545;">Absent but</span> <span style="color: #ff8c00;">On Leave</span>';
+                                    statusStyle = 'padding: 6px 2px; text-align: center; font-weight: 500;';
+                                } else if (recordRemarks === 'WITH PASS SLIP') {
+                                    statusDisplay = '<span style="color: #dc3545;">Absent but</span> <span style="color: #ff8c00;">With Pass Slip</span>';
+                                    statusStyle = 'padding: 6px 2px; text-align: center; font-weight: 500;';
                                 } else {
-                                    // Other statuses - default gray
-                                    statusDisplay = load.status || load.remarks || '';
-                                    statusStyle += ' color: #333; font-size: 0.85rem; font-weight: 500;';
+                                    statusDisplay = 'Absent';
+                                    statusStyle += ' color: #dc3545; font-weight: bold;';
                                 }
+                            } else if (load.status || load.remarks) {
+                                // Other statuses - default gray
+                                statusDisplay = load.status || load.remarks || '';
+                                statusStyle += ' color: #333; font-size: 0.85rem; font-weight: 500;';
                             } else {
-                                // No status - outside time range or not today
+                                // No status - outside time range or not matching day
                                 statusDisplay = '-';
                                 statusStyle += ' color: #999;';
                             }
@@ -2119,6 +2169,18 @@
                     document.getElementById('noTeachingLoads').style.display = 'block';
                     document.getElementById('noTeachingLoads').textContent = 'Error loading teaching loads.';
                 });
+            };
+            
+            // Initial fetch with current date
+            fetchTeachingLoads(datePicker.value);
+            
+            // Add event listener for date picker changes
+            datePicker.addEventListener('change', function() {
+                // Show loading state
+                document.getElementById('teachingLoadsTable').style.display = 'none';
+                document.getElementById('noTeachingLoads').style.display = 'none';
+                fetchTeachingLoads(this.value);
+            });
             
             openModal('viewTeachingLoadsModal');
         }
