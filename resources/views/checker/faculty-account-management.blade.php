@@ -2106,6 +2106,7 @@
                             const recordStatus = (load.record_status || load.status || '').toUpperCase().trim();
                             const recordRemarks = (load.record_remarks || load.remarks || '').toUpperCase().trim();
                             const rawRemarks = (load.record_remarks || load.remarks || '').trim();
+                            const isOfficialMatter = load.is_official_matter || false;
                             
                             if (load.status === 'On Going(Faculty Detected)') {
                                 // Faculty detected via recognition log
@@ -2133,6 +2134,19 @@
                                 } else if (recordRemarks === 'WITH PASS SLIP') {
                                     statusDisplay = '<span style="color: #dc3545;">Absent but</span> <span style="color: #ff8c00;">With Pass Slip</span>';
                                     statusStyle = 'padding: 6px 2px; text-align: center; font-weight: 500;';
+                                } else if (isOfficialMatter) {
+                                    // Official Matter cases
+                                    if (recordRemarks === 'PRESENT' || recordRemarks.includes('PRESENT')) {
+                                        statusDisplay = 'Present';
+                                        statusStyle += ' color: #28a745; font-weight: bold;';
+                                    } else if (recordRemarks === 'ABSENT' || recordRemarks.includes('ABSENT')) {
+                                        statusDisplay = 'Absent';
+                                        statusStyle += ' color: #dc3545; font-weight: bold;';
+                                    } else {
+                                        // Holiday or other official matter remarks - show exact remark
+                                        statusDisplay = rawRemarks;
+                                        statusStyle += ' color: #6f42c1; font-weight: bold;';
+                                    }
                                 } else {
                                     statusDisplay = 'Absent';
                                     statusStyle += ' color: #dc3545; font-weight: bold;';
